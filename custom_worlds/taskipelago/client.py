@@ -1,6 +1,14 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import yaml
+import asyncio
+import threading
+import logging
+import urllib.parse
+
+import Utils
+from NetUtils import Endpoint, decode
+import CommonClient
 
 RANDOM_TOKEN = "nothing here, get pranked nerd"
 
@@ -77,6 +85,23 @@ def apply_dark_theme(root: tk.Tk):
         "TNotebook.Tab",
         background=[("selected", "#4a4a4a")],
         foreground=[("selected", "#ffffff")]
+    )
+
+    style.configure(
+        "Task.TLabel",
+        font=("Segoe UI", 11),
+    )
+
+    style.configure(
+        "TaskDone.TLabel",
+        font=("Segoe UI", 11),
+        foreground="#9a9a9a"
+    )
+
+    style.configure(
+        "Reward.TLabel",
+        font=("Segoe UI", 10),
+        foreground="#4ade80"  # green
     )
 
     return {"bg": bg}
@@ -214,6 +239,60 @@ class DeathLinkRow:
 
     def get_text(self):
         return self.text_var.get().strip()
+    
+# ----------------------------
+# Networking shenanigans
+# ----------------------------
+class TaskipelagoContext(CommonClient.CommonContext):
+    game = "Taskipelago"
+    items_handling = 0b111  # receive all items
+
+    def __init__(self, server_address=None, password=None):
+        super().__init__(server_address, password)
+        self.slot_data = {}
+        self.tasks = []
+        self.rewards = []
+        self.base_location_id = None
+        self.death_link_pool = []
+        self.death_link_enabled = False
+
+        # UI callback
+        self.on_state_changed = None
+
+    def apply_slot_data(self, slot_data: dict):
+        self.slot_data = slot_data or {}
+        self.tasks = list(self.slot_data.get("tasks", []))
+        self.rewards = list(self.slot_data.get("rewards", []))
+        self.base_location_id = self.slot_data.get("base_location_id")
+        self.death_link_pool = list(self.slot_data.get("death_link_pool", []))
+        self.death_link_enabled = bool(self.slot_data.get("death_link_enabled", False))
+
+        if callable(self.on_state_changed):
+            self.on_state_changed()
+
+    def on_package(self, cmd: str, args: dict):
+        if cmd == "Connected":
+            self.apply_slot_data(args.get("slot_data", {}))
+
+async def server_loop(ctx: TaskipelagoContext, address: str):
+    import websockets  # lazy import
+
+    address = f"ws://{address}" if "://" not in address else address
+
+    socket = await websockets.connect(
+        address,
+        ping_timeout=None,
+        ping_interval=None
+    )
+    ctx.server = Endpoint(socket)
+
+    # Authenticate with server
+    await ctx.send_connect()
+
+    async for data in socket:
+        for msg in decode(data):
+            await CommonClient.process_server_cmd(ctx, msg)
+
 
 
 # ----------------------------
@@ -222,9 +301,14 @@ class DeathLinkRow:
 class TaskipelagoApp(tk.Tk):
     def __init__(self):
         super().__init__()
+
         self.title("Taskipelago")
         self.geometry("980x740")
         self.minsize(850, 640)
+        self.task_vars = {} # location_id -> BooleanVar
+        self.task_widgets = {}
+        self.connection_state = "disconnected"  # disconnected | connecting | connected
+        self.task_reward_labels = {}  # location_id -> Label
 
         self.colors = apply_dark_theme(self)
 
@@ -241,7 +325,21 @@ class TaskipelagoApp(tk.Tk):
         notebook.add(self.editor_tab, text="YAML Generator")
 
         notebook.select(self.play_tab)
+        
+        # Start the networking loop
+        self.loop = asyncio.new_event_loop()
 
+        t = threading.Thread(target=self._run_async_loop, daemon=True)
+        t.start()
+
+        # Create context safely inside the event loop
+        def _init_ctx():
+            self.ctx = TaskipelagoContext()
+            self.ctx.on_state_changed = self.on_network_update
+
+        self.loop.call_soon_threadsafe(_init_ctx)
+
+        # Buiild the UI
         self.build_ui()
 
     def build_ui(self):
@@ -350,12 +448,32 @@ class TaskipelagoApp(tk.Tk):
         self.pass_var = tk.StringVar()
         ttk.Entry(conn_frame, textvariable=self.pass_var, width=30, show="*").grid(row=2, column=1, padx=5)
 
+        btns = ttk.Frame(conn_frame)
+        btns.grid(row=3, column=0, columnspan=2, sticky="w", padx=5, pady=(8, 0))
+
+        # ttk.Button(btns, text="Connect", command=self.on_connect).pack(side="left", padx=(0, 8))
+        # ttk.Button(btns, text="Disconnect", command=self.on_disconnect).pack(side="left")
+        self.connect_button = ttk.Button(
+            btns,
+            text="Connect",
+            command=self.on_connect_toggle
+        )
+        self.connect_button.pack(side="left")
+
         self.connect_status = tk.StringVar(value="Not connected.")
         ttk.Label(play_root, textvariable=self.connect_status).pack(anchor="w")
 
-    def _set_deathlink_weights(self, on_: int, off_: int):
-        self.deathlink_on_weight.set(int(on_))
-        self.deathlink_off_weight.set(int(off_))
+        tasks_frame = ttk.LabelFrame(play_root, text="Tasks")
+        tasks_frame.pack(fill="both", expand=True, pady=(10, 0))
+
+        self.play_tasks_scroll = ScrollableFrame(tasks_frame, colors=self.colors)
+        self.play_tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
+
+    def on_connect_toggle(self):
+        if self.connection_state == "disconnected":
+            self._start_connect()
+        elif self.connection_state in ("connecting", "connected"):
+            self._start_disconnect()
 
     def add_task_row(self):
         row = TaskRow(self.tasks_scroll.inner, RANDOM_TOKEN, self._remove_task_row)
@@ -437,6 +555,132 @@ class TaskipelagoApp(tk.Tk):
             yaml.dump(data, f, sort_keys=False, allow_unicode=True)
 
         messagebox.showinfo("Success", f"YAML exported to:\n{path}")
+    
+    def _run_async_loop(self):
+        asyncio.set_event_loop(self.loop)
+        self.loop.run_forever()
+
+    def on_network_update(self):
+        if self.connection_state == "connecting":
+            self.connection_state = "connected"
+            self.connect_status.set("Connected.")
+            self.connect_button.config(text="Disconnect")
+
+        self.after(0, self.refresh_play_tab)
+
+    def refresh_play_tab(self):
+        for child in self.play_tasks_scroll.inner.winfo_children():
+            child.destroy()
+
+        self.task_widgets.clear()
+        self.task_reward_labels.clear()
+
+        if not self.ctx.tasks or self.ctx.base_location_id is None:
+            return
+
+        for i, task_name in enumerate(self.ctx.tasks):
+            loc_id = self.ctx.base_location_id + i
+            completed = loc_id in self.ctx.locations_checked
+
+            container = ttk.Frame(self.play_tasks_scroll.inner)
+            container.pack(fill="x", pady=6)
+
+            # --- Task text ---
+            task_label = ttk.Label(
+                container,
+                text=task_name,
+                style="Task.TLabel",
+                wraplength=640
+            )
+            task_label.pack(anchor="w")
+
+            # --- Reward line (hidden unless completed) ---
+            reward_label = ttk.Label(
+                container,
+                text="",  # filled when item received
+                style="Reward.TLabel",
+                wraplength=600
+            )
+            reward_label.pack(anchor="w", padx=(18, 0), pady=(2, 0))
+            reward_label.pack_forget()
+
+            self.task_reward_labels[loc_id] = reward_label
+
+            if completed:
+                task_label.configure(
+                    style="TaskDone.TLabel",
+                    text="✔ " + task_name.replace("", "\u0336")[:-1]
+                )
+                reward_label.pack(anchor="w", padx=(18, 0), pady=(2, 0))
+            else:
+                btn = ttk.Button(
+                    container,
+                    text="Complete",
+                    command=lambda lid=loc_id: self.complete_task(lid)
+                )
+                btn.pack(anchor="e", pady=(4, 0))
+
+            self.task_widgets[loc_id] = container
+
+
+    def complete_task(self, location_id: int):
+        if location_id in self.ctx.locations_checked:
+            return  # hard lock
+
+        async def _send():
+            await self.ctx.send_msgs([
+                {
+                    "cmd": "LocationChecks",
+                    "locations": [location_id]
+                }
+            ])
+
+        self.loop.call_soon_threadsafe(
+            lambda: asyncio.create_task(_send())
+        )
+
+
+    def _start_connect(self):
+        if self.connection_state != "disconnected":
+            return
+
+        server = self.server_var.get().strip()
+        slot = self.slot_var.get().strip()
+        password = self.pass_var.get().strip() or None
+
+        if not server or not slot:
+            messagebox.showerror("Error", "Server and Slot Name are required.")
+            return
+
+        self.connection_state = "connecting"
+        self.connect_status.set(f"Connecting to {server} as {slot}...")
+        self.connect_button.config(text="Disconnect")
+
+        def _start():
+            self.ctx.server_address = server
+            self.ctx.auth = slot
+            self.ctx.password = password
+            asyncio.create_task(server_loop(self.ctx, server))
+
+        self.loop.call_soon_threadsafe(_start)
+
+    def _start_disconnect(self):
+        if self.connection_state == "disconnected":
+            return
+
+        self.connection_state = "disconnected"
+        self.connect_status.set("Disconnected.")
+        self.connect_button.config(text="Connect")
+
+        if self.ctx and self.ctx.server:
+            async def _do_disconnect():
+                await self.ctx.disconnect()
+
+            self.loop.call_soon_threadsafe(
+                lambda: asyncio.create_task(_do_disconnect())
+            )
+
+
 
 
 if __name__ == "__main__":
