@@ -322,9 +322,9 @@ class TaskipelagoContext(CommonClient.CommonContext):
             return
 
         if cmd == "RoomUpdate":
-            # RoomUpdate is where checked locations usually refresh
             if "checked_locations" in args:
-                self.checked_locations_set = set(args["checked_locations"])
+                # RoomUpdate may be delta OR full list; union works for both
+                self.checked_locations_set.update(args["checked_locations"])
 
             if callable(self.on_state_changed):
                 self.on_state_changed()
@@ -544,7 +544,9 @@ class TaskipelagoApp(tk.Tk):
             self.ctx.base_location_id = None
             self.ctx.death_link_pool = []
             self.ctx.death_link_enabled = False
+            self.ctx.checked_locations_set = set()
         self.refresh_play_tab()
+
     
     def on_connect_toggle(self):
         if self.connection_state == "disconnected":
@@ -734,7 +736,7 @@ class TaskipelagoApp(tk.Tk):
                 self._bind_mousewheel_to_widget(reward_label, self.play_tasks_scroll)
 
     def complete_task(self, location_id: int):
-        if location_id in self.pending_locations or location_id in self.ctx.locations_checked:
+        if location_id in self.pending_locations or location_id in self.ctx.checked_locations_set:
             return
 
         # Immediate UI feedback
