@@ -4,6 +4,7 @@ from typing import Dict, List, Any
 
 from BaseClasses import Item, ItemClassification, Location, Region
 from worlds.AutoWorld import World, WebWorld
+from worlds.LauncherComponents import Component, Type, components, launch_subprocess
 
 from .options import TaskipelagoOptions
 
@@ -105,3 +106,15 @@ class TaskipelagoWorld(World):
             "death_link_enabled": bool(self.options.death_link),
             "base_location_id": BASE_LOCATION_ID,
         }
+
+def launch_client(*args):
+    from .client import launch
+    launch_subprocess(launch, name="TaskipelagoClient", args=args)
+
+components.append(
+    Component(
+        "Taskipelago Client",
+        func=launch_client,
+        component_type=Type.CLIENT,
+    )
+)
