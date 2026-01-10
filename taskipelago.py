@@ -4,6 +4,7 @@ import yaml
 
 RANDOM_TOKEN = "nothing here, get pranked nerd"
 
+
 # ----------------------------
 # Dark theme helpers (ttk)
 # ----------------------------
@@ -22,7 +23,6 @@ def apply_dark_theme(root: tk.Tk):
     root.configure(bg=bg)
 
     style.configure(".", background=bg, foreground=fg, fieldbackground=field)
-
     style.configure("TFrame", background=bg)
     style.configure("TLabelframe", background=bg, foreground=fg, bordercolor=border)
     style.configure("TLabelframe.Label", background=bg, foreground=fg)
@@ -30,35 +30,41 @@ def apply_dark_theme(root: tk.Tk):
     style.configure("TLabel", background=bg, foreground=fg)
     style.configure("Muted.TLabel", background=bg, foreground=muted)
 
-    style.configure("TButton", background=panel, foreground=fg, bordercolor=border, focusthickness=1, focuscolor=accent)
+    style.configure("TButton", background=panel, foreground=fg, bordercolor=border)
     style.map("TButton", background=[("active", "#303030")])
 
-    style.configure("TEntry", fieldbackground=field, background=field, foreground=fg, bordercolor=border, insertcolor=fg)
-    style.configure("TSpinbox", fieldbackground=field, background=field, foreground=fg, bordercolor=border, insertcolor=fg)
+    style.configure("TEntry", fieldbackground=field, background=field, foreground=fg, insertcolor=fg)
+    style.configure("TSpinbox", fieldbackground=field, background=field, foreground=fg, insertcolor=fg)
 
-    style.configure("TCombobox",
-                    fieldbackground=field,
-                    background=field,
-                    foreground=fg,
-                    arrowcolor=fg,
-                    bordercolor=border)
-    style.map("TCombobox",
-              fieldbackground=[("readonly", field)],
-              background=[("readonly", field)],
-              foreground=[("readonly", fg)])
+    style.configure(
+        "TCombobox",
+        fieldbackground=field,
+        background=field,
+        foreground=fg,
+        arrowcolor=fg,
+    )
+    style.map(
+        "TCombobox",
+        fieldbackground=[("readonly", field)],
+        background=[("readonly", field)],
+        foreground=[("readonly", fg)],
+    )
 
     style.configure("TCheckbutton", background=bg, foreground=fg)
-    style.map("TCheckbutton", background=[("active", bg)])
-
-    style.configure("TNotebook", background=bg, bordercolor=border)
+    style.map(
+        "TCheckbutton",
+        background=[("active", bg), ("pressed", bg), ("focus", bg), ("selected", bg)],
+        foreground=[("active", fg), ("pressed", fg), ("focus", fg), ("selected", fg)],
+    )
+    style.configure("TNotebook", background=bg)
     style.configure("TNotebook.Tab", background=panel, foreground=fg, padding=(12, 6))
     style.map("TNotebook.Tab", background=[("selected", "#2f2f2f")])
 
-    return {"bg": bg, "panel": panel, "field": field, "fg": fg, "muted": muted, "border": border, "accent": accent}
+    return {"bg": bg}
 
 
 # ----------------------------
-# Scrollable container
+# Scrollable container (auto-hide scrollbar)
 # ----------------------------
 class ScrollableFrame(ttk.Frame):
     def __init__(self, parent, colors=None):
@@ -69,28 +75,52 @@ class ScrollableFrame(ttk.Frame):
         self.vsb = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
         self.inner = ttk.Frame(self.canvas)
 
-        self.inner.bind("<Configure>", self._on_frame_configure)
-        self.canvas.configure(yscrollcommand=self.vsb.set)
-
         self.window_id = self.canvas.create_window((0, 0), window=self.inner, anchor="nw")
+
+        self.canvas.configure(yscrollcommand=self._on_scroll)
 
         self.canvas.grid(row=0, column=0, sticky="nsew")
         self.vsb.grid(row=0, column=1, sticky="ns")
+        self.vsb.grid_remove()  # hidden by default
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
+        self.inner.bind("<Configure>", self._on_frame_configure)
         self.canvas.bind("<Configure>", self._on_canvas_configure)
 
         # Mouse wheel scrolling
         self._bind_mousewheel(self.canvas)
         self._bind_mousewheel(self.inner)
 
+    def _on_scroll(self, first, last):
+        self.vsb.set(first, last)
+        if float(first) <= 0.0 and float(last) >= 1.0:
+            self.vsb.grid_remove()
+        else:
+            self.vsb.grid()
+
     def _on_frame_configure(self, _event=None):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        self._update_scrollbar_visibility()
 
     def _on_canvas_configure(self, event):
         self.canvas.itemconfig(self.window_id, width=event.width)
+        self._update_scrollbar_visibility()
+
+    def _update_scrollbar_visibility(self):
+        region = self.canvas.bbox("all")
+        if not region:
+            self.vsb.grid_remove()
+            return
+
+        content_height = region[3] - region[1]
+        canvas_height = self.canvas.winfo_height()
+
+        if content_height > canvas_height:
+            self.vsb.grid()
+        else:
+            self.vsb.grid_remove()
 
     def _bind_mousewheel(self, widget):
         widget.bind("<Enter>", lambda _e: widget.bind_all("<MouseWheel>", self._on_mousewheel))
@@ -104,9 +134,10 @@ class ScrollableFrame(ttk.Frame):
 # Rows
 # ----------------------------
 class TaskRow:
-    def __init__(self, parent, filler_token: str):
+    def __init__(self, parent, filler_token: str, on_remove):
         self.frame = ttk.Frame(parent)
         self.filler_token = filler_token
+        self._on_remove = on_remove
 
         self.task_var = tk.StringVar()
         self.reward_var = tk.StringVar()
@@ -115,16 +146,24 @@ class TaskRow:
         # Save user's last non-filler reward so unchecking restores it
         self._saved_reward = ""
 
-        self.task_entry = ttk.Entry(self.frame, textvariable=self.task_var)
-        self.reward_entry = ttk.Entry(self.frame, textvariable=self.reward_var)
-        self.filler_cb = ttk.Checkbutton(self.frame, text="Filler", variable=self.filler_var, command=self.on_filler_toggle)
+        ttk.Entry(self.frame, textvariable=self.task_var).grid(row=0, column=0, padx=(0, 8), sticky="ew")
+        ttk.Entry(self.frame, textvariable=self.reward_var).grid(row=0, column=1, padx=(0, 8), sticky="ew")
 
-        self.task_entry.grid(row=0, column=0, padx=(0, 8), sticky="ew")
-        self.reward_entry.grid(row=0, column=1, padx=(0, 8), sticky="ew")
-        self.filler_cb.grid(row=0, column=2, sticky="w")
+        ttk.Checkbutton(
+            self.frame,
+            text="Filler",
+            variable=self.filler_var,
+            command=self.on_filler_toggle,
+        ).grid(row=0, column=2, padx=(0, 8), sticky="w")
+
+        ttk.Button(self.frame, text="Remove", width=8, command=self.remove).grid(row=0, column=3, sticky="e")
 
         self.frame.grid_columnconfigure(0, weight=3)
         self.frame.grid_columnconfigure(1, weight=3)
+
+    def remove(self):
+        self.frame.destroy()
+        self._on_remove(self)
 
     def on_filler_toggle(self):
         if self.filler_var.get():
@@ -136,11 +175,7 @@ class TaskRow:
             self.reward_var.set(self._saved_reward)
 
     def get_data(self):
-        return (
-            self.task_var.get().strip(),
-            self.reward_var.get().strip(),
-            self.filler_var.get()
-        )
+        return self.task_var.get().strip(), self.reward_var.get().strip(), self.filler_var.get()
 
 
 class DeathLinkRow:
@@ -149,11 +184,8 @@ class DeathLinkRow:
         self.text_var = tk.StringVar()
         self._on_remove = on_remove
 
-        self.entry = ttk.Entry(self.frame, textvariable=self.text_var)
-        self.btn = ttk.Button(self.frame, text="Remove", command=self.remove, width=8)
-
-        self.entry.grid(row=0, column=0, padx=(0, 8), sticky="ew")
-        self.btn.grid(row=0, column=1, sticky="e")
+        ttk.Entry(self.frame, textvariable=self.text_var).grid(row=0, column=0, padx=(0, 8), sticky="ew")
+        ttk.Button(self.frame, text="Remove", width=8, command=self.remove).grid(row=0, column=1)
 
         self.frame.grid_columnconfigure(0, weight=1)
 
@@ -172,8 +204,8 @@ class TaskipelagoApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Taskipelago")
-        self.geometry("980x700")
-        self.minsize(850, 600)
+        self.geometry("980x740")
+        self.minsize(850, 640)
 
         self.colors = apply_dark_theme(self)
 
@@ -187,103 +219,119 @@ class TaskipelagoApp(tk.Tk):
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
         editor = ttk.Frame(notebook)
-        notebook.add(editor, text="Task Editor")
+        notebook.add(editor, text="YAML Generator")
 
-        # Use grid everywhere for consistent alignment
+        # Meta (fixed), Tasks (3), DeathLink (2), Export (fixed)
         editor.grid_columnconfigure(0, weight=1)
-        editor.grid_rowconfigure(1, weight=0)  # meta
-        editor.grid_rowconfigure(2, weight=3)  # tasks section
-        editor.grid_rowconfigure(3, weight=2)  # deathlink section
-        editor.grid_rowconfigure(4, weight=0)  # export button
+        editor.grid_rowconfigure(0, weight=0)
+        editor.grid_rowconfigure(1, weight=3)
+        editor.grid_rowconfigure(2, weight=2)
+        editor.grid_rowconfigure(3, weight=0)
 
-        # --- Meta / global settings
+        # Meta
         meta = ttk.LabelFrame(editor, text="Player / Global Settings")
-        meta.grid(row=1, column=0, sticky="ew", pady=(0, 10))
+        meta.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         meta.grid_columnconfigure(1, weight=1)
 
-        ttk.Label(meta, text="Player Name:").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        ttk.Label(meta, text="Player Name:").grid(row=0, column=0, padx=10, pady=8, sticky="w")
         self.player_name_var = tk.StringVar()
-        ttk.Entry(meta, textvariable=self.player_name_var, width=25).grid(row=0, column=1, sticky="ew", padx=(0, 10), pady=8)
+        ttk.Entry(meta, textvariable=self.player_name_var).grid(row=0, column=1, sticky="ew", padx=(0, 10), pady=8)
 
-        ttk.Label(meta, text="Progression Balancing (0–99):").grid(row=0, column=2, sticky="w", padx=(0, 10), pady=8)
+        ttk.Label(meta, text="Progression Balancing (0–99):").grid(row=0, column=2, padx=(0, 10), pady=8, sticky="w")
         self.progression_var = tk.IntVar(value=50)
-        ttk.Spinbox(meta, from_=0, to=99, textvariable=self.progression_var, width=5).grid(row=0, column=3, sticky="w", padx=(0, 10), pady=8)
+        ttk.Spinbox(meta, from_=0, to=99, textvariable=self.progression_var, width=5).grid(row=0, column=3, pady=8)
 
-        ttk.Label(meta, text="Accessibility:").grid(row=0, column=4, sticky="w", padx=(0, 10), pady=8)
+        ttk.Label(meta, text="Accessibility:").grid(row=0, column=4, padx=(0, 10), pady=8, sticky="w")
         self.accessibility_var = tk.StringVar(value="full")
-        ttk.Combobox(meta, textvariable=self.accessibility_var, values=["full", "items", "minimal"], width=10, state="readonly") \
-            .grid(row=0, column=5, sticky="w", padx=(0, 10), pady=8)
+        ttk.Combobox(
+            meta,
+            textvariable=self.accessibility_var,
+            values=["full", "items", "minimal"],
+            state="readonly",
+            width=10,
+        ).grid(row=0, column=5, pady=8)
 
-        # --- Tasks section
-        tasks_section = ttk.LabelFrame(editor, text="Tasks")
-        tasks_section.grid(row=2, column=0, sticky="nsew", pady=(0, 10))
-        tasks_section.grid_columnconfigure(0, weight=1)
-        tasks_section.grid_rowconfigure(2, weight=1)
+        # Weighted DeathLink controls
+        # Default "on" being 50, and off being 0
+        weights = ttk.Frame(meta)
+        weights.grid(row=1, column=0, columnspan=6, sticky="ew", padx=10, pady=(0, 10))
+        weights.grid_columnconfigure(7, weight=1)
 
-        ttk.Label(tasks_section, text="Add tasks + rewards. Use Filler to set the filler token.", style="Muted.TLabel") \
-            .grid(row=0, column=0, sticky="w", padx=10, pady=(6, 2))
+        ttk.Label(weights, text="DeathLink (weighted):", style="Muted.TLabel").grid(row=0, column=0, sticky="w", padx=(0, 10))
 
-        # Column labels
-        cols = ttk.Frame(tasks_section)
-        cols.grid(row=1, column=0, sticky="ew", padx=10, pady=(2, 0))
-        cols.grid_columnconfigure(0, weight=3)
-        cols.grid_columnconfigure(1, weight=3)
-        cols.grid_columnconfigure(2, weight=0)
+        ttk.Label(weights, text="On weight").grid(row=0, column=1, sticky="w")
+        self.deathlink_on_weight = tk.IntVar(value=50)
+        ttk.Spinbox(weights, from_=0, to=999, textvariable=self.deathlink_on_weight, width=6).grid(row=0, column=2, padx=(6, 14))
 
-        ttk.Label(cols, text="Task").grid(row=0, column=0, sticky="w")
-        ttk.Label(cols, text="Reward / Challenge").grid(row=0, column=1, sticky="w")
-        ttk.Label(cols, text="").grid(row=0, column=2, sticky="w")
+        ttk.Label(weights, text="Off weight").grid(row=0, column=3, sticky="w")
+        self.deathlink_off_weight = tk.IntVar(value=0)
+        ttk.Spinbox(weights, from_=0, to=999, textvariable=self.deathlink_off_weight, width=6).grid(row=0, column=4, padx=(6, 14))
 
-        self.tasks_scroll = ScrollableFrame(tasks_section, colors=self.colors)
-        self.tasks_scroll.grid(row=2, column=0, sticky="nsew", padx=10, pady=(8, 8))
+        ttk.Button(weights, text="Always On", command=lambda: self._set_deathlink_weights(on_=50, off_=0)).grid(row=0, column=5, padx=(0, 8))
+        ttk.Button(weights, text="Always Off", command=lambda: self._set_deathlink_weights(on_=0, off_=50)).grid(row=0, column=6, padx=(0, 8))
 
-        tasks_btns = ttk.Frame(tasks_section)
-        tasks_btns.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 10))
-        tasks_btns.grid_columnconfigure(0, weight=1)
+        # Tasks section
+        tasks = ttk.LabelFrame(editor, text="Tasks")
+        tasks.grid(row=1, column=0, sticky="nsew", pady=(0, 10))
+        tasks.grid_columnconfigure(0, weight=1)
+        tasks.grid_rowconfigure(0, weight=1)
 
-        ttk.Button(tasks_btns, text="Add Task", command=self.add_task_row).grid(row=0, column=0, sticky="w")
+        self.tasks_scroll = ScrollableFrame(tasks, colors=self.colors)
+        self.tasks_scroll.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
-        # --- DeathLink section
-        dl_section = ttk.LabelFrame(editor, text="DeathLink Task Pool")
-        dl_section.grid(row=3, column=0, sticky="nsew")
-        dl_section.grid_columnconfigure(0, weight=1)
-        dl_section.grid_rowconfigure(1, weight=1)
+        ttk.Button(tasks, text="Add Task", command=self.add_task_row).grid(row=1, column=0, sticky="w", padx=10, pady=(0, 10))
 
-        ttk.Label(dl_section, text="Independent list. Used when a DeathLink is received.", style="Muted.TLabel") \
-            .grid(row=0, column=0, sticky="w", padx=10, pady=(6, 2))
+        # DeathLink pool section
+        dl = ttk.LabelFrame(editor, text="DeathLink Task Pool")
+        dl.grid(row=2, column=0, sticky="nsew")
+        dl.grid_columnconfigure(0, weight=1)
+        dl.grid_rowconfigure(0, weight=0)  # hint label
+        dl.grid_rowconfigure(1, weight=1)  # scroll area grows/shrinks
+        dl.grid_rowconfigure(2, weight=0)  # button row stays visible
 
-        self.dl_scroll = ScrollableFrame(dl_section, colors=self.colors)
-        self.dl_scroll.grid(row=1, column=0, sticky="nsew", padx=10, pady=(8, 8))
+        hint = ttk.Label(
+            dl,
+            text="If DeathLink On weight > 0, this pool must contain at least 1 entry.",
+            style="Muted.TLabel",
+        )
+        hint.grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
 
-        dl_btns = ttk.Frame(dl_section)
-        dl_btns.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 10))
-        dl_btns.grid_columnconfigure(0, weight=1)
+        self.dl_scroll = ScrollableFrame(dl, colors=self.colors)
+        self.dl_scroll.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
 
-        ttk.Button(dl_btns, text="Add DeathLink Task", command=self.add_deathlink_row).grid(row=0, column=0, sticky="w")
+        ttk.Button(dl, text="Add DeathLink Task", command=self.add_deathlink_row).grid(row=2, column=0, sticky="w", padx=10, pady=(0, 10))
 
-        # --- Export button
+        # Export
         bottom = ttk.Frame(editor)
-        bottom.grid(row=4, column=0, sticky="ew", pady=(10, 0))
+        bottom.grid(row=3, column=0, sticky="ew", pady=(10, 0))
         bottom.grid_columnconfigure(0, weight=1)
 
         ttk.Button(bottom, text="Export YAML", command=self.export_yaml).grid(row=0, column=0, sticky="e")
 
-        # Start with one row each
+        # Start with one task row; DL pool can be empty
         self.add_task_row()
-        self.add_deathlink_row()
+
+    def _set_deathlink_weights(self, on_: int, off_: int):
+        self.deathlink_on_weight.set(int(on_))
+        self.deathlink_off_weight.set(int(off_))
 
     def add_task_row(self):
-        row = TaskRow(self.tasks_scroll.inner, filler_token=RANDOM_TOKEN)
+        row = TaskRow(self.tasks_scroll.inner, RANDOM_TOKEN, self._remove_task_row)
         row.frame.pack(fill="x", pady=4)
         self.task_rows.append(row)
 
+    def _remove_task_row(self, row):
+        if row in self.task_rows:
+            self.task_rows.remove(row)
+
     def add_deathlink_row(self):
-        row = DeathLinkRow(self.dl_scroll.inner, on_remove=self._remove_deathlink_row)
+        row = DeathLinkRow(self.dl_scroll.inner, self._remove_deathlink_row)
         row.frame.pack(fill="x", pady=4)
         self.deathlink_rows.append(row)
 
-    def _remove_deathlink_row(self, row: DeathLinkRow):
-        self.deathlink_rows = [r for r in self.deathlink_rows if r is not row]
+    def _remove_deathlink_row(self, row):
+        if row in self.deathlink_rows:
+            self.deathlink_rows.remove(row)
 
     def export_yaml(self):
         player_name = self.player_name_var.get().strip()
@@ -291,49 +339,60 @@ class TaskipelagoApp(tk.Tk):
             messagebox.showerror("Error", "Player name is required.")
             return
 
-        tasks = []
-        rewards = []
-
-        for row in self.task_rows:
-            task, reward, filler_flag = row.get_data()
-
-            if not task:
+        tasks, rewards = [], []
+        for r in self.task_rows:
+            t, rw, filler = r.get_data()
+            if not t:
                 continue
-
-            if not reward:
+            if not rw:
                 messagebox.showerror("Error", "Each task must have a reward or be marked Filler.")
                 return
-
-            tasks.append(task)
-            rewards.append(RANDOM_TOKEN if filler_flag else reward)
+            tasks.append(t)
+            rewards.append(RANDOM_TOKEN if filler else rw)
 
         if not tasks:
             messagebox.showerror("Error", "No tasks defined.")
             return
 
-        death_link_pool = []
-        for r in self.deathlink_rows:
-            txt = r.get_text()
-            if txt:
-                death_link_pool.append(txt)
+        deathlink_pool = [r.get_text() for r in self.deathlink_rows if r.get_text()]
+
+        on_w = int(self.deathlink_on_weight.get())
+        off_w = int(self.deathlink_off_weight.get())
+
+        if on_w < 0 or off_w < 0:
+            messagebox.showerror("Error", "DeathLink weights cannot be negative.")
+            return
+        if on_w == 0 and off_w == 0:
+            messagebox.showerror("Error", "DeathLink weights cannot both be 0.")
+            return
+
+        # If there's any chance DL is on, require pool to be non-empty
+        if on_w > 0 and not deathlink_pool:
+            messagebox.showerror(
+                "Error",
+                "DeathLink On weight is > 0, but the DeathLink Task Pool is empty.\n"
+                "Add at least one DeathLink task or set On weight to 0."
+            )
+            return
 
         data = {
-            "description": "YAML template for Taskipelago",
             "name": player_name,
             "game": "Taskipelago",
+            "description": "YAML template for Taskipelago",
             "Taskipelago": {
                 "progression_balancing": int(self.progression_var.get()),
                 "accessibility": self.accessibility_var.get(),
+                "death_link": {
+                    "true": on_w,
+                    "false": off_w,
+                },
                 "tasks": tasks,
                 "rewards": rewards,
-                "death_link_pool": death_link_pool,
+                "death_link_pool": deathlink_pool,
             }
         }
 
-        path = filedialog.asksaveasfilename(
-            defaultextension=".yaml",
-            filetypes=[("YAML Files", "*.yaml")]
-        )
+        path = filedialog.asksaveasfilename(defaultextension=".yaml", filetypes=[("YAML Files", "*.yaml")])
         if not path:
             return
 
