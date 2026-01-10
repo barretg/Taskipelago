@@ -10,6 +10,9 @@ import Utils
 from NetUtils import Endpoint, decode
 import CommonClient
 
+import random
+import time
+
 RANDOM_TOKEN = "nothing here, get pranked nerd"
 
 # ----------------------------
@@ -290,6 +293,13 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.death_link_pool = []
         self.death_link_enabled = False
         self.checked_locations_set = set()
+        self.on_disconnected = None
+
+        self.on_deathlink = None
+        self._deathlink_tag_enabled = False
+
+        self.on_item_received = None
+        self._last_item_index = 0
 
         # UI callback
         self.on_state_changed = None
@@ -320,6 +330,10 @@ class TaskipelagoContext(CommonClient.CommonContext):
         if cmd == "Connected":
             self.apply_slot_data(args.get("slot_data", {}))
 
+            # If your world says DeathLink is enabled, opt-in by adding the tag.
+            if self.slot_data.get("death_link_enabled"):
+                asyncio.create_task(self.enable_deathlink_tag())
+
             async def _double_sync():
                 # First sync immediately
                 await self.send_msgs([{"cmd": "Sync"}])
@@ -333,6 +347,30 @@ class TaskipelagoContext(CommonClient.CommonContext):
             if callable(self.on_state_changed):
                 self.on_state_changed()
 
+        if cmd == "Bounced":
+            tags = args.get("tags") or []
+            if "DeathLink" in tags:
+                data = args.get("data") or {}
+                if callable(self.on_deathlink):
+                    self.on_deathlink(data)
+
+        if cmd == "ReceivedItems":
+            items = list(getattr(self, "items_received", []) or [])
+            # notify for new items only
+            if len(items) > self._last_item_index:
+                new_items = items[self._last_item_index:]
+                self._last_item_index = len(items)
+                if callable(self.on_item_received):
+                    self.on_item_received(new_items)
+
+
+    async def enable_deathlink_tag(self):
+        # Adds the DeathLink tag so the server will route DeathLink bounces to us. :contentReference[oaicite:1]{index=1}
+        if self._deathlink_tag_enabled:
+            return
+        self._deathlink_tag_enabled = True
+        await self.send_msgs([{"cmd": "ConnectUpdate", "tags": ["DeathLink"]}])
+
 
 
 async def server_loop(ctx: TaskipelagoContext, address: str):
@@ -340,19 +378,28 @@ async def server_loop(ctx: TaskipelagoContext, address: str):
 
     address = f"ws://{address}" if "://" not in address else address
 
-    socket = await websockets.connect(
-        address,
-        ping_timeout=None,
-        ping_interval=None
-    )
-    ctx.server = Endpoint(socket)
+    try:
+        socket = await websockets.connect(
+            address,
+            ping_timeout=None,
+            ping_interval=None
+        )
+        ctx.server = Endpoint(socket)
 
-    # Authenticate with server
-    await ctx.send_connect()
+        await ctx.send_connect()
 
-    async for data in socket:
-        for msg in decode(data):
-            await CommonClient.process_server_cmd(ctx, msg)
+        async for data in socket:
+            for msg in decode(data):
+                await CommonClient.process_server_cmd(ctx, msg)
+
+    except Exception:
+        # fall through to finally
+        pass
+    finally:
+        # Tell UI we are no longer connected
+        if hasattr(ctx, "on_disconnected") and callable(ctx.on_disconnected):
+            ctx.on_disconnected()
+
 
 
 
@@ -369,6 +416,13 @@ class TaskipelagoApp(tk.Tk):
         self.task_vars = {} # location_id -> BooleanVar
         self.task_widgets = {}
         self.connection_state = "disconnected"  # disconnected | connecting | connected
+        self.sent_goal = False
+        self.total_task_count = 0
+        self._last_deathlink_key = None
+        self._last_deathlink_seen_at = 0.0
+        self._last_reward_key = None
+        self._last_reward_seen_at = 0.0
+
 
         self.colors = apply_dark_theme(self)
         ScrollableFrame.bind_mousewheel_to_root(self)
@@ -397,6 +451,9 @@ class TaskipelagoApp(tk.Tk):
         def _init_ctx():
             self.ctx = TaskipelagoContext()
             self.ctx.on_state_changed = self.on_network_update
+            self.ctx.on_disconnected = self.on_server_disconnected
+            self.ctx.on_deathlink = self.on_deathlink_received
+            self.ctx.on_item_received = self.on_items_received
 
         self.loop.call_soon_threadsafe(_init_ctx)
 
@@ -544,8 +601,11 @@ class TaskipelagoApp(tk.Tk):
             self.ctx.death_link_pool = []
             self.ctx.death_link_enabled = False
             self.ctx.checked_locations_set = set()
+            self.ctx._last_item_index = 0
             if hasattr(self.ctx, "locations_checked"):
                 self.ctx.locations_checked = set()
+        self._last_reward_key = None
+        self._last_reward_seen_at = 0.0
         self.refresh_play_tab()
 
     
@@ -653,6 +713,7 @@ class TaskipelagoApp(tk.Tk):
         if isinstance(getattr(self, "pending_locations", None), set):
             self.pending_locations.difference_update(checked)
 
+        self._maybe_send_goal_complete()
         self.after(0, self.refresh_play_tab)
 
 
@@ -660,8 +721,11 @@ class TaskipelagoApp(tk.Tk):
         for child in self.play_tasks_scroll.inner.winfo_children():
             child.destroy()
 
+        # Ensure tasks exist
         if not getattr(self, "ctx", None) or not self.ctx.tasks or self.ctx.base_location_id is None:
             return
+        
+        self.total_task_count = len(self.ctx.tasks)
 
         panel = self.colors.get("panel", "#252526")
         border = self.colors.get("border", "#3a3a3a")
@@ -736,6 +800,9 @@ class TaskipelagoApp(tk.Tk):
     def _start_connect(self):
         if self.connection_state != "disconnected":
             return
+        
+        # Ensure we don't accidentally early complete
+        self.sent_goal = False
 
         server = self.server_var.get().strip()
         slot = self.slot_var.get().strip()
@@ -772,7 +839,8 @@ class TaskipelagoApp(tk.Tk):
             self.loop.call_soon_threadsafe(
                 lambda: asyncio.create_task(_do_disconnect())
             )
-
+        
+        self.sent_goal = False
         self.after(0, self._clear_play_state)
     
     def _bind_mousewheel_to_widget(self, widget, scroll: ScrollableFrame):
@@ -788,6 +856,170 @@ class TaskipelagoApp(tk.Tk):
         # bind all descendants
         for child in root_widget.winfo_children():
             self._bind_mousewheel_recursive(child, scroll)
+
+    def _maybe_send_goal_complete(self):
+        if self.sent_goal:
+            return
+        if not getattr(self, "ctx", None):
+            return
+        if not self.ctx.tasks or self.ctx.base_location_id is None:
+            return
+
+        checked = getattr(self.ctx, "checked_locations_set", set())
+        all_done = True
+        for i in range(len(self.ctx.tasks)):
+            loc_id = self.ctx.base_location_id + i
+            if loc_id not in checked:
+                all_done = False
+                break
+
+        if not all_done:
+            return
+
+        self.sent_goal = True
+
+        async def _send_goal():
+            await self.ctx.send_msgs([{"cmd": "StatusUpdate", "status": 30}])  # CLIENT_GOAL = 30 :contentReference[oaicite:1]{index=1}
+
+        self.loop.call_soon_threadsafe(lambda: asyncio.create_task(_send_goal()))
+
+    def on_server_disconnected(self):
+        # called from async thread; bounce to Tk thread
+        self.after(0, self._handle_server_disconnected)
+
+    def _handle_server_disconnected(self):
+        self.connection_state = "disconnected"
+        self.connect_status.set("Disconnected (server closed connection).")
+        self.connect_button.config(text="Connect")
+        self.sent_goal = False
+        self._clear_play_state()
+
+    def on_deathlink_received(self, data: dict):
+        # Called from async thread -> marshal to Tk thread
+        self.after(0, lambda: self._show_deathlink_popup(data))
+
+    def _show_deathlink_popup(self, data: dict):
+        key = (data.get("time"), data.get("source"), data.get("cause"))
+        now = time.time()
+
+        # Ignore duplicates arriving back-to-back (common with some client handlers)
+        if key == self._last_deathlink_key and (now - self._last_deathlink_seen_at) < 2.0:
+            return
+
+        self._last_deathlink_key = key
+        self._last_deathlink_seen_at = now
+
+        pool = list(getattr(self.ctx, "death_link_pool", []) or [])
+        task = random.choice(pool) if pool else "DeathLink received! (No pool entries configured.)"
+
+        source = data.get("source") or "Unknown"
+        cause = data.get("cause") or ""
+
+        win = tk.Toplevel(self)
+        win.title("DEATHLINK!")
+        win.configure(bg=self.colors["bg"])
+        win.geometry("520x260")
+        win.transient(self)
+        win.grab_set()  # modal
+
+        title = tk.Label(
+            win,
+            text="DEATHLINK!",
+            bg=self.colors["bg"],
+            fg="#ff6b6b",
+            font=("Segoe UI", 20, "bold")
+        )
+        title.pack(pady=(18, 10))
+
+        detail_text = f"From: {source}"
+        if cause:
+            detail_text += f"\n{cause}"
+
+        details = tk.Label(
+            win,
+            text=detail_text,
+            bg=self.colors["bg"],
+            fg=self.colors["muted"],
+            font=("Segoe UI", 10),
+            justify="center",
+            wraplength=480
+        )
+        details.pack(pady=(0, 10))
+
+        task_label = tk.Label(
+            win,
+            text=task,
+            bg=self.colors["bg"],
+            fg=self.colors["fg"],
+            font=("Segoe UI", 14),
+            justify="center",
+            wraplength=480
+        )
+        task_label.pack(pady=(0, 18))
+
+        btn = ttk.Button(win, text="Dismiss", command=win.destroy)
+        btn.pack()
+    
+    def on_items_received(self, new_items):
+        # called from async thread; marshal to Tk thread
+        self.after(0, lambda: self._show_reward_popups(new_items))
+
+    def _show_reward_popups(self, new_items):
+        for it in new_items:
+            item_id = getattr(it, "item", None)
+            sender = getattr(it, "player", None)
+            loc = getattr(it, "location", None)
+
+            # name lookup best-effort
+            name = getattr(it, "item_name", None)
+            if not name:
+                try:
+                    name = Utils.get_item_name_from_id(item_id, self.ctx.game)
+                except Exception:
+                    name = None
+            if not name:
+                name = f"Item ID {item_id}"
+
+            # dedupe
+            key = (item_id, sender, loc)
+            now = time.time()
+            if key == self._last_reward_key and (now - self._last_reward_seen_at) < 1.5:
+                continue
+            self._last_reward_key = key
+            self._last_reward_seen_at = now
+
+            self._show_reward_popup(name)
+
+    def _show_reward_popup(self, reward_text: str):
+        win = tk.Toplevel(self)
+        win.title("Reward Received!")
+        win.configure(bg=self.colors["bg"])
+        win.geometry("520x240")
+        win.transient(self)
+        win.grab_set()
+
+        title = tk.Label(
+            win,
+            text="REWARD RECEIVED!",
+            bg=self.colors["bg"],
+            fg="#4ade80",
+            font=("Segoe UI", 20, "bold")
+        )
+        title.pack(pady=(18, 12))
+
+        body = tk.Label(
+            win,
+            text=reward_text,
+            bg=self.colors["bg"],
+            fg=self.colors["fg"],
+            font=("Segoe UI", 14),
+            justify="center",
+            wraplength=480
+        )
+        body.pack(pady=(0, 18))
+
+        btn = ttk.Button(win, text="Nice", command=win.destroy)
+        btn.pack()
 
 
 
