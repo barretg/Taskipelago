@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 
-from Options import PerGameCommonOptions, DeathLink, OptionList
+from Options import PerGameCommonOptions, DeathLink, OptionList, Toggle
 
 
 class Tasks(OptionList):

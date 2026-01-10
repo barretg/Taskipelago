@@ -105,6 +105,8 @@ class TaskipelagoWorld(World):
             "death_link_pool": [str(x).strip() for x in self.options.death_link_pool.value if str(x).strip()],
             "death_link_enabled": bool(self.options.death_link),
             "base_location_id": BASE_LOCATION_ID,
+            "task_prereqs": [str(x).strip() for x in self.options.task_prereqs.value],
+            "lock_prereqs": bool(self.options.lock_prereqs),
             "base_item_id": BASE_ITEM_ID,
         }
 
