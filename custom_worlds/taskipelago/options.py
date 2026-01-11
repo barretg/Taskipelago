@@ -3,7 +3,6 @@ from typing import List
 
 from Options import PerGameCommonOptions, DeathLink, OptionList, Toggle
 
-
 class Tasks(OptionList):
     display_name = "Tasks"
     default: List[str] = []
@@ -35,6 +34,22 @@ class DeathLinkPool(OptionList):
     default: List[str] = []
 
 
+class DeathLinkWeights(OptionList):
+    """
+    Parallel list aligned with death_link_pool, each entry is a number as text.
+    Missing entries default to 1.
+    """
+    display_name = "DeathLink Task Weights"
+    default: List[str] = []
+
+
+class DeathLinkAmnesty(Range):
+    display_name = "DeathLink Amnesty (ignore X before triggering 1)"
+    range_start = 0
+    range_end = 999
+    default = 0
+
+
 @dataclass
 class TaskipelagoOptions(PerGameCommonOptions):
     death_link: DeathLink
@@ -43,3 +58,5 @@ class TaskipelagoOptions(PerGameCommonOptions):
     task_prereqs: TaskPrereqs
     lock_prereqs: LockPreqreqs
     death_link_pool: DeathLinkPool
+    death_link_weights: DeathLinkWeights
+    death_link_amnesty: DeathLinkAmnesty

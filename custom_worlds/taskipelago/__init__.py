@@ -71,6 +71,37 @@ class TaskipelagoWorld(World):
             dl_pool = [str(x).strip() for x in self.options.death_link_pool.value if str(x).strip()]
             if not dl_pool:
                 raise Exception("Taskipelago: death_link is enabled but death_link_pool is empty.")
+            
+            raw_w = [str(x).strip() for x in getattr(self.options, "death_link_weights").value or []]
+
+            # pad/truncate to pool length, defaulting to "1"
+            if len(raw_w) < len(dl_pool):
+                raw_w += ["1"] * (len(dl_pool) - len(raw_w))
+            raw_w = raw_w[:len(dl_pool)]
+
+            # parse to floats; bad/empty => 1
+            parsed_w = []
+            for i, txt in enumerate(raw_w):
+                if not txt:
+                    parsed_w.append(1.0)
+                    continue
+                try:
+                    w = float(txt)
+                except ValueError:
+                    raise Exception(
+                        f"Taskipelago: invalid death_link_weights[{i}]={txt!r}. Must be a number."
+                    )
+                # allow 0 to mean "never pick", but prevent negatives
+                parsed_w.append(max(0.0, w))
+
+            self._death_link_pool = dl_pool
+            self._death_link_weights = parsed_w
+
+            self._death_link_amnesty = int(getattr(self.options, "death_link_amnesty").value or 0)
+        else:
+            self._death_link_pool = []
+            self._death_link_weights = []
+            self._death_link_amnest = int(getattr(self.options, "death_link_amnesty").value or 0)
 
         n = len(tasks)
         if n > MAX_TASKS:
@@ -274,6 +305,8 @@ class TaskipelagoWorld(World):
             "lock_prereqs": bool(self._lock_prereqs),
 
             "death_link_pool": [str(x).strip() for x in self.options.death_link_pool.value if str(x).strip()],
+            "death_link_weights": list(getattr(self, "_death_link_weights", [])),
+            "death_link_amnesty": int(getattr(self, "_death_link_amnesty", 0)),
             "death_link_enabled": bool(self.options.death_link),
 
             "base_reward_location_id": BASE_REWARD_LOC_ID,

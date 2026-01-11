@@ -465,20 +465,8 @@ class TaskipelagoApp(tk.Tk):
 
         tbl = self.tasks_scroll.inner
 
-        # header for top section
-        # header = ttk.Frame(self.tasks_scroll.inner)
-        # header.grid(row=0, column=0, sticky="ew", padx=(0, 0), pady=(6, 4))
-
-        # tbl.grid_columnconfigure(0, weight=1)
         for col, weight in [(1, 3), (2, 3), (3, 2)]:
             tbl.grid_columnconfigure(col, weight=weight)
-
-        # header.grid_columnconfigure(0, weight=0) # #
-        # header.grid_columnconfigure(1, weight=3) # task
-        # header.grid_columnconfigure(2, weight=3) # reward
-        # header.grid_columnconfigure(3, weight=2) # prereqs
-        # header.grid_columnconfigure(4, weight=0) # filler
-        # header.grid_columnconfigure(5, weight=0) # remove
 
         ttk.Label(tbl, text="#").grid(row=0, column=0, sticky="w", padx=(0, 8))
         ttk.Label(tbl, text="Task").grid(row=0, column=1, sticky="w", padx=(0, 8))
