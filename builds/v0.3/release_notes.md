@@ -4,6 +4,7 @@
 * Added weights to deathlink pool randomization
 * Added deathlink amnesty option
 * User no longer spammed with notifications they've seen before when reconnecting, instead only new checks are displayed
+* Can now import a YAML to edit in the YAML generator
 
 ## Bug Fixes
 * Fixed header alignment on tasks view

@@ -648,7 +648,8 @@ class TaskipelagoApp(tk.Tk):
         bottom = ttk.Frame(self.editor_tab)
         bottom.grid(row=3, column=0, sticky="ew", pady=(10, 0))
         bottom.grid_columnconfigure(0, weight=1)
-        ttk.Button(bottom, text="Export YAML", command=self.export_yaml).grid(row=0, column=0, sticky="e")
+        ttk.Button(bottom, text="Import YAML", command=self.import_yaml).grid(row=0, column=0, sticky="e", padx=(10, 0))
+        ttk.Button(bottom, text="Export YAML", command=self.export_yaml).grid(row=0, column=1, sticky="e", padx=(0, 10))
 
         self.add_task_row()
 
@@ -700,6 +701,15 @@ class TaskipelagoApp(tk.Tk):
             r.index = i
             r.num_label.config(text=str(i))
             r._grid()  # re-place widgets on the correct grid row
+    
+    def _clear_task_rows(self):
+        # Destroy existing widgets for all task rows and forget them
+        for r in list(self.task_rows):
+            try:
+                r.remove()  # calls destroy + _on_remove
+            except Exception:
+                pass
+        self.task_rows = []
 
     def add_deathlink_row(self):
         # rows start at 1 because header is row 0
@@ -713,6 +723,42 @@ class TaskipelagoApp(tk.Tk):
         for i, r in enumerate(self.deathlink_rows, start=1):
             r.index = i
             r._grid()
+
+    def _clear_deathlink_rows(self):
+        for r in list(self.deathlink_rows):
+            try:
+                r.remove()
+            except Exception:
+                pass
+        self.deathlink_rows = []
+
+    def _extract_taskipelago_block(self, doc: dict):
+        """
+        Supports:
+          A) Your generator format (root has 'name' + 'Taskipelago')
+          B) Common AP format-ish (root has a player name key; inside has 'Taskipelago')
+        Returns: (player_name: str|None, block: dict|None)
+        """
+        if not isinstance(doc, dict):
+            return None, None
+
+        # A) direct
+        if isinstance(doc.get("Taskipelago"), dict):
+            player_name = doc.get("name")
+            if isinstance(player_name, str):
+                player_name = player_name.strip()
+            else:
+                player_name = None
+            return player_name, doc["Taskipelago"]
+
+        # B) nested: find any mapping that contains a Taskipelago dict
+        # e.g. { "Barret": { "Taskipelago": {...}} }
+        for k, v in doc.items():
+            if isinstance(v, dict) and isinstance(v.get("Taskipelago"), dict):
+                player_name = k if isinstance(k, str) else None
+                return player_name, v["Taskipelago"]
+
+        return None, None
 
     def export_yaml(self):
         player_name = self.player_name_var.get().strip()
@@ -787,6 +833,134 @@ class TaskipelagoApp(tk.Tk):
             yaml.dump(data, f, sort_keys=False, allow_unicode=True)
 
         messagebox.showinfo("Success", f"YAML exported to:\n{path}")
+
+    def import_yaml(self):
+        path = filedialog.askopenfilename(filetypes=[("YAML Files", "*.yaml *.yml"), ("All Files", "*.*")])
+        if not path:
+            return
+
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                doc = yaml.safe_load(f)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to read YAML:\n{e}")
+            return
+
+        player_name, block = self._extract_taskipelago_block(doc)
+        if not isinstance(block, dict):
+            messagebox.showerror(
+                "Error",
+                "Could not find a 'Taskipelago' section in this YAML.\n"
+                "Expected either:\n"
+                "  - root: { name: ..., Taskipelago: {...} }\n"
+                "  - or a player entry: { <player>: { Taskipelago: {...} } }"
+            )
+            return
+
+        # --------- Populate global settings ---------
+        if player_name:
+            self.player_name_var.set(player_name)
+
+        pb = block.get("progression_balancing", self.progression_var.get())
+        try:
+            self.progression_var.set(int(pb))
+        except Exception:
+            pass
+
+        acc = block.get("accessibility", self.accessibility_var.get())
+        if isinstance(acc, str) and acc.strip():
+            self.accessibility_var.set(acc.strip())
+
+        # death_link stored as weights: {"true": X, "false": Y}
+        dl = block.get("death_link", None)
+        enabled = bool(self.deathlink_enabled.get())
+        if isinstance(dl, dict):
+            try:
+                t = int(dl.get("true", 0) or 0)
+                f = int(dl.get("false", 0) or 0)
+                enabled = (t > 0) and (t >= f)
+            except Exception:
+                pass
+        elif isinstance(dl, (bool, int)):
+            enabled = bool(dl)
+        self.deathlink_enabled.set(enabled)
+
+        try:
+            self.deathlink_amnesty_var.set(int(block.get("death_link_amnesty", self.deathlink_amnesty_var.get()) or 0))
+        except Exception:
+            pass
+
+        self.lock_prereqs_var.set(bool(block.get("lock_prereqs", self.lock_prereqs_var.get())))
+
+        # --------- Populate Tasks table ---------
+        tasks = list(block.get("tasks", []) or [])
+        rewards = list(block.get("rewards", []) or [])
+        prereqs = list(block.get("task_prereqs", []) or [])
+
+        # Normalize lengths
+        n = max(len(tasks), len(rewards), len(prereqs))
+        tasks += [""] * (n - len(tasks))
+        rewards += [""] * (n - len(rewards))
+        prereqs += [""] * (n - len(prereqs))
+
+        # Wipe existing UI rows then rebuild
+        self._clear_task_rows()
+
+        for i in range(n):
+            t = str(tasks[i]).strip() if tasks[i] is not None else ""
+            rw = str(rewards[i]).strip() if rewards[i] is not None else ""
+            pr = str(prereqs[i]).strip() if prereqs[i] is not None else ""
+
+            # Skip completely empty rows
+            if not t and not rw and not pr:
+                continue
+
+            row = TaskRow(self.tasks_scroll.inner, len(self.task_rows) + 1, FILLER_TOKEN, self._remove_task_row)
+            self.task_rows.append(row)
+
+            row.task_var.set(t)
+            row.prereq_var.set(pr)
+
+            # Filler handling
+            if rw == FILLER_TOKEN:
+                row.filler_var.set(True)
+                # on_filler_toggle sets reward to token + disables entry
+                row.on_filler_toggle()
+            else:
+                row.filler_var.set(False)
+                row.reward_entry.state(["!disabled"])
+                row.reward_var.set(rw)
+
+        # Ensure at least 1 row exists for UX
+        if not self.task_rows:
+            self.add_task_row()
+
+        # --------- Populate DeathLink pool ---------
+        deathlink_pool = list(block.get("death_link_pool", []) or [])
+        deathlink_weights = list(block.get("death_link_weights", []) or [])
+
+        # Normalize weights to pool length (default "1")
+        if len(deathlink_weights) < len(deathlink_pool):
+            deathlink_weights += ["1"] * (len(deathlink_pool) - len(deathlink_weights))
+        deathlink_weights = deathlink_weights[:len(deathlink_pool)]
+
+        self._clear_deathlink_rows()
+
+        for i, txt in enumerate(deathlink_pool):
+            s = str(txt).strip() if txt is not None else ""
+            if not s:
+                continue
+            w = deathlink_weights[i]
+            wtxt = str(w).strip() if w is not None else "1"
+            if not wtxt:
+                wtxt = "1"
+
+            row = DeathLinkRow(self.dl_scroll.inner, len(self.deathlink_rows) + 1, self._remove_deathlink_row)
+            self.deathlink_rows.append(row)
+            row.text_var.set(s)
+            row.weight_var.set(wtxt)
+
+        messagebox.showinfo("Imported", f"Imported YAML from:\n{path}")
 
     # ---------------- Connection actions ----------------
     def on_connect_toggle(self):
