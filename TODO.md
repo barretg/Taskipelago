@@ -7,6 +7,5 @@ take that Jira.
 
 * Generate Template Options actually puts a yaml template in the templates folder
 * Import options from yaml
-* Weighted randomness for deathlink
-* Deathlink amnesty value
 * Incoming message pane rather than ugly evil pop-up windows
+* Store which rewards have already been received in the past so you don't get spammed when reconnecting
