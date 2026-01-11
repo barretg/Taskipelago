@@ -220,10 +220,12 @@ class DeathLinkRow:
     def __init__(self, parent, on_remove):
         self.frame = ttk.Frame(parent)
         self.text_var = tk.StringVar()
+        self.weight_var = tk.StringVar(value="1")
         self._on_remove = on_remove
 
         ttk.Entry(self.frame, textvariable=self.text_var).grid(row=0, column=0, padx=(0, 8), sticky="ew")
-        ttk.Button(self.frame, text="Remove", width=8, command=self.remove).grid(row=0, column=1)
+        ttk.Entry(self.frame, textvariable=self.weight_var, width=6).grid(row=0, column=1, padx=(0, 8), sticky="w")
+        ttk.Button(self.frame, text="Remove", width=8, command=self.remove).grid(row=0, column=2)
 
         self.frame.grid_columnconfigure(0, weight=1)
 
@@ -231,8 +233,9 @@ class DeathLinkRow:
         self.frame.destroy()
         self._on_remove(self)
 
-    def get_text(self):
-        return self.text_var.get().strip()
+    def get_data(self):
+        return (self.text_var.get().strip(), self.weight_var.get().strip())
+
 
 
 # ----------------------------
@@ -265,6 +268,9 @@ class TaskipelagoContext(CommonClient.CommonContext):
 
         self.on_deathlink = None
         self._deathlink_tag_enabled = False
+        self.death_link_weights = []
+        self.death_link_amnesty = 0
+        self._deathlink_amnesty_left = 0
 
         self.on_item_received = None
         self._last_item_index = 0
@@ -281,6 +287,8 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.base_item_id = self.slot_data.get("base_item_id")
 
         self.death_link_pool = list(self.slot_data.get("death_link_pool", []))
+        self.death_link_weights = list(self.slot_data.get("death_link_weights", []))
+        self.death_link_amnesty = int(self.slot_data.get("death_link_amnesty", 0) or 0)
         self.death_link_enabled = bool(self.slot_data.get("death_link_enabled", False))
 
         if callable(self.on_state_changed):
@@ -450,8 +458,14 @@ class TaskipelagoApp(tk.Tk):
         self.deathlink_enabled = tk.BooleanVar(value=True)
         ttk.Checkbutton(meta_row2, text="Enable DeathLink", variable=self.deathlink_enabled).grid(row=0, column=0, sticky="w")
 
+        ttk.Label(meta_row2, text="DeathLink amnesty:").grid(row=0, column=1, sticky="w", padx=(16, 0))
+        self.deathlink_amnesty_var = tk.IntVar(value=0)
+        ttk.Spinbox(meta_row2, from_=0, to=999, textvariable=self.deathlink_amnesty_var, width=5).grid(
+            row=0, column=2, sticky="w", padx=(6, 0)
+        )
+
         self.lock_prereqs_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(meta_row2, text="Lock tasks behind prereqs", variable=self.lock_prereqs_var).grid(row=0, column=1, sticky="w", padx=(16, 0))
+        ttk.Checkbutton(meta_row2, text="Lock tasks behind prereqs", variable=self.lock_prereqs_var).grid(row=0, column=3, sticky="w", padx=(16, 0))
 
         tasks = ttk.LabelFrame(self.editor_tab, text="Tasks")
         tasks.grid(row=1, column=0, sticky="nsew", pady=(0, 10))
@@ -577,7 +591,15 @@ class TaskipelagoApp(tk.Tk):
             messagebox.showerror("Error", "No tasks defined.")
             return
 
-        deathlink_pool = [r.get_text() for r in self.deathlink_rows if r.get_text()]
+        deathlink_pool = []
+        deathlink_weights = []
+        for r in self.deathlink_rows:
+            txt, wtxt = r.get_data()
+            if not txt:
+                continue
+            deathlink_pool.append(txt)
+            deathlink_weights.append(wtxt if wtxt else "1")
+
 
         if self.deathlink_enabled.get():
             on_w, off_w = 50, 0
@@ -600,11 +622,15 @@ class TaskipelagoApp(tk.Tk):
                 "progression_balancing": int(self.progression_var.get()),
                 "accessibility": self.accessibility_var.get(),
                 "death_link": {"true": on_w, "false": off_w},
+
                 "tasks": tasks,
                 "rewards": rewards,
                 "task_prereqs": prereqs,
                 "lock_prereqs": bool(self.lock_prereqs_var.get()),
+
                 "death_link_pool": deathlink_pool,
+                "death_link_weights": deathlink_weights,
+                "death_link_amnesty": int(self.deathlink_amnesty_var.get()),
             }
         }
 
@@ -698,6 +724,8 @@ class TaskipelagoApp(tk.Tk):
 
         if not getattr(self, "ctx", None):
             return
+        
+        self._deathlink_amnesty_left = int(getattr(self.ctx, "death_link_amnesty", 0) or 0)
 
         checked = getattr(self.ctx, "checked_locations_set", set()) or set()
         self.pending_reward_locations.difference_update(checked)
@@ -871,6 +899,7 @@ class TaskipelagoApp(tk.Tk):
         self.after(0, lambda: self._show_deathlink_popup(data))
 
     def _show_deathlink_popup(self, data: dict):
+        # dedupe
         key = (data.get("time"), data.get("source"), data.get("cause"))
         now = time.time()
         if key == self._last_deathlink_key and (now - self._last_deathlink_seen_at) < 2.0:
@@ -878,8 +907,38 @@ class TaskipelagoApp(tk.Tk):
         self._last_deathlink_key = key
         self._last_deathlink_seen_at = now
 
+        # amnesty- ignores X deathlinks
+        amnesty = int(getattr(self.ctx, "death_link_amnesty", 0) or 0) if getattr(self, "ctx", None) else 0
+
+        if self._deathlink_amnesty_left > amnesty:
+            self._deathlink_amnesty_left -= 1
+            return # iframed through it babyyy let's go
+        
+        self._deathlink_amnesty_left = amnesty # reset if not dodged
+
         pool = list(getattr(self.ctx, "death_link_pool", []) or [])
-        task = random.choice(pool) if pool else "DeathLink received! (No pool entries configured.)"
+        weights_raw = list(getattr(self.ctx, "death_link_weights", []) or [])
+
+        # normalize weights length
+        if len(weights_raw) < len(pool):
+            weights_raw += [1] * (len(pool) - len(weights_raw))
+        weights_raw = weights_raw[:len(pool)]
+
+        weights = []
+        for w in weights_raw:
+            try:
+                wf = float(w)
+            except Exception:
+                wf = 1.0
+            weights.append(max(0.0, wf))
+
+        if pool:
+            if sum(weights) > 0:
+                task = random.choices(pool, weights=weights, k=1)[0]
+            else:
+                task = random.choice(pool)
+        else:
+            task = "No pool entries configured. Make something up, I guess"
 
         source = data.get("source") or "Unknown"
         cause = data.get("cause") or ""
