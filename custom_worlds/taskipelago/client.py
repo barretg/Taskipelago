@@ -11,7 +11,7 @@ import yaml
 import CommonClient
 from NetUtils import Endpoint, decode
 
-RANDOM_TOKEN = "nothing here, get pranked nerd"
+FILLER_TOKEN = "nothing here, get pranked nerd"
 
 
 # ----------------------------
@@ -161,7 +161,7 @@ class ScrollableFrame(ttk.Frame):
 # ----------------------------
 class TaskRow:
     def __init__(self, parent, index: int, filler_token: str, on_remove):
-        self.frame = ttk.Frame(parent)
+        self.parent = parent
         self.index = index
         self.filler_token = filler_token
         self._on_remove = on_remove
@@ -173,29 +173,27 @@ class TaskRow:
 
         self._saved_reward = ""
 
-        self.num_label = ttk.Label(self.frame, text=str(index), width=3)
-        self.num_label.grid(row=0, column=0, padx=(0, 8), sticky="w")
+        self.num_label = ttk.Label(parent, text=str(index), width=3)
+        self.task_entry = ttk.Entry(parent, textvariable=self.task_var)
+        self.reward_entry = ttk.Entry(parent, textvariable=self.reward_var)
+        self.prereq_entry = ttk.Entry(parent, textvariable=self.prereq_var)
+        self.filler_cb = ttk.Checkbutton(parent, text="Filler", variable=self.filler_var, command=self.on_filler_toggle)
+        self.remove_btn = ttk.Button(parent, text="Remove", width=8, command=self.remove)
 
-        ttk.Entry(self.frame, textvariable=self.task_var).grid(row=0, column=1, padx=(0, 8), sticky="ew")
-        self.reward_entry = ttk.Entry(self.frame, textvariable=self.reward_var)
-        self.reward_entry.grid(row=0, column=2, padx=(0, 8), sticky="ew")
-        ttk.Entry(self.frame, textvariable=self.prereq_var).grid(row=0, column=3, padx=(0, 8), sticky="ew")
+        self._grid()
 
-        ttk.Checkbutton(
-            self.frame,
-            text="Filler",
-            variable=self.filler_var,
-            command=self.on_filler_toggle,
-        ).grid(row=0, column=4, padx=(0, 8), sticky="w")
-
-        ttk.Button(self.frame, text="Remove", width=8, command=self.remove).grid(row=0, column=5, sticky="e")
-
-        self.frame.grid_columnconfigure(1, weight=3)
-        self.frame.grid_columnconfigure(2, weight=3)
-        self.frame.grid_columnconfigure(3, weight=2)
+    def _grid(self):
+        r = self.index  # NOTE: header is row 0, so tasks start at row 1
+        self.num_label.grid(row=r, column=0, padx=(0, 8), sticky="w", pady=4)
+        self.task_entry.grid(row=r, column=1, padx=(0, 8), sticky="ew", pady=4)
+        self.reward_entry.grid(row=r, column=2, padx=(0, 8), sticky="ew", pady=4)
+        self.prereq_entry.grid(row=r, column=3, padx=(0, 8), sticky="ew", pady=4)
+        self.filler_cb.grid(row=r, column=4, padx=(0, 8), sticky="w", pady=4)
+        self.remove_btn.grid(row=r, column=5, sticky="e", pady=4)
 
     def remove(self):
-        self.frame.destroy()
+        for w in (self.num_label, self.task_entry, self.reward_entry, self.prereq_entry, self.filler_cb, self.remove_btn):
+            w.destroy()
         self._on_remove(self)
 
     def on_filler_toggle(self):
@@ -203,11 +201,10 @@ class TaskRow:
             current = self.reward_var.get().strip()
             if current and current != self.filler_token:
                 self._saved_reward = current
-
             self.reward_var.set(self.filler_token)
-            self.reward_entry.state(["disabled"])   # lock editing
+            self.reward_entry.state(["disabled"])
         else:
-            self.reward_entry.state(["!disabled"])  # unlock editing
+            self.reward_entry.state(["!disabled"])
             self.reward_var.set(self._saved_reward)
 
     def get_data(self):
@@ -462,25 +459,33 @@ class TaskipelagoApp(tk.Tk):
         tasks.grid_rowconfigure(0, weight=0, minsize=28)
         tasks.grid_rowconfigure(1, weight=1)
         tasks.grid_rowconfigure(2, weight=0, minsize=44)
-
-        # header for top section
-        header = ttk.Frame(tasks)
-        header.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 0))
-
-        header.grid_columnconfigure(0, weight=0) # #
-        header.grid_columnconfigure(1, weight=3) # task
-        header.grid_columnconfigure(2, weight=3) # reward
-        header.grid_columnconfigure(3, weight=2) # prereqs
-        header.grid_columnconfigure(4, weight=0) # filler
-        header.grid_columnconfigure(5, weight=0) # remove
-
-        ttk.Label(header, text="#").grid(row=0, column=0, sticky="w", padx=(0, 8))
-        ttk.Label(header, text="Task").grid(row=0, column=1, sticky="w", padx=(0, 8))
-        ttk.Label(header, text="Reward / Challenge").grid(row=0, column=2, sticky="w", padx=(0, 8))
-        ttk.Label(header, text="Prereqs (1-based, e.g. 1,2)").grid(row=0, column=3, sticky="w", padx=(0, 8))
-
+        
         self.tasks_scroll = ScrollableFrame(tasks, colors=self.colors)
         self.tasks_scroll.grid(row=1, column=0, sticky="nsew", padx=10, pady=0)
+
+        tbl = self.tasks_scroll.inner
+
+        # header for top section
+        # header = ttk.Frame(self.tasks_scroll.inner)
+        # header.grid(row=0, column=0, sticky="ew", padx=(0, 0), pady=(6, 4))
+
+        # tbl.grid_columnconfigure(0, weight=1)
+        for col, weight in [(1, 3), (2, 3), (3, 2)]:
+            tbl.grid_columnconfigure(col, weight=weight)
+
+        # header.grid_columnconfigure(0, weight=0) # #
+        # header.grid_columnconfigure(1, weight=3) # task
+        # header.grid_columnconfigure(2, weight=3) # reward
+        # header.grid_columnconfigure(3, weight=2) # prereqs
+        # header.grid_columnconfigure(4, weight=0) # filler
+        # header.grid_columnconfigure(5, weight=0) # remove
+
+        ttk.Label(tbl, text="#").grid(row=0, column=0, sticky="w", padx=(0, 8))
+        ttk.Label(tbl, text="Task").grid(row=0, column=1, sticky="w", padx=(0, 8))
+        ttk.Label(tbl, text="Reward / Challenge").grid(row=0, column=2, sticky="w", padx=(0, 8))
+        ttk.Label(tbl, text="Prereqs (1-based, e.g. 1,2)").grid(row=0, column=3, sticky="w", padx=(0, 8))
+        ttk.Label(tbl, text="").grid(row=0, column=4, sticky="w")  # filler column placeholder
+        ttk.Label(tbl, text="").grid(row=0, column=5, sticky="w")  # remove column placeholder
 
         btn_row = ttk.Frame(tasks)
         btn_row.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 10))
@@ -540,16 +545,18 @@ class TaskipelagoApp(tk.Tk):
 
     # ---------------- YAML generator actions ----------------
     def add_task_row(self):
-        row = TaskRow(self.tasks_scroll.inner, len(self.task_rows) + 1, RANDOM_TOKEN, self._remove_task_row)
-        row.frame.pack(fill="x", pady=4)
+        # rows start at 1 because header is row 0
+        row = TaskRow(self.tasks_scroll.inner, len(self.task_rows) + 1, FILLER_TOKEN, self._remove_task_row)
         self.task_rows.append(row)
 
     def _remove_task_row(self, row):
         if row in self.task_rows:
             self.task_rows.remove(row)
+
         for i, r in enumerate(self.task_rows, start=1):
             r.index = i
             r.num_label.config(text=str(i))
+            r._grid()  # re-place widgets on the correct grid row
 
     def add_deathlink_row(self):
         row = DeathLinkRow(self.dl_scroll.inner, self._remove_deathlink_row)
@@ -575,7 +582,7 @@ class TaskipelagoApp(tk.Tk):
                 messagebox.showerror("Error", "Each task must have a reward or be marked Filler.")
                 return
             tasks.append(t)
-            rewards.append(RANDOM_TOKEN if filler else rw)
+            rewards.append(FILLER_TOKEN if filler else rw)
             prereqs.append(pr or "")
 
         if not tasks:
@@ -972,7 +979,7 @@ class TaskipelagoApp(tk.Tk):
             resolved_name = str(resolved_name).strip()
 
             # If it's your filler token, don't popup
-            if resolved_name == RANDOM_TOKEN:
+            if resolved_name == FILLER_TOKEN:
                 continue
 
             # (Extra safety) If server name says Task Complete anyway, skip
