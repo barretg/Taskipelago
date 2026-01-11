@@ -1,4 +1,6 @@
 import asyncio
+import os
+from pathlib import Path
 import random
 import threading
 import time
@@ -6,6 +8,7 @@ from tkinter import filedialog, messagebox
 import tkinter as tk
 from tkinter import ttk
 
+import json
 import yaml
 
 import CommonClient
@@ -291,6 +294,12 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.on_item_received = None
         self._last_item_index = 0
 
+        # persist received notification state
+        self._notify_state_path = Path(os.path.expanduser("~")) / ".taskipelago" / "notify_state.json"
+        self._notify_key = None
+        self._loaded_notify_index = False
+        self._pending_notify_index = None  # type: int | None
+
     def apply_slot_data(self, slot_data: dict):
         self.slot_data = slot_data or {}
         self.tasks = list(self.slot_data.get("tasks", []))
@@ -321,10 +330,15 @@ class TaskipelagoContext(CommonClient.CommonContext):
             self.checked_locations_set.update(base_checked)
 
         if cmd == "Connected":
+            # Apply slot data on connection
             self.apply_slot_data(args.get("slot_data", {}))
-
             if self.slot_data.get("death_link_enabled"):
                 asyncio.create_task(self.enable_deathlink_tag())
+
+            # Load persisted "already notified" index for this server+slot.
+            # Apply it when we see the first ReceivedItems after connect.
+            self._loaded_notify_index = False
+            self._pending_notify_index = self.load_last_notified_index()
 
             async def _double_sync():
                 await self.send_msgs([{"cmd": "Sync"}])
@@ -346,11 +360,32 @@ class TaskipelagoContext(CommonClient.CommonContext):
 
         if cmd == "ReceivedItems":
             items = list(getattr(self, "items_received", []) or [])
+
+            # If this is the first ReceivedItems after connect, establish baseline.
+            if not self._loaded_notify_index:
+                self._loaded_notify_index = True
+
+                if isinstance(self._pending_notify_index, int):
+                    # We've notified up through this index in the past; resume from there.
+                    self._last_item_index = min(self._pending_notify_index, len(items))
+                else:
+                    # First time on this machine: treat existing history as already-seen,
+                    # so we only popup for future rewards.
+                    self._last_item_index = len(items)
+
+                # Persist baseline so a crash right after connect doesn't replay history next time.
+                self.save_last_notified_index(self._last_item_index)
+
             if len(items) > self._last_item_index:
                 new_items = items[self._last_item_index:]
                 self._last_item_index = len(items)
+
+                # Persist that we've now notified through this index.
+                self.save_last_notified_index(self._last_item_index)
+
                 if callable(self.on_item_received):
                     self.on_item_received(new_items)
+
 
     async def enable_deathlink_tag(self):
         # If we aren't connected to a server endpoint yet, bail.
@@ -363,6 +398,78 @@ class TaskipelagoContext(CommonClient.CommonContext):
 
         self._deathlink_tag_enabled = True
         await self.send_msgs([{"cmd": "ConnectUpdate", "tags": ["DeathLink"]}])
+
+    def _make_notify_key(self) -> str:
+        # Slot name is stored in ctx.auth by your connect flow
+        server = (self.server_address or "").strip().lower()
+        slot = (getattr(self, "auth", None) or "").strip()
+        return f"{server}::{slot}"
+
+    def _load_notify_state(self) -> dict:
+        try:
+            if self._notify_state_path.exists():
+                return json.loads(self._notify_state_path.read_text(encoding="utf-8") or "{}")
+        except Exception:
+            pass
+        return {}
+
+    def _save_notify_state(self, data: dict) -> None:
+        try:
+            self._notify_state_path.parent.mkdir(parents=True, exist_ok=True)
+            self._notify_state_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        except Exception:
+            # Don't crash the client for a persistence failure
+            pass
+
+    def load_last_notified_index(self) -> int | None:
+        self._notify_key = self._make_notify_key()
+        if not self._notify_key.strip(":"):
+            return None
+        data = self._load_notify_state()
+        val = data.get(self._notify_key)
+        if isinstance(val, int) and val >= 0:
+            return val
+        return None
+
+    def save_last_notified_index(self, idx: int) -> None:
+        if idx is None:
+            return
+        if self._notify_key is None:
+            self._notify_key = self._make_notify_key()
+        if not self._notify_key.strip(":"):
+            return
+        data = self._load_notify_state()
+        prev = data.get(self._notify_key)
+        # Only move forward
+        if isinstance(prev, int) and prev > idx:
+            return
+        data[self._notify_key] = int(idx)
+        self._save_notify_state(data)
+
+    async def disconnect(self):
+        # Snapshot current endpoint so it can't be nulled out under us
+        endpoint = getattr(self, "server", None)
+        if not endpoint:
+            return
+
+        # Best-effort tell server we're disconnecting
+        try:
+            await self.send_msgs([{"cmd": "Disconnect"}])
+        except Exception:
+            pass
+
+        # Hard close the websocket so server_loop's "async for data in socket" exits
+        try:
+            sock = getattr(endpoint, "socket", None)
+            if sock is not None:
+                await sock.close()
+        except Exception:
+            pass
+
+        # Now clear local endpoint
+        self.server = None
+        self._deathlink_tag_enabled = False
+
 
 
 
@@ -731,7 +838,6 @@ class TaskipelagoApp(tk.Tk):
             self.loop.call_soon_threadsafe(lambda: asyncio.create_task(_do_disconnect()))
 
         if getattr(self, "ctx", None):
-            self.ctx.server = None
             self.ctx._deathlink_tag_enabled = False
 
         self.after(0, self._clear_play_state)
@@ -749,7 +855,8 @@ class TaskipelagoApp(tk.Tk):
             self.ctx.death_link_enabled = False
             self.ctx.deathlink_tag_enabled = False
             self.ctx.checked_locations_set = set()
-            self.ctx._last_item_index = 0
+            self.ctx._loaded_notify_index = False
+            self.ctx._pending_notify_index = None
             self._deathlink_amnesty_left = 0
             if hasattr(self.ctx, "locations_checked"):
                 self.ctx.locations_checked = set()
