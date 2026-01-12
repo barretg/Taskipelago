@@ -11,4 +11,3 @@ take that Jira.
 * optimize, it is very laggy when lots of tasks.
 * make it store the last server and slot that was connected to and auto-fill that info
 * add a reset button to yaml generator
-* Fix bug with connecting to archipelago.gg host
