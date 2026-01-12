@@ -474,22 +474,58 @@ class TaskipelagoContext(CommonClient.CommonContext):
 
 async def server_loop(ctx: TaskipelagoContext, address: str):
     import websockets
+    import ssl
+    import traceback
 
-    address = f"ws://{address}" if "://" not in address else address
+    raw = (address or "").strip()
 
+    # If user didn't provide scheme, try sensible defaults:
+    candidates = []
+    if "://" in raw:
+        candidates.append(raw)
+    else:
+        host = raw
+        # archipelago.gg is typically behind TLS; try wss first
+        if "archipelago.gg" in host.lower():
+            candidates.append(f"wss://{host}")
+        candidates.append(f"ws://{host}")
+
+    last_err = None
+
+    for url in candidates:
+        try:
+            ssl_ctx = ssl.create_default_context() if url.startswith("wss://") else None
+
+            socket = await websockets.connect(
+                url,
+                ssl=ssl_ctx,
+                ping_timeout=None,
+                ping_interval=None,
+                close_timeout=2,
+            )
+
+            ctx.server = Endpoint(socket)
+
+            # ensure every connection will send deathlink tag over
+            ctx._deathlink_tag_enabled = False
+
+            await ctx.send_connect()
+
+            async for data in socket:
+                for msg in decode(data):
+                    await CommonClient.process_server_cmd(ctx, msg)
+
+            # If the server loop exits cleanly, break
+            return
+
+        except Exception as e:
+            last_err = e
+            print(f"[Taskipelago] Connection failed for {url}: {e!r}")
+            traceback.print_exc()
+
+    # If we tried all candidates and failed, stash a human-readable reason for UI
     try:
-        socket = await websockets.connect(address, ping_timeout=None, ping_interval=None)
-        ctx.server = Endpoint(socket)
-
-        # ensure every connection will send deathlink tag over
-        ctx._deathlink_tag_enabled = False
-
-        await ctx.send_connect()
-
-        async for data in socket:
-            for msg in decode(data):
-                await CommonClient.process_server_cmd(ctx, msg)
-
+        ctx._last_disconnect_reason = f"{type(last_err).__name__}: {last_err}" if last_err else "Unknown error"
     except Exception:
         pass
     finally:

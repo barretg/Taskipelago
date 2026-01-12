@@ -9,3 +9,6 @@ take that Jira.
 * Add a scrolling pane of incoming rewards and death links rather than evil pop-ups
 * fix it reloading every time you complete a task
 * optimize, it is very laggy when lots of tasks.
+* make it store the last server and slot that was connected to and auto-fill that info
+* add a reset button to yaml generator
+* Fix bug with connecting to archipelago.gg host
