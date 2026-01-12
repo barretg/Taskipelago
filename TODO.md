@@ -5,4 +5,7 @@ what are you gonna do about it?
 take that Jira.
 
 
-* Incoming message pane rather than ugly evil pop-up windows
+* Fix the reward thingy to show an actual player name rather than "player #"
+* Add a scrolling pane of incoming rewards and death links rather than evil pop-ups
+* fix it reloading every time you complete a task
+* optimize, it is very laggy when lots of tasks.
