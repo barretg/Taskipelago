@@ -15,3 +15,4 @@ take that Jira.
 * notification history
 * prerequisite rewards for tasks (i.e. "Progressive Broom" lol)
 * mark rewards as traps, junk, useful, progression
+* tasklock integration to force all task locks to be in the taskipelago world (generate tasklock yaml with plando logic included, warn user to enable plando items in host.yaml)
