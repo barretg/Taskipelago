@@ -49,8 +49,14 @@ class RewardPrereqs(OptionList):
 
 class LockPreqreqs(Toggle):
     display_name = "Lock Tasks Behind Prereqs"
-    default = 0
+    default = 1
 
+class DeathLink(Toggle):
+    """
+    If enabled, receiving certain rewards can trigger DeathLink.
+    """
+    display_name = "DeathLink"
+    default = 0
 
 class DeathLinkPool(OptionList):
     display_name = "DeathLink Task Pool"
@@ -75,13 +81,13 @@ class DeathLinkAmnesty(Range):
 
 @dataclass
 class TaskipelagoOptions(PerGameCommonOptions):
-    death_link: DeathLink
     tasks: Tasks
     rewards: Rewards
     reward_types: RewardTypes
     task_prereqs: TaskPrereqs
     reward_prereqs: RewardPrereqs
     lock_prereqs: LockPreqreqs
+    death_link: DeathLink
     death_link_pool: DeathLinkPool
     death_link_weights: DeathLinkWeights
     death_link_amnesty: DeathLinkAmnesty

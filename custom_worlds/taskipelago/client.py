@@ -689,7 +689,7 @@ class TaskipelagoApp(tk.Tk):
         meta_row2 = ttk.Frame(meta)
         meta_row2.grid(row=1, column=0, columnspan=6, sticky="w", padx=10, pady=(0, 10))
 
-        self.deathlink_enabled = tk.BooleanVar(value=True)
+        self.deathlink_enabled = tk.BooleanVar(value=False)
         ttk.Checkbutton(meta_row2, text="Enable DeathLink", variable=self.deathlink_enabled).grid(row=0, column=0, sticky="w")
 
         ttk.Label(meta_row2, text="DeathLink amnesty:").grid(row=0, column=1, sticky="w", padx=(16, 0))
@@ -698,7 +698,7 @@ class TaskipelagoApp(tk.Tk):
             row=0, column=2, sticky="w", padx=(6, 0)
         )
 
-        self.lock_prereqs_var = tk.BooleanVar(value=False)
+        self.lock_prereqs_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(meta_row2, text="Lock tasks behind prereqs", variable=self.lock_prereqs_var).grid(row=0, column=3, sticky="w", padx=(16, 0))
 
         tasks = ttk.LabelFrame(self.editor_tab, text="Tasks")
