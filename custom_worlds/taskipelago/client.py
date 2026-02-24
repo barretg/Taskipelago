@@ -558,7 +558,7 @@ async def server_loop(ctx: TaskipelagoContext, address: str):
 
 @dataclass
 class Notification:
-    kind: str # "reward" | "deathlink"
+    kind: str # "reward" | "deathlink" | "sent"
     title: str
     body: str
     created_at: float # time.time()
@@ -587,6 +587,8 @@ class TaskipelagoApp(tk.Tk):
         self._last_deathlink_seen_at = 0.0
         self._last_reward_key = None
         self._last_reward_seen_at = 0.0
+        self._last_sent_key = None
+        self._last_sent_seen_at = 0.0
 
         # YAML generator state
         self.task_rows = []
@@ -1328,6 +1330,122 @@ class TaskipelagoApp(tk.Tk):
             if loc not in checked_locations:
                 return False
         return True
+    
+    def _slot_name_from_id(self, slot_id):
+        """Best-effort slot-id -> slot name."""
+        if slot_id is None:
+            return "Unknown"
+        try:
+            ctx = getattr(self, "ctx", None)
+            slot_info = getattr(ctx, "slot_info", None) if ctx else None
+
+            # Archipelago commonly provides slot_info as dict[int, dict-like]
+            if isinstance(slot_info, dict) and slot_id in slot_info:
+                v = slot_info.get(slot_id)
+                if isinstance(v, dict):
+                    name = v.get("name") or v.get("slot_name") or v.get("player_name")
+                    if isinstance(name, str) and name.strip():
+                        return name.strip()
+                else:
+                    name = getattr(v, "name", None) or getattr(v, "slot_name", None)
+                    if isinstance(name, str) and name.strip():
+                        return name.strip()
+        except Exception:
+            pass
+
+        return f"Player {slot_id}"
+
+    def _get_location_item_and_player(self, loc_id: int):
+        """
+        Best-effort read of scouted location info from context.
+        Returns: (item_id|None, player_id|None)
+        """
+        ctx = getattr(self, "ctx", None)
+        if not ctx:
+            return None, None
+
+        # Different AP clients / versions store this differently.
+        candidates = [
+            "location_info",
+            "locations_info",
+            "locations_info_cache",
+            "location_infos",
+            "scouted_locations",
+        ]
+
+        for attr in candidates:
+            try:
+                m = getattr(ctx, attr, None)
+                if isinstance(m, dict) and loc_id in m:
+                    li = m.get(loc_id)
+
+                    # tuple/list form: (item, player, flags?) or similar
+                    if isinstance(li, (tuple, list)) and len(li) >= 2:
+                        return li[0], li[1]
+
+                    # dict form
+                    if isinstance(li, dict):
+                        return li.get("item"), li.get("player")
+
+                    # object form (NetUtils.LocationInfo-like)
+                    item = getattr(li, "item", None)
+                    player = getattr(li, "player", None)
+                    return item, player
+            except Exception:
+                continue
+
+        return None, None
+
+    def _resolve_item_name_for_sent(self, item_id, task_index: int):
+        """
+        Resolve an item name similar to your received-item popup logic:
+        - Prefer ctx.item_names map (multiworld items)
+        - If it's a Taskipelago Reward item id, use YAML reward text
+        - Otherwise fallback to YAML reward text for this task (best-effort)
+        """
+        ctx = getattr(self, "ctx", None)
+        if not ctx:
+            return None
+
+        resolved = None
+
+        # 1) global item name map
+        try:
+            item_names = getattr(ctx, "item_names", None)
+            if isinstance(item_names, dict):
+                resolved = item_names.get(item_id)
+            elif hasattr(item_names, "get"):
+                resolved = item_names.get(item_id)
+        except Exception:
+            resolved = None
+
+        # 2) Taskipelago reward range -> YAML reward text
+        try:
+            base_reward_item = getattr(ctx, "base_item_id", None)
+            rewards_text = list(getattr(ctx, "rewards", []) or [])
+            if isinstance(base_reward_item, int) and isinstance(item_id, int) and rewards_text:
+                idx = item_id - base_reward_item
+                if 0 <= idx < len(rewards_text):
+                    resolved = rewards_text[idx]
+        except Exception:
+            pass
+
+        # 3) fallback: YAML reward text by task index (even if item_id unknown)
+        if (not resolved) and task_index is not None:
+            try:
+                rewards_text = list(getattr(ctx, "rewards", []) or [])
+                if 0 <= task_index < len(rewards_text):
+                    resolved = rewards_text[task_index]
+            except Exception:
+                pass
+
+        if resolved is None:
+            return None
+
+        resolved = str(resolved).strip()
+        if not resolved:
+            return None
+        return resolved
 
     def complete_task(self, task_index: int):
         if not getattr(self, "ctx", None):
@@ -1345,6 +1463,44 @@ class TaskipelagoApp(tk.Tk):
         # UI optimism on reward location
         self.pending_reward_locations.add(reward_loc_id)
         self.refresh_play_tab()
+
+        try:
+            # Dedupe so doule-clicks or rapid refreshes don't spam
+            now = time.time()
+            sent_key = ("sent", reward_loc_id)
+            if sent_key != self._last_sent_key or (now - self._last_sent_seen_at) > 1.0:
+                item_id, recipient_id = self._get_location_item_and_player(reward_loc_id)
+                reward_name = self._resolve_item_name_for_sent(item_id, task_index)
+
+                # Skip if filler
+                if reward_name and reward_name.strip() != FILLER_TOKEN:
+                    recipient_name = self._slot_name_from_id(recipient_id) if recipient_id is not None else "Unknown"
+                    task_label = None
+                    try:
+                        if 0 <= task_index < len(self.ctx.tasks):
+                            task_label = self.ctx.tasks[task_index]
+                    except Exception:
+                        task_label = None
+
+                    body_lines = []
+                    if task_label:
+                        body_lines.append(f"Task {task_index+1}: {task_label}")
+                        body_lines.append("")  # spacer line
+                    body_lines.append(str(reward_name))
+                    body_lines.append("")
+                    body_lines.append(f"(sent to {recipient_name})")
+
+                    self._enqueue_notification(Notification(
+                        kind="sent",
+                        title="Reward Sent!",
+                        body="\n".join(body_lines),
+                        created_at=time.time()
+                    ))
+
+                    self._last_sent_key = sent_key
+                    self._last_sent_seen_at = now
+        except Exception:
+            pass
 
         async def _send():
             # IMPORTANT: send BOTH checks in one click
@@ -1555,31 +1711,6 @@ class TaskipelagoApp(tk.Tk):
                 body=(f"{resolved_name}\n\n(from player {sender_label})" if sender is not None else resolved_name),
                 created_at=time.time()
             ))
-
-    # Unused as of now, used to show rewards as a separate pop-up, but moved that into the sidebar.
-    # def _show_reward_popup(self, reward_text: str):
-    #     win = tk.Toplevel(self)
-    #     win.title("Reward Received!")
-    #     win.configure(bg=self.colors["bg"])
-    #     win.geometry("520x260")
-    #     win.transient(self)
-    #     win.grab_set()
-
-    #     title = tk.Label(win, text="REWARD RECEIVED!", bg=self.colors["bg"], fg="#4ade80", font=("Segoe UI", 20, "bold"))
-    #     title.pack(pady=(18, 12))
-
-    #     body = tk.Label(
-    #         win,
-    #         text=reward_text,
-    #         bg=self.colors["bg"],
-    #         fg=self.colors["fg"],
-    #         font=("Segoe UI", 13),
-    #         justify="center",
-    #         wraplength=480
-    #     )
-    #     body.pack(pady=(0, 18))
-
-    #     ttk.Button(win, text="Nice", command=win.destroy).pack()
 
 
 if __name__ == "__main__":

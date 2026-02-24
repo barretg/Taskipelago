@@ -8,8 +8,6 @@ take that Jira.
 * Fix it reloading every time you complete a task
 * Optimize, it can be quite laggy when lots of tasks.
 * Store the last server and slot that was connected to and auto-fill that info
-* Add reset button to yaml generator
-* Add notification for what item was sent out when completing a task
 * Add proper archipelago text console window (separate tab?)
 * Notification history
 * Prerequisite rewards for tasks rather than just prerequisite tasks (separate column with a field the same as the pre-requisite tasks, and a checkbox to enable/disable this feature)
