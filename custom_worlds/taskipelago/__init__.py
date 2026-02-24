@@ -122,7 +122,7 @@ class TaskipelagoWorld(World):
         if n > MAX_TASKS:
             raise Exception(f"Taskipelago: too many tasks ({n}). Max supported is {MAX_TASKS}.")
 
-        # --- prereqs parse/normalize ---
+        # --- task prereqs parse/normalize ---
         raw_prereqs = list(getattr(self.options, "task_prereqs").value or [])
         if len(raw_prereqs) < n:
             raw_prereqs += [""] * (n - len(raw_prereqs))
@@ -154,6 +154,47 @@ class TaskipelagoWorld(World):
             seen = set()
             reqs = [x for x in reqs if not (x in seen or seen.add(x))]
             parsed_prereqs.append(reqs)
+
+        # --- reward prereqs parse/normalize ---
+        raw_reward_prereqs = list(getattr(self.options, "reward_prereqs").value or [])
+        if len(raw_reward_prereqs) < n:
+            raw_reward_prereqs += [""] * (n - len(raw_reward_prereqs))
+        raw_reward_prereqs = raw_reward_prereqs[:n]
+        raw_reward_prereqs = [str(x).strip() for x in raw_reward_prereqs]
+
+        parsed_reward_prereqs: List[List[int]] = []
+        for i, txt in enumerate(raw_reward_prereqs):
+            if not txt:
+                parsed_reward_prereqs.append([])
+                continue
+            parts = [p.strip() for p in txt.split(",") if p.strip()]
+            reqs: List[int] = []
+            for p in parts:
+                try:
+                    idx_1 = int(p)
+                except ValueError:
+                    raise Exception(
+                        f"Taskipelago: invalid reward prereq '{p}' on task {i+1}. "
+                        f"Use comma-separated integers like '1,2'."
+                    )
+                if idx_1 < 1 or idx_1 > n:
+                    raise Exception(
+                        f"Taskipelago: reward prereq '{idx_1}' on task {i+1} is out of range (1..{n})."
+                    )
+                reqs.append(idx_1 - 1)  # store 0-based like task_prereqs
+            parsed_reward_prereqs.append(reqs)
+
+        self._raw_reward_prereqs = raw_reward_prereqs
+        self._parsed_reward_prereqs = parsed_reward_prereqs
+
+        # Any reward that is referenced as a prereq (either completion prereq or reward prereq)
+        # must be progression so logic can rely on it.
+        forced_prog = set()
+        for reqs in parsed_prereqs:
+            forced_prog.update(reqs)
+        for reqs in parsed_reward_prereqs:
+            forced_prog.update(reqs)
+        self._forced_progression_rewards = forced_prog
 
         lock = bool(getattr(self.options, "lock_prereqs"))
         if lock:
@@ -270,6 +311,10 @@ class TaskipelagoWorld(World):
             else:
                 cls = ItemClassification.filler  # junk -> filler
 
+            # If this reward is used as a prereq anywhere, force it to progression.
+            if hasattr(self, "_forced_progression_rewards") and i in self._forced_progression_rewards:
+                cls = ItemClassification.progression
+
             self.multiworld.itempool.append(
                 TaskipelagoItem(
                     name,
@@ -295,19 +340,55 @@ class TaskipelagoWorld(World):
         if not self._lock_prereqs:
             return
 
-        # Prereq logic locks the REWARD location behind completion EVENTs.
-        for i in range(len(self._tasks)):
-            req_indices = self._parsed_prereqs[i]
-            if not req_indices:
-                continue
+        n = len(self._tasks)
 
+        for i in range(n):
+            token_req_indices = self._parsed_prereqs[i] if i < len(self._parsed_prereqs) else []
+            reward_req_indices = (
+                self._parsed_reward_prereqs[i]
+                if hasattr(self, "_parsed_reward_prereqs") and i < len(self._parsed_reward_prereqs)
+                else []
+            )
+
+            # ----------------------------
+            # A) Lock completing the task
+            # ----------------------------
+            if token_req_indices or reward_req_indices:
+                complete_loc = self.multiworld.get_location(self._complete_location_names[i], self.player)
+
+                required_token_names = tuple(f"Task Complete {j+1}" for j in token_req_indices)
+                required_reward_names = tuple(f"Reward {j+1}" for j in reward_req_indices)
+
+                def complete_rule(state, req_tokens=required_token_names, req_rewards=required_reward_names, player=self.player):
+                    return all(state.has(name, player) for name in req_tokens) and all(state.has(name, player) for name in req_rewards)
+
+                complete_loc.access_rule = complete_rule
+
+            # ---------------------------------------
+            # B) Lock getting the reward behind:
+            #    - completing this same task, AND
+            #    - (optionally) any prereqs as well
+            # ---------------------------------------
             reward_loc = self.multiworld.get_location(self._reward_location_names[i], self.player)
-            required_token_names = tuple(f"Task Complete {j+1}" for j in req_indices)
+            my_complete_token = f"Task Complete {i+1}"
 
-            def rule(state, req=required_token_names, player=self.player):
-                return all(state.has(name, player) for name in req)
+            required_token_names = tuple(f"Task Complete {j+1}" for j in token_req_indices)
+            required_reward_names = tuple(f"Reward {j+1}" for j in reward_req_indices)
 
-            reward_loc.access_rule = rule
+            def reward_rule(
+                state,
+                my_token=my_complete_token,
+                req_tokens=required_token_names,
+                req_rewards=required_reward_names,
+                player=self.player,
+            ):
+                return (
+                    state.has(my_token, player)
+                    and all(state.has(name, player) for name in req_tokens)
+                    and all(state.has(name, player) for name in req_rewards)
+                )
+
+            reward_loc.access_rule = reward_rule
 
     def generate_basic(self) -> None:
         # Place locked EVENT items on completion locations (code=None => not a network item id).
@@ -336,6 +417,7 @@ class TaskipelagoWorld(World):
             "reward_types": list(getattr(self, "_reward_types", [])),
 
             "task_prereqs": list(self._raw_prereqs),
+            "reward_prereqs": list(getattr(self, "_raw_reward_prereqs", [])),
             "lock_prereqs": bool(self._lock_prereqs),
 
             "death_link_pool": [str(x).strip() for x in self.options.death_link_pool.value if str(x).strip()],

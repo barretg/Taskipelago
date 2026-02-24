@@ -3,12 +3,13 @@
 ## How it works:
 ### 'Tasks' and 'Rewards'
 * In the client's YAML generator, you'll be able to input 'Tasks' and 'Rewards'.
-* Tasks are the checks you'll need to mark complete on the client's todo list.
+* Tasks are the checks (locations) you'll need to mark complete on the client's todo list.
 * Rewards are the items that are shuffled into the multi-world to match those spots
+* Tasks can be prerequisite on the completion of other tasks or rewards. It is recommended to set up some hierarchy with this, as otherwise all checks will be in sphere 1.
 
 ### DeathLink:
-* If death link is enabled, the user can provide a list of random tasks or punishments that go off whenever the client receives a death link
-* I recommend things like "10 pushups" or "Tidy one thing in your room" or "Read 2 pages of a book for school". Things like that.
+* If DeathLink is enabled, the user can provide a list of random tasks or punishments that go off whenever the client receives a death link
+* I recommend things like "10 pushups" or "Tidy one thing in your room" or "Read 2 pages of a book" or "1 minute plank". Things like that.
 
 ## Setup:
 * Download taskipelago.apworld from the releases page.

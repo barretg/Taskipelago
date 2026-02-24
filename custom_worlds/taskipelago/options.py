@@ -25,6 +25,7 @@ class RewardTypes(OptionList):
 
 class TaskPrereqs(OptionList):
     """
+    NOTE: The application contains a YAML generator that makes it easier to populate this!
     List to show task preqreqs, entries formatted:
     ""
     "1"             requires 1
@@ -33,6 +34,18 @@ class TaskPrereqs(OptionList):
     display_name = "Task Prereqs"
     default: List[str] = []
 
+class RewardPrereqs(OptionList):
+    """
+    NOTE: The application contains a YAML generator that makes it easier to populate this!
+    Parallel list aligned with tasks.
+    Each entry is a comma-separated list of task indices whose *Reward {n}* items are required.
+    Examples:
+      ""            -> no reward prereqs
+      "1"           -> requires Reward 1
+      "1, 2, 5"     -> requires Reward 1, Reward 2, Reward 5
+    """
+    display_name = "Reward Prereqs"
+    default: List[str] = []
 
 class LockPreqreqs(Toggle):
     display_name = "Lock Tasks Behind Prereqs"
@@ -67,6 +80,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     rewards: Rewards
     reward_types: RewardTypes
     task_prereqs: TaskPrereqs
+    reward_prereqs: RewardPrereqs
     lock_prereqs: LockPreqreqs
     death_link_pool: DeathLinkPool
     death_link_weights: DeathLinkWeights

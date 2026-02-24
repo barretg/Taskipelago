@@ -181,6 +181,8 @@ class TaskRow:
         self.task_var = tk.StringVar()
         self.reward_var = tk.StringVar()
         self.prereq_var = tk.StringVar()
+        self.reward_prereq_var = tk.StringVar(value="")
+        self.reward_prereq_entry = ttk.Entry(parent, textvariable=self.reward_prereq_var, width = 10)
         self.filler_var = tk.BooleanVar()
 
         self.reward_type_var = tk.StringVar(value=DEFAULT_REWARD_TYPE)
@@ -209,17 +211,16 @@ class TaskRow:
         self.num_label.grid(row=r, column=0, padx=(0, 8), sticky="w", pady=4)
         self.task_entry.grid(row=r, column=1, padx=(0, 8), sticky="ew", pady=4)
         self.reward_entry.grid(row=r, column=2, padx=(0, 8), sticky="ew", pady=4)
-        self.prereq_entry.grid(row=r, column=3, padx=(0, 8), sticky="ew", pady=4)
+        self.prereq_entry.grid(row=r, column=3, sticky="ew", padx=(0, 8), pady=4)
+        self.reward_prereq_entry.grid(row=r, column=4, sticky="ew", padx=(0, 8), pady=4)
 
-        self.reward_type_cb.grid(row=r, column=4, padx=(0, 8), sticky="w", pady=4)
-
-        self.filler_cb.grid(row=r, column=5, padx=(0, 8), sticky="w", pady=4)
-        self.remove_btn.grid(row=r, column=6, sticky="e", pady=4)
+        self.reward_type_cb.grid(row=r, column=5, sticky="w", padx=(0, 8), pady=4)
+        self.filler_cb.grid(row=r, column=6, padx=(0, 8), sticky="w", pady=4)
+        self.remove_btn.grid(row=r, column=7, padx=(0, 0), pady=4)
 
     def remove(self):
-        for w in (self.num_label, self.task_entry, self.reward_entry, self.prereq_entry, self.reward_type_cb, self.filler_cb, self.remove_btn):
-            w.destroy()
-        self._on_remove(self)
+        for w in (self.num_label, self.task_entry, self.reward_entry, self.prereq_entry, self.reward_prereq_entry, self.reward_type_cb, self.filler_cb, self.remove_btn):
+            self._on_remove(self)
 
     def on_filler_toggle(self):
         if self.filler_var.get():
@@ -248,6 +249,7 @@ class TaskRow:
             self.task_var.get().strip(),
             self.reward_var.get().strip(),
             self.prereq_var.get().strip(),
+            self.reward_prereq_var.get().strip(),
             self.filler_var.get(),
             self.reward_type_var.get().strip().lower() or "useful",
         )
@@ -298,6 +300,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.tasks = []
         self.rewards = []
         self.task_prereqs = []
+        self.reward_prereqs = []
         self.lock_prereqs = False
 
         self.base_reward_location_id = None
@@ -332,6 +335,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.tasks = list(self.slot_data.get("tasks", []))
         self.rewards = list(self.slot_data.get("rewards", []))
         self.task_prereqs = list(self.slot_data.get("task_prereqs", []))
+        self.reward_prereqs = list(self.slot_data.get("reward_prereqs", []))
         self.lock_prereqs = bool(self.slot_data.get("lock_prereqs", False))
 
         self.base_reward_location_id = self.slot_data.get("base_reward_location_id")
@@ -715,10 +719,23 @@ class TaskipelagoApp(tk.Tk):
         ttk.Label(tbl, text="#").grid(row=0, column=0, sticky="w", padx=(0, 8))
         ttk.Label(tbl, text="Task").grid(row=0, column=1, sticky="w", padx=(0, 8))
         ttk.Label(tbl, text="Reward / Challenge").grid(row=0, column=2, sticky="w", padx=(0, 8))
-        ttk.Label(tbl, text="Prereqs (1-based, e.g. 1,2)").grid(row=0, column=3, sticky="w", padx=(0, 8))
-        ttk.Label(tbl, text="Type").grid(row=0, column=4, sticky="w", padx=(0, 8))
-        ttk.Label(tbl, text="").grid(row=0, column=5, sticky="w")  # filler column placeholder
-        ttk.Label(tbl, text="").grid(row=0, column=6, sticky="w")  # remove column placeholder
+        ttk.Label(tbl, text="Task prereqs").grid(row=0, column=3, sticky="w", padx=(0, 8))
+        ttk.Label(tbl, text="Reward prereqs").grid(row=0, column=4, sticky="w", padx=(0, 8))
+        ttk.Label(tbl, text="Type").grid(row=0, column=5, sticky="w", padx=(0, 8))
+
+        # filler + remove placeholders (no header text)
+        ttk.Label(tbl, text="").grid(row=0, column=6, sticky="w")
+        ttk.Label(tbl, text="").grid(row=0, column=7, sticky="w")
+
+        # Column stretch/weights (optional but recommended)
+        tbl.grid_columnconfigure(0, weight=0)  # #
+        tbl.grid_columnconfigure(1, weight=3)  # Task
+        tbl.grid_columnconfigure(2, weight=3)  # Reward
+        tbl.grid_columnconfigure(3, weight=2)  # Task prereqs
+        tbl.grid_columnconfigure(4, weight=2)  # Reward prereqs
+        tbl.grid_columnconfigure(5, weight=1)  # Type
+        tbl.grid_columnconfigure(6, weight=0)  # Filler
+        tbl.grid_columnconfigure(7, weight=0)  # Remove button
 
         btn_row = ttk.Frame(tasks)
         btn_row.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 10))
@@ -823,6 +840,7 @@ class TaskipelagoApp(tk.Tk):
         # rows start at 1 because header is row 0
         row = TaskRow(self.tasks_scroll.inner, len(self.task_rows) + 1, FILLER_TOKEN, self._remove_task_row)
         self.task_rows.append(row)
+        return row
 
     def _remove_task_row(self, row):
         if row in self.task_rows:
@@ -897,9 +915,9 @@ class TaskipelagoApp(tk.Tk):
             messagebox.showerror("Error", "Player name is required.")
             return
 
-        tasks, rewards, prereqs, reward_types = [], [], [], []
+        tasks, rewards, prereqs, reward_prereqs, reward_types = [], [], [], [], []
         for r in self.task_rows:
-            t, rw, pr, filler, rtype = r.get_data()
+            t, rw, pr, rpr, filler, rtype = r.get_data()
             if not t:
                 continue
             if not rw:
@@ -909,9 +927,8 @@ class TaskipelagoApp(tk.Tk):
             tasks.append(t)
             rewards.append(FILLER_TOKEN if filler else rw)
             prereqs.append(pr or "")
-
-            # filler is always junk
-            reward_types.append("junk" if filler else (rtype or "junk"))
+            reward_prereqs.append(rpr or "")
+            reward_types.append("junk" if filler else (rtype or "junk")) # filler is always junk
 
         if not tasks:
             messagebox.showerror("Error", "No tasks defined.")
@@ -953,6 +970,7 @@ class TaskipelagoApp(tk.Tk):
                 "rewards": rewards,
                 "reward_types": reward_types,
                 "task_prereqs": prereqs,
+                "reward_prereqs": reward_prereqs,
                 "lock_prereqs": bool(self.lock_prereqs_var.get()),
 
                 "death_link_pool": deathlink_pool,
@@ -1032,6 +1050,7 @@ class TaskipelagoApp(tk.Tk):
         tasks = list(block.get("tasks", []) or [])
         rewards = list(block.get("rewards", []) or [])
         prereqs = list(block.get("task_prereqs", []) or [])
+        reward_prereqs = list(block.get("reward_prereqs", []) or [])
         reward_types = list(block.get("reward_types", []) or [])
 
         # Normalize lengths
@@ -1039,6 +1058,7 @@ class TaskipelagoApp(tk.Tk):
         tasks += [""] * (n - len(tasks))
         rewards += [""] * (n - len(rewards))
         prereqs += [""] * (n - len(prereqs))
+        reward_prereqs += [""] * (n - len(reward_prereqs))
         reward_types += ["useful"] * (n - len(reward_types))
 
         # Wipe existing UI rows then rebuild
@@ -1048,37 +1068,31 @@ class TaskipelagoApp(tk.Tk):
             t = str(tasks[i]).strip() if tasks[i] is not None else ""
             rw = str(rewards[i]).strip() if rewards[i] is not None else ""
             pr = str(prereqs[i]).strip() if prereqs[i] is not None else ""
+            rpr = str(reward_prereqs[i]).strip() if reward_prereqs[i] is not None else ""
             rt = str(reward_types[i]).strip().lower() if reward_types[i] is not None else "useful"
 
-            # Skip completely empty rows
-            if not t and not rw and not pr:
-                continue
-
-            row = TaskRow(self.tasks_scroll.inner, len(self.task_rows) + 1, FILLER_TOKEN, self._remove_task_row)
-            self.task_rows.append(row)
-
+            row = self.add_task_row()
             row.task_var.set(t)
             row.prereq_var.set(pr)
+            row.reward_prereq_var.set(rpr)
 
-            # Filler handling
-            if rw == FILLER_TOKEN:
-                row.filler_var.set(True)
-                # on_filler_toggle sets reward to token + disables entry
-                row.on_filler_toggle()
-            else:
-                row.filler_var.set(False)
-                row.reward_entry.state(["!disabled"])
-                row.reward_var.set(rw)
-
-            # reward types handling
+            # Clamp reward type
             if rt not in ("trap", "junk", "useful", "progression"):
                 rt = "useful"
             row.reward_type_var.set(rt)
             row._saved_reward_type = rt
 
-        # Ensure at least 1 row exists for UX
-        if not self.task_rows:
-            self.add_task_row()
+            # Handle filler token exactly the same way your existing import does
+            if rw == FILLER_TOKEN:
+                row.filler_var.set(True)
+                row.on_filler_toggle()
+            else:
+                row.filler_var.set(False)
+                row.on_filler_toggle()
+                row.reward_var.set(rw)
+                # Ensure at least 1 row exists for UX
+                if not self.task_rows:
+                    self.add_task_row()
 
         # --------- Populate DeathLink pool ---------
         deathlink_pool = list(block.get("death_link_pool", []) or [])
@@ -1316,6 +1330,7 @@ class TaskipelagoApp(tk.Tk):
         checked = set(getattr(self.ctx, "checked_locations_set", set()) or set())
 
         prereq_list = list(getattr(self.ctx, "task_prereqs", []) or [])
+        reward_prereq_list = list(getattr(self.ctx, "reward_prereqs", []) or [])
         lock_prereqs = bool(getattr(self.ctx, "lock_prereqs", False))
 
         for i, task_name in enumerate(self.ctx.tasks):
@@ -1323,14 +1338,25 @@ class TaskipelagoApp(tk.Tk):
             complete_loc_id = self.ctx.base_complete_location_id + i
 
             # Consider "completed" when reward location is checked (the one that sends items)
-            completed = (reward_loc_id in checked) or (reward_loc_id in self.pending_reward_locations)
+            completed = (complete_loc_id in checked) or (reward_loc_id in checked)
 
-            # prereqs satisfied based on COMPLETE locations (completion tokens)
-            prereq_ok = True
-            prereq_text = ""
-            if i < len(prereq_list) and prereq_list[i]:
-                prereq_text = prereq_list[i]
-                prereq_ok = self._prereqs_satisfied(prereq_text, checked)
+            # task prereqs satisfied based on COMPLETE locations (completion tokens)
+            task_prereq_ok = True
+            task_prereq_text = ""
+            if i < len(prereq_list):
+                raw = prereq_list[i]
+                task_prereq_text = ("" if raw is None else str(raw)).strip()
+                if task_prereq_text:
+                    task_prereq_ok = self._prereqs_satisfied(task_prereq_text, checked)
+
+            reward_prereq_list = list(getattr(self.ctx, "reward_prereqs", []) or [])
+            reward_prereq_ok = True
+            reward_prereq_text = ""
+            if i < len(reward_prereq_list):
+                raw = reward_prereq_list[i]
+                reward_prereq_text = ("" if raw is None else str(raw)).strip()
+                if reward_prereq_text:
+                    reward_prereq_ok = self._reward_prereqs_satisfied(reward_prereq_text, checked)
 
             card = tk.Frame(self.play_tasks_scroll.inner, bg=panel, highlightbackground=border, highlightthickness=1)
             card.pack(fill="x", pady=6, padx=4)
@@ -1358,18 +1384,27 @@ class TaskipelagoApp(tk.Tk):
 
             if not completed:
                 can_complete = True
-                if lock_prereqs and not prereq_ok:
+                if lock_prereqs and (not task_prereq_ok or not reward_prereq_ok):
                     can_complete = False
 
-                btn = ttk.Button(top, text="Complete", command=lambda idx=i: self.complete_task(idx))
+                btn = ttk.Button(
+                    top,
+                    text="Complete",
+                    command=lambda idx=i: self.complete_task(idx)
+                )
+
                 if not can_complete:
                     btn.state(["disabled"])
+
                 btn.pack(side="right", padx=(10, 0))
 
-            if (not completed) and lock_prereqs and prereq_text and not prereq_ok:
+            # Hints: show task line if locked behind tasks; reward line if locked behind rewards
+            showed_hint = False
+
+            if (not completed) and lock_prereqs and task_prereq_text and not task_prereq_ok:
                 hint = tk.Label(
                     card,
-                    text=f"Locked until prereqs complete: {prereq_text}",
+                    text=f"Locked behind task(s): {task_prereq_text}",
                     bg=panel,
                     fg=muted,
                     font=("Segoe UI", 10),
@@ -1377,8 +1412,24 @@ class TaskipelagoApp(tk.Tk):
                     justify="left",
                     wraplength=740
                 )
-                hint.pack(fill="x", padx=28, pady=(0, 8))
-            else:
+                hint.pack(fill="x", padx=28, pady=(0, 2))
+                showed_hint = True
+
+            if (not completed) and lock_prereqs and reward_prereq_text and not reward_prereq_ok:
+                hint2 = tk.Label(
+                    card,
+                    text=f"Locked behind reward(s): {self._reward_prereq_display(reward_prereq_text)}",
+                    bg=panel,
+                    fg=muted,
+                    font=("Segoe UI", 10),
+                    anchor="w",
+                    justify="left",
+                    wraplength=740
+                )
+                hint2.pack(fill="x", padx=28, pady=(0, 8))
+                showed_hint = True
+
+            if not showed_hint:
                 spacer = tk.Frame(card, bg=panel, height=6)
                 spacer.pack(fill="x")
 
@@ -1400,6 +1451,99 @@ class TaskipelagoApp(tk.Tk):
                 return False
         return True
     
+    def _received_item_ids(self) -> set:
+        """
+        Best-effort extraction of received item IDs from common AP client context shapes.
+        Returns a set of integer item ids.
+        """
+        ctx = getattr(self, "ctx", None)
+        if not ctx:
+            return set()
+
+        candidates = None
+        for attr in ("items_received", "received_items"):
+            v = getattr(ctx, attr, None)
+            if isinstance(v, (list, tuple)):
+                candidates = v
+                break
+
+        if not candidates:
+            return set()
+
+        out = set()
+        for it in candidates:
+            # Many AP clients store items as objects with .item, sometimes tuples.
+            item_id = getattr(it, "item", None)
+            if isinstance(item_id, int):
+                out.add(item_id)
+                continue
+            if isinstance(it, (tuple, list)) and it:
+                # try first element if it looks like an int item id
+                if isinstance(it[0], int):
+                    out.add(it[0])
+        return out
+
+
+    def _reward_prereqs_satisfied(self, prereq_text: str, checked_locations: set) -> bool:
+        """
+        prereq_text: "1,2,5" meaning Reward #1/#2/#5 must have been obtained.
+        Prefer checking received item IDs if base_item_id is present.
+        Fallback: treat reward locations being checked as satisfying the reward prereq.
+        """
+        if not prereq_text:
+            return True
+
+        parts = [p.strip() for p in prereq_text.split(",") if p.strip()]
+
+        base_item_id = getattr(self.ctx, "base_item_id", None)
+        if isinstance(base_item_id, int):
+            have = self._received_item_ids()
+            for p in parts:
+                try:
+                    idx_1based = int(p)
+                except ValueError:
+                    continue
+                item_id = base_item_id + (idx_1based - 1)
+                if item_id not in have:
+                    return False
+            return True
+
+        # Fallback: if we don't know item ids, approximate with reward locations checked/pending.
+        if self.ctx.base_reward_location_id is None:
+            return True
+
+        for p in parts:
+            try:
+                idx_1based = int(p)
+            except ValueError:
+                continue
+            loc = self.ctx.base_reward_location_id + (idx_1based - 1)
+            if (loc not in checked_locations) and (loc not in getattr(self, "pending_reward_locations", set())):
+                return False
+        return True
+
+
+    def _reward_prereq_display(self, prereq_text: str) -> str:
+        """
+        Convert prereq indices into actual reward names from ctx.rewards.
+        """
+        rewards = list(getattr(self.ctx, "rewards", []) or [])
+        parts = [p.strip() for p in prereq_text.split(",") if p.strip()]
+        names = []
+
+        for p in parts:
+            try:
+                idx_1based = int(p)
+            except ValueError:
+                continue
+            idx0 = idx_1based - 1
+            if 0 <= idx0 < len(rewards) and str(rewards[idx0]).strip():
+                names.append(str(rewards[idx0]).strip())
+            else:
+                names.append(f"Reward #{idx_1based}")
+
+        return ", ".join(names)
+        
     def _slot_name_from_id(self, slot_id):
         """Best-effort slot-id -> slot name."""
         if slot_id is None:
