@@ -1495,14 +1495,46 @@ class TaskipelagoApp(tk.Tk):
             self._last_reward_key = key
             self._last_reward_seen_at = now
 
+            sender_label = None
+            if sender is not None:
+                # Try common AP context mappings first
+                try:
+                    player_names = getattr(self.ctx, "player_names", None)
+                    if isinstance(player_names, dict):
+                        sender_label = player_names.get(sender)
+                    elif hasattr(player_names, "get"):
+                        sender_label = player_names.get(sender)
+                except Exception:
+                    sender_label = None
+
+                # Fallback: slot_info-style structures (if present)
+                if not sender_label:
+                    try:
+                        slot_info = getattr(self.ctx, "slot_info", None)
+                        info = None
+                        if isinstance(slot_info, dict):
+                            info = slot_info.get(sender)
+                        elif hasattr(slot_info, "get"):
+                            info = slot_info.get(sender)
+
+                        if isinstance(info, dict):
+                            sender_label = info.get("name") or info.get("slot_name")
+                        else:
+                            sender_label = getattr(info, "name", None) if info is not None else None
+                    except Exception:
+                        sender_label = None
+
+                if not sender_label:
+                    sender_label = f"Player {sender}"
+
             # show popup
             self._enqueue_notification(Notification(
                 kind="reward",
                 title="Reward Received!",
-                body=(f"{resolved_name}\n\n(from player {sender})" if sender is not None else resolved_name),
+                body=(f"{resolved_name}\n\n(from player {sender_label})" if sender is not None else resolved_name),
                 created_at=time.time()
             ))
-
+            
     # Unused as of now, used to show rewards as a separate pop-up, but moved that into the sidebar.
     # def _show_reward_popup(self, reward_text: str):
     #     win = tk.Toplevel(self)

@@ -5,7 +5,6 @@ what are you gonna do about it?
 take that Jira.
 
 
-* Fix the reward thingy to show an actual player name rather than "player #"
 * Fix it reloading every time you complete a task
 * Optimize, it can be quite laggy when lots of tasks.
 * Store the last server and slot that was connected to and auto-fill that info
