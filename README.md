@@ -11,6 +11,10 @@
 * If DeathLink is enabled, the user can provide a list of random tasks or punishments that go off whenever the client receives a death link
 * I recommend things like "10 pushups" or "Tidy one thing in your room" or "Read 2 pages of a book" or "1 minute plank". Things like that.
 
+## Known Issues
+* Notifications show Unknown for who the item was sent to when sending items
+* Changing to a different multiworld with the same slot name requires a restart
+
 ## Setup:
 * Download taskipelago.apworld from the releases page.
 * Place taskipelago.apworld in the custom_worlds folder of your archipelago install
