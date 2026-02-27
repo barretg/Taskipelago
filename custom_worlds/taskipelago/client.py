@@ -341,6 +341,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.base_reward_location_id = self.slot_data.get("base_reward_location_id")
         self.base_complete_location_id = self.slot_data.get("base_complete_location_id")
         self.base_item_id = self.slot_data.get("base_item_id")
+        self.base_token_id = self.slot_data.get("base_token_id")
 
         self.death_link_pool = list(self.slot_data.get("death_link_pool", []))
         self.death_link_weights = list(self.slot_data.get("death_link_weights", []))
@@ -1871,10 +1872,6 @@ class TaskipelagoApp(tk.Tk):
 
             # If it's your filler token, don't popup
             if resolved_name == FILLER_TOKEN:
-                continue
-
-            # (Extra safety) If server name says Task Complete anyway, skip
-            if resolved_name.startswith("Task Complete "):
                 continue
 
             # ---- dedupe the popup ----

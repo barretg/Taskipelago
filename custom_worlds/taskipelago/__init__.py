@@ -8,6 +8,20 @@ from worlds.LauncherComponents import Component, Type, components, launch_subpro
 
 from .options import TaskipelagoOptions
 
+
+def _deduplicate_names(names: List[str]) -> List[str]:
+    """Ensure all names are unique by appending [2], [3], etc. to duplicates."""
+    seen: Dict[str, int] = {}
+    result = []
+    for name in names:
+        if name in seen:
+            seen[name] += 1
+            result.append(f"{name} [{seen[name]}]")
+        else:
+            seen[name] = 1
+            result.append(name)
+    return result
+
 print("Loading Taskipelago world module...")
 
 # Reward locations: these contain real multiworld items and MUST be checked to send items.
@@ -223,11 +237,11 @@ class TaskipelagoWorld(World):
         self._parsed_prereqs = parsed_prereqs
         self._lock_prereqs = lock
 
-        # stable names for this generation
-        self._reward_location_names = [f"Task {i+1} (Reward)" for i in range(n)]
-        self._complete_location_names = [f"Task {i+1} (Complete)" for i in range(n)]
-        self._reward_item_names = [f"Reward {i+1}" for i in range(n)]
-        self._token_item_names = [f"Task Complete {i+1}" for i in range(n)]
+        # stable names for this generation -- use actual task/reward names
+        self._reward_location_names = _deduplicate_names([f"{tasks[i]} (Reward)" for i in range(n)])
+        self._complete_location_names = _deduplicate_names([f"{tasks[i]} (Complete)" for i in range(n)])
+        self._reward_item_names = _deduplicate_names([rewards[i] for i in range(n)])
+        self._token_item_names = _deduplicate_names([f"{tasks[i]} Complete" for i in range(n)])
 
         # update id maps for this generation
         self.location_name_to_id = {}
@@ -238,8 +252,8 @@ class TaskipelagoWorld(World):
             {name: int(BASE_COMPLETE_LOC_ID + i) for i, name in enumerate(self._complete_location_names)}
         )
 
-        self.item_name_to_id = {f"Reward {i+1}": int(BASE_ITEM_ID + i) for i in range(n)}
-        self.item_name_to_id.update({f"Task Complete {i+1}": int(BASE_TOKEN_ID + i) for i in range(n)})
+        self.item_name_to_id = {name: int(BASE_ITEM_ID + i) for i, name in enumerate(self._reward_item_names)}
+        self.item_name_to_id.update({name: int(BASE_TOKEN_ID + i) for i, name in enumerate(self._token_item_names)})
 
         # Hard-sanitize IDs to real ints and validate
         for name, lid in list(self.location_name_to_id.items()):
@@ -356,8 +370,8 @@ class TaskipelagoWorld(World):
             if token_req_indices or reward_req_indices:
                 complete_loc = self.multiworld.get_location(self._complete_location_names[i], self.player)
 
-                required_token_names = tuple(f"Task Complete {j+1}" for j in token_req_indices)
-                required_reward_names = tuple(f"Reward {j+1}" for j in reward_req_indices)
+                required_token_names = tuple(self._token_item_names[j] for j in token_req_indices)
+                required_reward_names = tuple(self._reward_item_names[j] for j in reward_req_indices)
 
                 def complete_rule(state, req_tokens=required_token_names, req_rewards=required_reward_names, player=self.player):
                     return all(state.has(name, player) for name in req_tokens) and all(state.has(name, player) for name in req_rewards)
@@ -370,10 +384,10 @@ class TaskipelagoWorld(World):
             #    - (optionally) any prereqs as well
             # ---------------------------------------
             reward_loc = self.multiworld.get_location(self._reward_location_names[i], self.player)
-            my_complete_token = f"Task Complete {i+1}"
+            my_complete_token = self._token_item_names[i]
 
-            required_token_names = tuple(f"Task Complete {j+1}" for j in token_req_indices)
-            required_reward_names = tuple(f"Reward {j+1}" for j in reward_req_indices)
+            required_token_names = tuple(self._token_item_names[j] for j in token_req_indices)
+            required_reward_names = tuple(self._reward_item_names[j] for j in reward_req_indices)
 
             def reward_rule(
                 state,
@@ -428,6 +442,7 @@ class TaskipelagoWorld(World):
             "base_reward_location_id": BASE_REWARD_LOC_ID,
             "base_complete_location_id": BASE_COMPLETE_LOC_ID,
             "base_item_id": BASE_ITEM_ID,
+            "base_token_id": BASE_TOKEN_ID,
         }
 
 
