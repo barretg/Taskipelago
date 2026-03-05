@@ -12,6 +12,6 @@ take that Jira.
 * Designate a "Goal" task
 * Lots of cleaning & make it follow apworld standards better
 * Region-based logic with percentage completion to unlock next region
-* Fix display bug on sent notification
+* Fix display bug on sent item notification (says sent to "Unknown" and doesn't say the reward it sent, just indexes the local list)
 * Add in seed to hash in stored data
-* Fix yaml gen "remove button" bug
+* Fix yaml gen "remove button" not doing anything sometimes
