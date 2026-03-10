@@ -428,6 +428,8 @@ class TaskipelagoWorld(World):
             "base_reward_location_id": BASE_REWARD_LOC_ID,
             "base_complete_location_id": BASE_COMPLETE_LOC_ID,
             "base_item_id": BASE_ITEM_ID,
+
+            "seed_name": str(getattr(self.multiworld, "seed_name", "") or ""),
         }
 
 

@@ -324,6 +324,8 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.on_item_received = None
         self._last_item_index = 0
 
+        self.seed_name = ""
+
         # persist received notification state
         self._notify_state_path = Path.cwd() / "taskipelago_notify_state.json"
         self._notify_key = None
@@ -346,6 +348,8 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.death_link_weights = list(self.slot_data.get("death_link_weights", []))
         self.death_link_amnesty = int(self.slot_data.get("death_link_amnesty", 0) or 0)
         self.death_link_enabled = bool(self.slot_data.get("death_link_enabled", False))
+
+        self.seed_name = str(self.slot_data.get("seed_name", "") or "")
 
         if callable(self.on_state_changed):
             self.on_state_changed()
@@ -453,7 +457,8 @@ class TaskipelagoContext(CommonClient.CommonContext):
         # Slot name is stored in ctx.auth by your connect flow
         server = (self.server_address or "").strip().lower()
         slot = (getattr(self, "auth", None) or "").strip()
-        return f"v2::{server}::{slot}"
+        seed = (getattr(self, "seed_name", None) or "").strip()
+        return f"v3::{server}::{slot}::{seed}"
 
     def _load_notify_state(self) -> dict:
         try:
