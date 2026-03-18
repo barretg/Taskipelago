@@ -722,7 +722,7 @@ class TaskipelagoApp(tk.Tk):
         )
 
         self.lock_prereqs_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(meta_row2, text="Allow out of logic", variable=self.lock_prereqs_var).grid(row=0, column=3, sticky="w", padx=(16, 0))
+        ttk.Checkbutton(meta_row2, text="In logic only (lock task completion behind prereqs)", variable=self.lock_prereqs_var).grid(row=0, column=3, sticky="w", padx=(16, 0))
 
         tasks = ttk.LabelFrame(self.editor_tab, text="Tasks")
         tasks.grid(row=1, column=0, sticky="nsew", pady=(0, 10))
