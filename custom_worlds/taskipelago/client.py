@@ -317,6 +317,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.task_prereqs = []
         self.reward_prereqs = []
         self.lock_prereqs = False
+        self.goal_indices = []
 
         self.base_reward_location_id = None
         self.base_complete_location_id = None
@@ -356,6 +357,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.task_prereqs = list(self.slot_data.get("task_prereqs", []))
         self.reward_prereqs = list(self.slot_data.get("reward_prereqs", []))
         self.lock_prereqs = bool(self.slot_data.get("lock_prereqs", False))
+        self.goal_indices = list(self.slot_data.get("goal_indices", []) or [])
 
         self.base_reward_location_id = self.slot_data.get("base_reward_location_id")
         self.base_complete_location_id = self.slot_data.get("base_complete_location_id")
@@ -726,6 +728,15 @@ class TaskipelagoApp(tk.Tk):
         self.lock_prereqs_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(meta_row2, text="In logic only (lock task completion behind prereqs)", variable=self.lock_prereqs_var).grid(row=0, column=3, sticky="w", padx=(16, 0))
 
+        ttk.Label(meta_row2, text="Goal task(s):").grid(row=0, column=4, sticky="w", padx=(16, 0))
+        self.goal_tasks_var = tk.StringVar()
+        ttk.Entry(meta_row2, textvariable=self.goal_tasks_var, width=16).grid(
+            row=0, column=5, sticky="w", padx=(6, 0)
+        )
+        ttk.Label(meta_row2, text="(blank = all)", style="Muted.TLabel").grid(
+            row=0, column=6, sticky="w", padx=(4, 0)
+        )
+
         tasks = ttk.LabelFrame(self.editor_tab, text="Tasks")
         tasks.grid(row=1, column=0, sticky="nsew", pady=(0, 10))
         tasks.grid_columnconfigure(0, weight=1)
@@ -990,6 +1001,15 @@ class TaskipelagoApp(tk.Tk):
                 "Add at least one DeathLink task or disable DeathLink."
             )
             return
+        
+        goal_tasks_raw = [p.strip() for p in self.goal_tasks_var.get().split(",") if p.strip()]
+        # Validate they're integers in range
+        for g in goal_tasks_raw:
+            try:
+                int(g)
+            except ValueError:
+                messagebox.showerror("Error", f"Goal tasks must be comma-separated integers, got: '{g}'")
+                return
 
         data = {
             "name": player_name,
@@ -1006,6 +1026,7 @@ class TaskipelagoApp(tk.Tk):
                 "task_prereqs": prereqs,
                 "reward_prereqs": reward_prereqs,
                 "lock_prereqs": bool(self.lock_prereqs_var.get()),
+                "goal_tasks": goal_tasks_raw,
 
                 "death_link_pool": deathlink_pool,
                 "death_link_weights": deathlink_weights,
@@ -1079,6 +1100,9 @@ class TaskipelagoApp(tk.Tk):
             pass
 
         self.lock_prereqs_var.set(bool(block.get("lock_prereqs", self.lock_prereqs_var.get())))
+        
+        goal_tasks = list(block.get("goal_tasks", []) or [])
+        self.goal_tasks_var.set(", ".join(str(g) for g in goal_tasks))
 
         # --------- Populate Tasks table ---------
         tasks = list(block.get("tasks", []) or [])
@@ -1163,6 +1187,7 @@ class TaskipelagoApp(tk.Tk):
         self.deathlink_enabled.set(True)
         self.deathlink_amnesty_var.set(0)
         self.lock_prereqs_var.set(False)
+        self.goal_tasks_var.set("")
 
         # clear rows and recreate initial blank task row
         self._clear_task_rows()
@@ -1881,19 +1906,30 @@ class TaskipelagoApp(tk.Tk):
             return
         if not getattr(self, "ctx", None):
             return
-        if not self.ctx.tasks or self.ctx.base_reward_location_id is None:
+        if not self.ctx.tasks or self.ctx.base_reward_location_id is None or self.ctx.base_complete_location_id is None:
             return
 
         checked = getattr(self.ctx, "checked_locations_set", set()) or set()
+        goal_indices = list(getattr(self.ctx, "goal_indices", []) or [])
 
-        for i in range(len(self.ctx.tasks)):
-            if (self.ctx.base_reward_location_id + i) not in checked:
-                return
+        if goal_indices:
+            done = all(
+                (self.ctx.base_complete_location_id + i) in checked
+                for i in goal_indices
+            )
+        else:
+            done = all(
+                (self.ctx.base_reward_location_id + i) in checked
+                for i in range(len(self.ctx.tasks))
+            )
+
+        if not done:
+            return
 
         self.sent_goal = True
 
         async def _send_goal():
-            await self.ctx.send_msgs([{"cmd": "StatusUpdate", "status": 30}])  # CLIENT_GOAL
+            await self.ctx.send_msgs([{"cmd": "StatusUpdate", "status": 30}])
 
         self.loop.call_soon_threadsafe(lambda: asyncio.create_task(_send_goal()))
 

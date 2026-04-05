@@ -134,6 +134,23 @@ class TaskipelagoWorld(World):
         # Cycle detection via DFS.
         _assert_no_cycles(parsed_prereqs, n)
 
+         # --- Parse goal tasks ---
+        raw_goal = [str(x).strip() for x in list(self.options.goal_tasks.value or []) if str(x).strip()]
+        goal_indices: set[int] = set()
+        for entry in raw_goal:
+            for part in entry.split(","):
+                part = part.strip()
+                if not part:
+                    continue
+                try:
+                    idx_1 = int(part)
+                except ValueError:
+                    raise Exception(f"Taskipelago: invalid goal_tasks entry '{part}'. Must be integers.")
+                if idx_1 < 1 or idx_1 > n:
+                    raise Exception(f"Taskipelago: goal_tasks entry '{idx_1}' is out of range (1..{n}).")
+                goal_indices.add(idx_1 - 1)  # store 0-based
+        self._goal_indices = goal_indices  # empty set = all tasks required
+
         # --- Parse reward prereqs ---
         raw_reward_prereqs = [
             str(x).strip() for x in list(self.options.reward_prereqs.value or [])
@@ -228,14 +245,23 @@ class TaskipelagoWorld(World):
                 )
             )
 
-        # Win when all reward locations are checked.
-        reward_locs = [
-            self.multiworld.get_location(name, self.player)
-            for name in self._reward_location_names
-        ]
-        self.multiworld.completion_condition[self.player] = lambda state: all(
-            loc in state.locations_checked for loc in reward_locs
-        )
+        # Goal condition: either specific goal tasks, or all tasks by default.
+        if self._goal_indices:
+            goal_locs = [
+                self.multiworld.get_location(self._complete_location_names[i], self.player)
+                for i in self._goal_indices
+            ]
+            self.multiworld.completion_condition[self.player] = lambda state: all(
+                loc in state.locations_checked for loc in goal_locs
+            )
+        else:
+            reward_locs = [
+                self.multiworld.get_location(name, self.player)
+                for name in self._reward_location_names
+            ]
+            self.multiworld.completion_condition[self.player] = lambda state: all(
+                loc in state.locations_checked for loc in reward_locs
+            )
 
     def fill_slot_data(self) -> Dict[str, Any]:
         sent_item_names: List[str] = []
@@ -280,6 +306,7 @@ class TaskipelagoWorld(World):
             "base_item_id": BASE_ITEM_ID,
             "sent_item_names": sent_item_names,
             "sent_player_names": sent_player_names,
+            "goal_indices": sorted(self._goal_indices),
         }
 
 

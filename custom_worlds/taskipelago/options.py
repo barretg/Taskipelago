@@ -81,6 +81,13 @@ class DeathLinkAmnesty(Range):
     range_end = 999
     default = 0
 
+class GoalTasks(OptionList):
+    """
+    Comma-separated 1-based indices of tasks whose completion triggers game completion.
+    If empty, all tasks must be completed (default behaviour).
+    """
+    display_name = "Goal Tasks"
+    default: List[str] = []
 
 @dataclass
 class TaskipelagoOptions(PerGameCommonOptions):
@@ -90,6 +97,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     task_prereqs: TaskPrereqs
     reward_prereqs: RewardPrereqs
     lock_prereqs: LockPreqreqs
+    goal_tasks: GoalTasks
     death_link: DeathLink
     death_link_pool: DeathLinkPool
     death_link_weights: DeathLinkWeights
