@@ -12,4 +12,4 @@ take that Jira.
 * Designate a "Goal" task
 * Lots of cleaning & make it follow apworld standards better
 * Region-based logic with percentage completion to unlock next region
-* Fix yaml gen "remove button" not doing anything sometimes
+* Boolean logic
