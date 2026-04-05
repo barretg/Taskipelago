@@ -165,7 +165,7 @@ class TaskipelagoWorld(World):
         self._complete_location_names = [f"Task {i + 1} (Complete)" for i in range(n)]
         self._reward_item_names = [f"Reward {i + 1}" for i in range(n)]
         self._reward_display_names = [
-            r if r.strip() else f"Reward {i + 1}"
+            f"Reward {i + 1}: {r}" if r.strip() else f"Reward {i + 1}"
             for i, r in enumerate(rewards)
         ]
         self._token_item_names = [f"Task Complete {i + 1}" for i in range(n)]

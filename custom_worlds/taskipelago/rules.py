@@ -42,7 +42,7 @@ def _set_rules_builder(world: "TaskipelagoWorld", player: int, n: int) -> None:
 
         # Build the shared base rule (prereqs for completing the task)
         req_tokens = [f"Task Complete {j + 1}" for j in token_reqs]
-        req_rewards = [f"Reward {j + 1}" for j in reward_reqs]
+        req_rewards = [world._reward_display_names[j] for j in reward_reqs]
         all_prereqs = req_tokens + req_rewards
 
         # --- Complete location ---
@@ -73,7 +73,7 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
         )
 
         req_tokens = tuple(f"Task Complete {j + 1}" for j in token_reqs)
-        req_rewards = tuple(f"Reward {j + 1}" for j in reward_reqs)
+        req_rewards = tuple(world._reward_display_names[j] for j in reward_reqs)
 
         # --- Complete location ---
         if req_tokens or req_rewards:
