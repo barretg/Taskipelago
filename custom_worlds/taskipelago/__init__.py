@@ -164,6 +164,10 @@ class TaskipelagoWorld(World):
         self._reward_location_names = [f"Task {i + 1} (Reward)" for i in range(n)]
         self._complete_location_names = [f"Task {i + 1} (Complete)" for i in range(n)]
         self._reward_item_names = [f"Reward {i + 1}" for i in range(n)]
+        self._reward_display_names = [
+            r if r.strip() else f"Reward {i + 1}"
+            for i, r in enumerate(rewards)
+        ]
         self._token_item_names = [f"Task Complete {i + 1}" for i in range(n)]
 
     def create_regions(self) -> None:
@@ -197,11 +201,12 @@ class TaskipelagoWorld(World):
             forced = i in self._forced_progression_rewards
             cls = get_item_classification(rt, forced)
 
+            display_name = self._reward_display_names[i]
             self.multiworld.itempool.append(
                 TaskipelagoItem(
-                    name,
+                    display_name,
                     cls,
-                    ITEM_NAME_TO_ID[name],
+                    ITEM_NAME_TO_ID[name],  # stable ID keyed off "Reward {i+1}"
                     self.player,
                 )
             )
