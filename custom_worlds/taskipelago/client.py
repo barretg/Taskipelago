@@ -1849,11 +1849,11 @@ class TaskipelagoApp(tk.Tk):
         complete_loc_id = self.ctx.base_complete_location_id + task_index
 
         checked = getattr(self.ctx, "checked_locations_set", set()) or set()
-        if reward_loc_id in checked or reward_loc_id in self.pending_reward_locations:
+        if complete_loc_id in checked or complete_loc_id in self.pending_reward_locations:
             return
-
-        # UI optimism on reward location
-        self.pending_reward_locations.add(reward_loc_id)
+        
+        # UI optimism on complete location
+        self.pending_reward_locations.add(complete_loc_id)
         self.refresh_play_tab()
 
         try:
