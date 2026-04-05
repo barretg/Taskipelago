@@ -1954,7 +1954,7 @@ class TaskipelagoApp(tk.Tk):
                 done = False
         else:
             done = all(
-                (self.ctx.base_reward_location_id + i) in checked
+                (self.ctx.base_complete_location_id + i) in checked
                 for i in range(len(self.ctx.tasks))
             )
 
