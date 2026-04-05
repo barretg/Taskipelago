@@ -389,6 +389,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.reward_prereqs = []
         self.lock_prereqs = False
         self.goal_indices = []
+        self.goal_expression = ""
 
         self.base_reward_location_id = None
         self.base_complete_location_id = None
@@ -429,6 +430,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.reward_prereqs = list(self.slot_data.get("reward_prereqs", []))
         self.lock_prereqs = bool(self.slot_data.get("lock_prereqs", False))
         self.goal_indices = list(self.slot_data.get("goal_indices", []) or [])
+        self.goal_expression = str(self.slot_data.get("goal_expression", "") or "")
 
         self.base_reward_location_id = self.slot_data.get("base_reward_location_id")
         self.base_complete_location_id = self.slot_data.get("base_complete_location_id")
@@ -1073,14 +1075,7 @@ class TaskipelagoApp(tk.Tk):
             )
             return
         
-        goal_tasks_raw = [p.strip() for p in self.goal_tasks_var.get().split(",") if p.strip()]
-        # Validate they're integers in range
-        for g in goal_tasks_raw:
-            try:
-                int(g)
-            except ValueError:
-                messagebox.showerror("Error", f"Goal tasks must be comma-separated integers, got: '{g}'")
-                return
+        goal_tasks_raw = self.goal_tasks_var.get().strip()
 
         data = {
             "name": player_name,
@@ -1097,7 +1092,7 @@ class TaskipelagoApp(tk.Tk):
                 "task_prereqs": prereqs,
                 "reward_prereqs": reward_prereqs,
                 "lock_prereqs": bool(self.lock_prereqs_var.get()),
-                "goal_tasks": goal_tasks_raw,
+                "goal_tasks": [goal_tasks_raw] if goal_tasks_raw else [],
 
                 "death_link_pool": deathlink_pool,
                 "death_link_weights": deathlink_weights,
@@ -1948,13 +1943,15 @@ class TaskipelagoApp(tk.Tk):
             return
 
         checked = getattr(self.ctx, "checked_locations_set", set()) or set()
-        goal_indices = list(getattr(self.ctx, "goal_indices", []) or [])
 
-        if goal_indices:
-            done = all(
-                (self.ctx.base_complete_location_id + i) in checked
-                for i in goal_indices
-            )
+        if self.ctx.goal_expression:
+            try:
+                done = _eval_prereq_expr(
+                    self.ctx.goal_expression,
+                    lambda idx_1: (self.ctx.base_complete_location_id + idx_1 - 1) in checked
+                )
+            except Exception:
+                done = False
         else:
             done = all(
                 (self.ctx.base_reward_location_id + i) in checked

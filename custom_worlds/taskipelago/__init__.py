@@ -148,7 +148,9 @@ class TaskipelagoWorld(World):
         raw_goal_parts = [str(x).strip() for x in list(self.options.goal_tasks.value or []) if str(x).strip()]
         raw_goal = ", ".join(raw_goal_parts)  # rejoin into single expression
         goal_ast = parse_prereq(raw_goal, n, 0, "goal_tasks") if raw_goal else None
+        self._raw_goal = raw_goal
         self._goal_ast = goal_ast
+
         # 0-based indices of all tasks referenced in goal (for slot data)
         self._goal_indices = sorted(set(collect_leaves(goal_ast))) if goal_ast else []
 
@@ -307,6 +309,7 @@ class TaskipelagoWorld(World):
             "sent_item_names": sent_item_names,
             "sent_player_names": sent_player_names,
             "goal_indices": sorted(self._goal_indices),
+            "goal_expression": self._raw_goal,
         }
 
 
