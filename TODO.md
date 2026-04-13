@@ -6,6 +6,7 @@ take that Jira.
 
 ### High Prio:
 * Boolean logic (finish testing)
+* Region-based logic with percentage completion to unlock next region (https://discord.com/channels/731205301247803413/1459523644693676160/1493368125142470717)
 
 ### Medium Prio:
 * Notification history
@@ -16,5 +17,5 @@ take that Jira.
 ### Low Prio:
 * Tasklock integration to force all task locks to be in the taskipelago world (generate tasklock yaml with plando logic included, warn user to enable plando items in host.yaml)
 * Add proper archipelago text console window (separate tab?)
-* Region-based logic with percentage completion to unlock next region (I don't remember what I meant by this)
+
 * Pomodoro mode
