@@ -1,4 +1,4 @@
-# Version 0.7 Beta
+# Version 0.7
 Support for boolean logic implemented
 
 ## Features, Improvements, and Changes
