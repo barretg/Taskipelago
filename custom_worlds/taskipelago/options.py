@@ -54,6 +54,13 @@ class LockPreqreqs(Toggle):
     display_name = "Lock Tasks Behind Prereqs"
     default = 1
 
+class HideUnreachableTasks(Toggle):
+    """
+    If enabled, the client will hide tasks that are currently unreachable due to unsatisfied prereqs.
+    """
+    display_name = "Hide Unreachable Tasks"
+    default = 1
+
 class DeathLink(Toggle):
     """
     If enabled, receiving certain rewards can trigger DeathLink.
@@ -98,6 +105,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     reward_prereqs: RewardPrereqs
     lock_prereqs: LockPreqreqs
     goal_tasks: GoalTasks
+    hide_unreachable_tasks: HideUnreachableTasks
     death_link: DeathLink
     death_link_pool: DeathLinkPool
     death_link_weights: DeathLinkWeights
