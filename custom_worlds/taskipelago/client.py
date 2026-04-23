@@ -388,6 +388,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.task_prereqs = []
         self.reward_prereqs = []
         self.lock_prereqs = False
+        self.hide_unreachable_tasks = True
         self.goal_indices = []
         self.goal_expression = ""
 
@@ -429,6 +430,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.task_prereqs = list(self.slot_data.get("task_prereqs", []))
         self.reward_prereqs = list(self.slot_data.get("reward_prereqs", []))
         self.lock_prereqs = bool(self.slot_data.get("lock_prereqs", False))
+        self.hide_unreachable_tasks = bool(self.slot_data.get("hide_unreachable_tasks", True))
         self.goal_indices = list(self.slot_data.get("goal_indices", []) or [])
         self.goal_expression = str(self.slot_data.get("goal_expression", "") or "")
 
@@ -792,22 +794,25 @@ class TaskipelagoApp(tk.Tk):
         self.deathlink_enabled = tk.BooleanVar(value=False)
         ttk.Checkbutton(meta_row2, text="Enable DeathLink", variable=self.deathlink_enabled).grid(row=0, column=0, sticky="w")
 
-        ttk.Label(meta_row2, text="DeathLink amnesty:").grid(row=0, column=1, sticky="w", padx=(16, 0))
+        self.hide_unreachable_tasks = tk.BooleanVar(value=True)
+        ttk.Checkbutton(meta_row2, text="Hide Unreachable Tasks", variable=self.hide_unreachable_tasks).grid(row=0, column=1, sticky="w")
+
+        ttk.Label(meta_row2, text="DeathLink amnesty:").grid(row=0, column=2, sticky="w", padx=(16, 0))
         self.deathlink_amnesty_var = tk.IntVar(value=0)
         ttk.Spinbox(meta_row2, from_=0, to=999, textvariable=self.deathlink_amnesty_var, width=5).grid(
-            row=0, column=2, sticky="w", padx=(6, 0)
+            row=0, column=3, sticky="w", padx=(6, 0)
         )
 
         self.lock_prereqs_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(meta_row2, text="In logic only (lock task completion behind prereqs)", variable=self.lock_prereqs_var).grid(row=0, column=3, sticky="w", padx=(16, 0))
+        ttk.Checkbutton(meta_row2, text="In logic only (lock task completion behind prereqs)", variable=self.lock_prereqs_var).grid(row=0, column=4, sticky="w", padx=(16, 0))
 
-        ttk.Label(meta_row2, text="Goal task(s):").grid(row=0, column=4, sticky="w", padx=(16, 0))
+        ttk.Label(meta_row2, text="Goal task(s):").grid(row=0, column=5, sticky="w", padx=(16, 0))
         self.goal_tasks_var = tk.StringVar()
         ttk.Entry(meta_row2, textvariable=self.goal_tasks_var, width=16).grid(
-            row=0, column=5, sticky="w", padx=(6, 0)
+            row=0, column=6, sticky="w", padx=(6, 0)
         )
         ttk.Label(meta_row2, text="(blank = all)", style="Muted.TLabel").grid(
-            row=0, column=6, sticky="w", padx=(4, 0)
+            row=0, column=7, sticky="w", padx=(4, 0)
         )
 
         tasks = ttk.LabelFrame(self.editor_tab, text="Tasks")
@@ -1092,6 +1097,7 @@ class TaskipelagoApp(tk.Tk):
                 "task_prereqs": prereqs,
                 "reward_prereqs": reward_prereqs,
                 "lock_prereqs": bool(self.lock_prereqs_var.get()),
+                "hide_unreachable_tasks": bool(self.hide_unreachable_tasks.get()),
                 "goal_tasks": [goal_tasks_raw] if goal_tasks_raw else [],
 
                 "death_link_pool": deathlink_pool,
@@ -1166,6 +1172,8 @@ class TaskipelagoApp(tk.Tk):
             pass
 
         self.lock_prereqs_var.set(bool(block.get("lock_prereqs", self.lock_prereqs_var.get())))
+
+        self.hide_unreachable_tasks.set(bool(block.get("hide_unreachable_tasks", self.hide_unreachable_tasks.get())))
         
         goal_tasks = list(block.get("goal_tasks", []) or [])
         self.goal_tasks_var.set(", ".join(str(g) for g in goal_tasks))
@@ -1253,6 +1261,7 @@ class TaskipelagoApp(tk.Tk):
         self.deathlink_enabled.set(True)
         self.deathlink_amnesty_var.set(0)
         self.lock_prereqs_var.set(False)
+        self.hide_unreachable_tasks.set(True)
         self.goal_tasks_var.set("")
 
         # clear rows and recreate initial blank task row
@@ -1481,6 +1490,10 @@ class TaskipelagoApp(tk.Tk):
                 reward_prereq_text = ("" if raw is None else str(raw)).strip()
                 if reward_prereq_text:
                     reward_prereq_ok = self._reward_prereqs_satisfied(reward_prereq_text, checked)
+
+            #Hide tasks that have unfinished prerequisites if enabled
+            if (not task_prereq_ok or not reward_prereq_ok) and getattr(self.ctx, "hide_unreachable_tasks", True) and getattr(self.ctx, "lock_prereqs", False):
+                continue
 
             card = tk.Frame(self.play_tasks_scroll.inner, bg=panel, highlightbackground=border, highlightthickness=1)
             card.pack(fill="x", pady=6, padx=4)

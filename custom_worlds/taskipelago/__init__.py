@@ -59,6 +59,7 @@ class TaskipelagoWorld(World):
     _death_link_pool: List[str]
     _death_link_weights: List[float]
     _death_link_amnesty: int
+    _hide_unreachable_tasks: bool
 
     def generate_early(self) -> None:
         tasks = [str(t).strip() for t in self.options.tasks.value if str(t).strip()]
@@ -118,6 +119,9 @@ class TaskipelagoWorld(World):
 
         self._death_link_amnesty = int(self.options.death_link_amnesty.value or 0)
 
+        # --- set hiding of unreachable tasks ---
+        self._hide_unreachable_tasks = bool(self.options.hide_unreachable_tasks.value)
+        
         # --- Parse task prereqs ---
         raw_prereqs = [str(x).strip() for x in list(self.options.task_prereqs.value or [])]
         if len(raw_prereqs) < n:
@@ -295,6 +299,7 @@ class TaskipelagoWorld(World):
             "task_prereqs": list(self._raw_prereqs),
             "reward_prereqs": list(self._raw_reward_prereqs),
             "lock_prereqs": bool(self._lock_prereqs),
+            "hide_unreachable_tasks": bool(self._hide_unreachable_tasks),
             "death_link_pool": [
                 str(x).strip()
                 for x in self.options.death_link_pool.value
