@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 import random
+import re
 import threading
 import time
 from tkinter import filedialog, messagebox
@@ -13,6 +14,9 @@ import json
 import yaml
 
 import certifi
+import ssl
+import traceback
+import websockets
 
 import CommonClient
 from NetUtils import Endpoint, decode
@@ -245,7 +249,7 @@ class ScrollableFrame(ttk.Frame):
 # Rows (YAML Generator)
 # ----------------------------
 class TaskRow:
-    def __init__(self, parent, index: int, filler_token: str, on_remove):
+    def __init__(self, parent, index: int, filler_token: str, on_remove, groups=None):
         self.parent = parent
         self.index = index
         self.filler_token = filler_token
@@ -255,7 +259,7 @@ class TaskRow:
         self.reward_var = tk.StringVar()
         self.prereq_var = tk.StringVar()
         self.reward_prereq_var = tk.StringVar(value="")
-        self.reward_prereq_entry = ttk.Entry(parent, textvariable=self.reward_prereq_var, width = 10)
+        self.reward_prereq_entry = ttk.Entry(parent, textvariable=self.reward_prereq_var, width=10)
         self.filler_var = tk.BooleanVar()
 
         self.reward_type_var = tk.StringVar(value=DEFAULT_REWARD_TYPE)
@@ -269,6 +273,17 @@ class TaskRow:
         )
 
         self._saved_reward = ""
+        self._saved_prog_group = ""
+
+        self.prog_group_var = tk.StringVar(value="")
+        self.prog_group_cb = ttk.Combobox(
+            parent,
+            textvariable=self.prog_group_var,
+            values=[""] + list(groups or []),
+            state="readonly",
+            width=12,
+        )
+        self.prog_group_var.trace_add("write", self._on_prog_group_change)
 
         self.num_label = ttk.Label(parent, text=str(index), width=3)
         self.task_entry = ttk.Entry(parent, textvariable=self.task_var)
@@ -286,10 +301,10 @@ class TaskRow:
         self.reward_entry.grid(row=r, column=2, padx=(0, 8), sticky="ew", pady=4)
         self.prereq_entry.grid(row=r, column=3, sticky="ew", padx=(0, 8), pady=4)
         self.reward_prereq_entry.grid(row=r, column=4, sticky="ew", padx=(0, 8), pady=4)
-
         self.reward_type_cb.grid(row=r, column=5, sticky="w", padx=(0, 8), pady=4)
         self.filler_cb.grid(row=r, column=6, padx=(0, 8), sticky="w", pady=4)
-        self.remove_btn.grid(row=r, column=7, padx=(0, 0), pady=4)
+        self.prog_group_cb.grid(row=r, column=7, sticky="w", padx=(0, 8), pady=4)
+        self.remove_btn.grid(row=r, column=8, padx=(0, 0), pady=4)
 
     def remove(self):
         for w in (
@@ -300,6 +315,7 @@ class TaskRow:
             self.reward_prereq_entry,
             self.reward_type_cb,
             self.filler_cb,
+            self.prog_group_cb,
             self.remove_btn,
         ):
             try:
@@ -313,22 +329,47 @@ class TaskRow:
             current = self.reward_var.get().strip()
             if current and current != self.filler_token:
                 self._saved_reward = current
-
             current_type = self.reward_type_var.get().strip().lower()
             if current_type:
                 self._saved_reward_type = current_type
-
+            self._saved_prog_group = self.prog_group_var.get()
+            self.prog_group_var.set("")
+            self.prog_group_cb.state(["disabled"])
             self.reward_var.set(self.filler_token)
             self.reward_entry.state(["disabled"])
-
             self.reward_type_var.set("junk")
             self.reward_type_cb.state(["disabled"])
         else:
             self.reward_entry.state(["!disabled"])
             self.reward_var.set(self._saved_reward)
+            self.prog_group_cb.state(["!disabled"])
+            self.prog_group_var.set(self._saved_prog_group)
+            # _on_prog_group_change fires from the trace and restores type / disables as needed
 
+    def _on_prog_group_change(self, *_):
+        if self.prog_group_var.get():
+            # Group selected: force progression type, lock type dropdown and filler.
+            if not self.filler_var.get():
+                current_type = self.reward_type_var.get().strip().lower()
+                if current_type != "progression":
+                    self._saved_reward_type = current_type
+            self.reward_type_var.set("progression")
+            self.reward_type_cb.state(["disabled"])
+            self.filler_cb.state(["disabled"])
+        else:
+            # Group cleared: restore type and re-enable controls.
             self.reward_type_cb.state(["!disabled"])
-            self.reward_type_var.set(self._saved_reward_type or "useful")
+            self.reward_type_var.set(self._saved_reward_type or DEFAULT_REWARD_TYPE)
+            if not self.filler_var.get():
+                self.filler_cb.state(["!disabled"])
+
+    def update_groups(self, groups):
+        """Refresh the prog-group combobox values, keeping current selection if still valid."""
+        current = self.prog_group_var.get()
+        new_values = [""] + list(groups)
+        self.prog_group_cb.configure(values=new_values)
+        if current not in new_values:
+            self.prog_group_var.set("")
 
     def get_data(self):
         return (
@@ -338,6 +379,7 @@ class TaskRow:
             self.reward_prereq_var.get().strip(),
             self.filler_var.get(),
             self.reward_type_var.get().strip().lower() or "useful",
+            self.prog_group_var.get().strip(),
         )
 
 
@@ -417,6 +459,10 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.sent_item_names = []
         self.sent_player_names = []
 
+        self.progressive_groups = []
+        self.reward_progressive_group = []
+        self.task_progressive_reqs = []
+
         # persist received notification state
         self._notify_state_path = Path.cwd() / "taskipelago_notify_state.json"
         self._notify_key = None
@@ -447,6 +493,10 @@ class TaskipelagoContext(CommonClient.CommonContext):
 
         self.sent_item_names = list(self.slot_data.get("sent_item_names", []))
         self.sent_player_names = list(self.slot_data.get("sent_player_names", []))
+
+        self.progressive_groups = list(self.slot_data.get("progressive_groups", []) or [])
+        self.reward_progressive_group = list(self.slot_data.get("reward_progressive_group", []) or [])
+        self.task_progressive_reqs = list(self.slot_data.get("task_progressive_reqs", []) or [])
 
         if callable(self.on_state_changed):
             self.on_state_changed()
@@ -629,10 +679,6 @@ class TaskipelagoContext(CommonClient.CommonContext):
 
 
 async def server_loop(ctx: TaskipelagoContext, address: str):
-    import websockets
-    import ssl
-    import traceback
-
     raw = (address or "").strip()
 
     # If user didn't provide scheme, try sensible defaults:
@@ -725,6 +771,7 @@ class TaskipelagoApp(tk.Tk):
         # YAML generator state
         self.task_rows = []
         self.deathlink_rows = []
+        self.prog_groups: list = []  # defined progressive group names
 
         # Notifications state
         self._notifications: list[Notification] = []
@@ -761,10 +808,11 @@ class TaskipelagoApp(tk.Tk):
     def build_ui(self):
         # YAML tab layout
         self.editor_tab.grid_columnconfigure(0, weight=1)
-        self.editor_tab.grid_rowconfigure(0, weight=0)
-        self.editor_tab.grid_rowconfigure(1, weight=1, minsize=220)
-        self.editor_tab.grid_rowconfigure(2, weight=1, minsize=160)
-        self.editor_tab.grid_rowconfigure(3, weight=0, minsize=52)
+        self.editor_tab.grid_rowconfigure(0, weight=0)   # meta / global settings
+        self.editor_tab.grid_rowconfigure(1, weight=0)   # progressive groups
+        self.editor_tab.grid_rowconfigure(2, weight=1, minsize=220)  # tasks
+        self.editor_tab.grid_rowconfigure(3, weight=1, minsize=160)  # deathlink
+        self.editor_tab.grid_rowconfigure(4, weight=0, minsize=52)   # buttons
 
         meta = ttk.LabelFrame(self.editor_tab, text="Player / Global Settings")
         meta.grid(row=0, column=0, sticky="ew", pady=(0, 10))
@@ -815,20 +863,38 @@ class TaskipelagoApp(tk.Tk):
             row=0, column=7, sticky="w", padx=(4, 0)
         )
 
+        # --- Progressive Groups panel (row 1) ---
+        prog_frame = ttk.LabelFrame(self.editor_tab, text="Progressive Groups")
+        prog_frame.grid(row=1, column=0, sticky="ew", pady=(0, 6))
+        prog_frame.grid_columnconfigure(0, weight=1)
+
+        self.prog_chips_frame = ttk.Frame(prog_frame)
+        self.prog_chips_frame.grid(row=0, column=0, sticky="w", padx=10, pady=(6, 4))
+
+        add_row = ttk.Frame(prog_frame)
+        add_row.grid(row=1, column=0, sticky="w", padx=10, pady=(0, 8))
+        ttk.Label(add_row, text="New group name:").pack(side="left", padx=(0, 6))
+        self.new_group_var = tk.StringVar()
+        new_group_entry = ttk.Entry(add_row, textvariable=self.new_group_var, width=18)
+        new_group_entry.pack(side="left", padx=(0, 6))
+        new_group_entry.bind("<Return>", lambda _: self._add_prog_group())
+        ttk.Button(add_row, text="Add Group", command=self._add_prog_group).pack(side="left")
+        ttk.Label(add_row, text="(letters, underscores, hyphens — no digits)", style="Muted.TLabel").pack(side="left", padx=(8, 0))
+
+        self._refresh_prog_groups_panel()
+
+        # --- Tasks table (row 2) ---
         tasks = ttk.LabelFrame(self.editor_tab, text="Tasks")
-        tasks.grid(row=1, column=0, sticky="nsew", pady=(0, 10))
+        tasks.grid(row=2, column=0, sticky="nsew", pady=(0, 10))
         tasks.grid_columnconfigure(0, weight=1)
         tasks.grid_rowconfigure(0, weight=0, minsize=28)
         tasks.grid_rowconfigure(1, weight=1)
         tasks.grid_rowconfigure(2, weight=0, minsize=44)
-        
+
         self.tasks_scroll = ScrollableFrame(tasks, colors=self.colors)
         self.tasks_scroll.grid(row=1, column=0, sticky="nsew", padx=10, pady=0)
 
         tbl = self.tasks_scroll.inner
-
-        for col, weight in [(1, 3), (2, 3), (3, 2), (4, 1)]:
-            tbl.grid_columnconfigure(col, weight=weight)
 
         ttk.Label(tbl, text="#").grid(row=0, column=0, sticky="w", padx=(0, 8))
         ttk.Label(tbl, text="Task").grid(row=0, column=1, sticky="w", padx=(0, 8))
@@ -836,37 +902,37 @@ class TaskipelagoApp(tk.Tk):
         ttk.Label(tbl, text="Task prereqs").grid(row=0, column=3, sticky="w", padx=(0, 8))
         ttk.Label(tbl, text="Reward prereqs").grid(row=0, column=4, sticky="w", padx=(0, 8))
         ttk.Label(tbl, text="Type").grid(row=0, column=5, sticky="w", padx=(0, 8))
+        ttk.Label(tbl, text="").grid(row=0, column=6, sticky="w")   # Filler (no header)
+        ttk.Label(tbl, text="Prog. Group").grid(row=0, column=7, sticky="w", padx=(0, 8))
+        ttk.Label(tbl, text="").grid(row=0, column=8, sticky="w")   # Remove (no header)
 
-        # filler + remove placeholders (no header text)
-        ttk.Label(tbl, text="").grid(row=0, column=6, sticky="w")
-        ttk.Label(tbl, text="").grid(row=0, column=7, sticky="w")
-
-        # Muted instruction text
+        # Muted hint text
         ttk.Label(tbl, text="", style="Muted.TLabel").grid(row=1, column=0, sticky="w", padx=(0, 8))
         ttk.Label(tbl, text="Location", style="Muted.TLabel").grid(row=1, column=1, sticky="w", padx=(0, 8))
         ttk.Label(tbl, text="Item", style="Muted.TLabel").grid(row=1, column=2, sticky="w", padx=(0, 8))
-        ttk.Label(tbl, text="1   or   1, 2, 5", style="Muted.TLabel").grid(row=1, column=3, sticky="w", padx=(0, 8))
-        ttk.Label(tbl, text="1   or   1, 2, 5", style="Muted.TLabel").grid(row=1, column=4, sticky="w", padx=(0, 8))
+        ttk.Label(tbl, text="1  or  1, 2, 5", style="Muted.TLabel").grid(row=1, column=3, sticky="w", padx=(0, 8))
+        ttk.Label(tbl, text="1  or  prog  or  prog-2", style="Muted.TLabel").grid(row=1, column=4, sticky="w", padx=(0, 8))
         ttk.Label(tbl, text="", style="Muted.TLabel").grid(row=1, column=5, sticky="w", padx=(0, 8))
         ttk.Label(tbl, text="", style="Muted.TLabel").grid(row=1, column=6, sticky="w")
         ttk.Label(tbl, text="", style="Muted.TLabel").grid(row=1, column=7, sticky="w")
+        ttk.Label(tbl, text="", style="Muted.TLabel").grid(row=1, column=8, sticky="w")
 
-        # Column stretch/weights (optional but recommended)
-        tbl.grid_columnconfigure(0, weight=0)  # #
-        tbl.grid_columnconfigure(1, weight=3)  # Task
-        tbl.grid_columnconfigure(2, weight=3)  # Reward
-        tbl.grid_columnconfigure(3, weight=2)  # Task prereqs
-        tbl.grid_columnconfigure(4, weight=2)  # Reward prereqs
-        tbl.grid_columnconfigure(5, weight=1)  # Type
-        tbl.grid_columnconfigure(6, weight=0)  # Filler
-        tbl.grid_columnconfigure(7, weight=0)  # Remove button
+        tbl.grid_columnconfigure(0, weight=0)   # #
+        tbl.grid_columnconfigure(1, weight=3)   # Task
+        tbl.grid_columnconfigure(2, weight=3)   # Reward
+        tbl.grid_columnconfigure(3, weight=2)   # Task prereqs
+        tbl.grid_columnconfigure(4, weight=2)   # Reward prereqs
+        tbl.grid_columnconfigure(5, weight=1)   # Type
+        tbl.grid_columnconfigure(6, weight=0)   # Filler
+        tbl.grid_columnconfigure(7, weight=1)   # Prog. Group
+        tbl.grid_columnconfigure(8, weight=0)   # Remove button
 
         btn_row = ttk.Frame(tasks)
         btn_row.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 10))
         ttk.Button(btn_row, text="Add Task", command=self.add_task_row).pack(side="left")
 
         dl = ttk.LabelFrame(self.editor_tab, text="DeathLink Task Pool")
-        dl.grid(row=2, column=0, sticky="nsew")
+        dl.grid(row=3, column=0, sticky="nsew")
         dl.grid_columnconfigure(0, weight=1)
         dl.grid_rowconfigure(0, weight=1)
         dl.grid_rowconfigure(1, weight=0, minsize=44)
@@ -886,7 +952,7 @@ class TaskipelagoApp(tk.Tk):
         ttk.Button(dl, text="Add DeathLink Task", command=self.add_deathlink_row).grid(row=1, column=0, sticky="w", padx=10, pady=(0, 10))
 
         bottom = ttk.Frame(self.editor_tab)
-        bottom.grid(row=3, column=0, sticky="ew", pady=(10, 0))
+        bottom.grid(row=4, column=0, sticky="ew", pady=(10, 0))
         bottom.grid_columnconfigure(0, weight=1)
         ttk.Button(bottom, text="Reset", command=self.reset_yaml_generator).grid(
             row=0, column=0, sticky="w", padx=(10, 0)
@@ -961,10 +1027,62 @@ class TaskipelagoApp(tk.Tk):
 
     # ---------------- YAML generator actions ----------------
     def add_task_row(self):
-        # rows start at 1 because header is row 0
-        row = TaskRow(self.tasks_scroll.inner, len(self.task_rows) + 1, FILLER_TOKEN, self._remove_task_row)
+        row = TaskRow(
+            self.tasks_scroll.inner,
+            len(self.task_rows) + 1,
+            FILLER_TOKEN,
+            self._remove_task_row,
+            list(self.prog_groups),
+        )
         self.task_rows.append(row)
         return row
+
+    # ---------------- Progressive groups management ----------------
+    def _add_prog_group(self):
+        name = self.new_group_var.get().strip()
+        if not name:
+            messagebox.showerror("Error", "Group name cannot be empty.")
+            return
+        if re.search(r'\d', name):
+            messagebox.showerror("Error", f"Group name '{name}' must not contain digits.")
+            return
+        if name in self.prog_groups:
+            messagebox.showerror("Error", f"Progressive group '{name}' already exists.")
+            return
+        self.prog_groups.append(name)
+        self.new_group_var.set("")
+        self._refresh_prog_groups_panel()
+        self._update_all_task_row_prog_groups()
+
+    def _remove_prog_group(self, gname: str):
+        if gname in self.prog_groups:
+            self.prog_groups.remove(gname)
+        for row in self.task_rows:
+            if row.prog_group_var.get() == gname:
+                row.prog_group_var.set("")
+        self._refresh_prog_groups_panel()
+        self._update_all_task_row_prog_groups()
+
+    def _refresh_prog_groups_panel(self):
+        if not hasattr(self, "prog_chips_frame"):
+            return
+        for w in self.prog_chips_frame.winfo_children():
+            w.destroy()
+        if not self.prog_groups:
+            ttk.Label(self.prog_chips_frame, text="No groups defined.", style="Muted.TLabel").pack(side="left")
+            return
+        for gname in self.prog_groups:
+            chip = ttk.Frame(self.prog_chips_frame)
+            chip.pack(side="left", padx=(0, 6))
+            ttk.Label(chip, text=gname).pack(side="left", padx=(6, 2), pady=2)
+            ttk.Button(
+                chip, text="×", width=2,
+                command=lambda g=gname: self._remove_prog_group(g),
+            ).pack(side="left", padx=(0, 2))
+
+    def _update_all_task_row_prog_groups(self):
+        for row in self.task_rows:
+            row.update_groups(self.prog_groups)
 
     def _remove_task_row(self, row):
         if row in self.task_rows:
@@ -1039,9 +1157,9 @@ class TaskipelagoApp(tk.Tk):
             messagebox.showerror("Error", "Player name is required.")
             return
 
-        tasks, rewards, prereqs, reward_prereqs, reward_types = [], [], [], [], []
+        tasks, rewards, prereqs, reward_prereqs, reward_types, reward_prog_groups = [], [], [], [], [], []
         for r in self.task_rows:
-            t, rw, pr, rpr, filler, rtype = r.get_data()
+            t, rw, pr, rpr, filler, rtype, pgrp = r.get_data()
             if not t:
                 continue
             if not rw:
@@ -1051,7 +1169,8 @@ class TaskipelagoApp(tk.Tk):
             rewards.append(FILLER_TOKEN if filler else rw)
             prereqs.append(pr or "")
             reward_prereqs.append(rpr or "")
-            reward_types.append("junk" if filler else (rtype or "junk")) # filler is always junk
+            reward_types.append("junk" if filler else (rtype or "junk"))
+            reward_prog_groups.append(pgrp if not filler else "")
 
         if not tasks:
             messagebox.showerror("Error", "No tasks defined.")
@@ -1090,6 +1209,9 @@ class TaskipelagoApp(tk.Tk):
                 "progression_balancing": int(self.progression_var.get()),
                 "accessibility": self.accessibility_var.get(),
                 "death_link": {"true": on_w, "false": off_w},
+
+                "progressive_groups": list(self.prog_groups),
+                "reward_progressive_group": reward_prog_groups,
 
                 "tasks": tasks,
                 "rewards": rewards,
@@ -1178,12 +1300,18 @@ class TaskipelagoApp(tk.Tk):
         goal_tasks = list(block.get("goal_tasks", []) or [])
         self.goal_tasks_var.set(", ".join(str(g) for g in goal_tasks))
 
+        # --------- Progressive groups (must be loaded before task rows) ---------
+        raw_pg = list(block.get("progressive_groups", []) or [])
+        self.prog_groups = [str(g).strip() for g in raw_pg if str(g).strip()]
+        self._refresh_prog_groups_panel()
+
         # --------- Populate Tasks table ---------
         tasks = list(block.get("tasks", []) or [])
         rewards = list(block.get("rewards", []) or [])
         prereqs = list(block.get("task_prereqs", []) or [])
         reward_prereqs = list(block.get("reward_prereqs", []) or [])
         reward_types = list(block.get("reward_types", []) or [])
+        reward_prog_group = list(block.get("reward_progressive_group", []) or [])
 
         # Normalize lengths
         n = max(len(tasks), len(rewards), len(prereqs))
@@ -1192,6 +1320,7 @@ class TaskipelagoApp(tk.Tk):
         prereqs += [""] * (n - len(prereqs))
         reward_prereqs += [""] * (n - len(reward_prereqs))
         reward_types += ["useful"] * (n - len(reward_types))
+        reward_prog_group += [""] * (n - len(reward_prog_group))
 
         # Wipe existing UI rows then rebuild
         self._clear_task_rows()
@@ -1202,8 +1331,9 @@ class TaskipelagoApp(tk.Tk):
             pr = str(prereqs[i]).strip() if prereqs[i] is not None else ""
             rpr = str(reward_prereqs[i]).strip() if reward_prereqs[i] is not None else ""
             rt = str(reward_types[i]).strip().lower() if reward_types[i] is not None else "useful"
+            pgrp = str(reward_prog_group[i]).strip() if reward_prog_group[i] is not None else ""
 
-            row = self.add_task_row()
+            row = self.add_task_row()  # creates row with current self.prog_groups
             row.task_var.set(t)
             row.prereq_var.set(pr)
             row.reward_prereq_var.set(rpr)
@@ -1214,7 +1344,7 @@ class TaskipelagoApp(tk.Tk):
             row.reward_type_var.set(rt)
             row._saved_reward_type = rt
 
-            # Handle filler token exactly the same way your existing import does
+            # Handle filler token
             if rw == FILLER_TOKEN:
                 row.filler_var.set(True)
                 row.on_filler_toggle()
@@ -1222,9 +1352,12 @@ class TaskipelagoApp(tk.Tk):
                 row.filler_var.set(False)
                 row.on_filler_toggle()
                 row.reward_var.set(rw)
-                # Ensure at least 1 row exists for UX
                 if not self.task_rows:
                     self.add_task_row()
+
+            # Set progressive group after filler toggle so _on_prog_group_change fires correctly
+            if pgrp in self.prog_groups:
+                row.prog_group_var.set(pgrp)
 
         # --------- Populate DeathLink pool ---------
         deathlink_pool = list(block.get("death_link_pool", []) or [])
@@ -1264,7 +1397,9 @@ class TaskipelagoApp(tk.Tk):
         self.hide_unreachable_tasks.set(True)
         self.goal_tasks_var.set("")
 
-        # clear rows and recreate initial blank task row
+        self.prog_groups = []
+        self._refresh_prog_groups_panel()
+
         self._clear_task_rows()
         self._clear_deathlink_rows()
         self.add_task_row()
@@ -1343,6 +1478,9 @@ class TaskipelagoApp(tk.Tk):
             self._deathlink_amnesty_left = 0
             if hasattr(self.ctx, "locations_checked"):
                 self.ctx.locations_checked = set()
+            self.ctx.progressive_groups = []
+            self.ctx.reward_progressive_group = []
+            self.ctx.task_progressive_reqs = []
         self.refresh_play_tab()
 
     # ---------------- Notifications stuff ----------------
@@ -1491,6 +1629,23 @@ class TaskipelagoApp(tk.Tk):
                 if reward_prereq_text:
                     reward_prereq_ok = self._reward_prereqs_satisfied(reward_prereq_text, checked)
 
+            # Progressive group requirement (resolved server-side, delivered via slot_data)
+            prog_reqs = []
+            task_prog_reqs_list = list(getattr(self.ctx, "task_progressive_reqs", []) or [])
+            if i < len(task_prog_reqs_list):
+                raw_pr = task_prog_reqs_list[i]
+                if isinstance(raw_pr, list):
+                    prog_reqs = raw_pr
+            prog_hint_parts = []
+            for req in prog_reqs:
+                if isinstance(req, dict):
+                    g, c = req.get("group", ""), req.get("count", 1)
+                else:
+                    g, c = req[0], req[1]
+                if not self._progressive_req_satisfied(g, c):
+                    reward_prereq_ok = False
+                prog_hint_parts.append(f"group '{g}' (need {c})")
+
             #Hide tasks that have unfinished prerequisites if enabled
             if (not task_prereq_ok or not reward_prereq_ok) and getattr(self.ctx, "hide_unreachable_tasks", True) and getattr(self.ctx, "lock_prereqs", False):
                 continue
@@ -1552,10 +1707,14 @@ class TaskipelagoApp(tk.Tk):
                 hint.pack(fill="x", padx=28, pady=(0, 2))
                 showed_hint = True
 
-            if (not completed) and lock_prereqs and reward_prereq_text and not reward_prereq_ok:
+            if (not completed) and lock_prereqs and (reward_prereq_text or prog_hint_parts) and not reward_prereq_ok:
+                hint_parts = []
+                if reward_prereq_text:
+                    hint_parts.append(self._reward_prereq_display(reward_prereq_text))
+                hint_parts.extend(prog_hint_parts)
                 hint2 = tk.Label(
                     card,
-                    text=f"Locked behind reward(s): {self._reward_prereq_display(reward_prereq_text)}",
+                    text=f"Locked behind reward(s): {', '.join(hint_parts)}",
                     bg=panel,
                     fg=muted,
                     font=("Segoe UI", 10),
@@ -1594,6 +1753,19 @@ class TaskipelagoApp(tk.Tk):
             )
         except Exception:
             return True
+
+    def _progressive_req_satisfied(self, group: str, required_count: int) -> bool:
+        """Return True if the player has received at least required_count items from the given group."""
+        reward_prog_group = list(getattr(self.ctx, "reward_progressive_group", []) or [])
+        base = getattr(self.ctx, "base_item_id", None)
+        if not isinstance(base, int):
+            return True  # can't evaluate without base id — optimistic
+        have = self._received_item_ids()
+        count = sum(
+            1 for idx, g in enumerate(reward_prog_group)
+            if g == group and (base + idx) in have
+        )
+        return count >= required_count
     
     def _received_item_ids(self) -> set:
         """

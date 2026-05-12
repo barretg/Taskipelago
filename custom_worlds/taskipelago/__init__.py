@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+import re as _re
+from typing import Any, Dict, List, Tuple
 
 from BaseClasses import Item, ItemClassification, Region
 from worlds.AutoWorld import WebWorld, World
@@ -21,7 +22,7 @@ from .locations import (
     TaskipelagoLocation,
 )
 from .options import TaskipelagoOptions
-from .prereq_parser import collect_leaves, parse_prereq, Node
+from .prereq_parser import collect_leaves, eval_node, parse_prereq, Node
 from .rules import set_rules as _set_rules
 
 
@@ -60,6 +61,11 @@ class TaskipelagoWorld(World):
     _death_link_weights: List[float]
     _death_link_amnesty: int
     _hide_unreachable_tasks: bool
+    _progressive_groups: List[str]
+    _reward_to_group: List[str]
+    _group_to_reward_indices: Dict[str, List[int]]
+    _task_progressive_reqs: List[List[Tuple[str, int]]]
+    _group_item_display_names: Dict[str, List[str]]
 
     def generate_early(self) -> None:
         tasks = [str(t).strip() for t in self.options.tasks.value if str(t).strip()]
@@ -138,11 +144,110 @@ class TaskipelagoWorld(World):
         # Cycle detection via DFS.
         _assert_no_cycles(parsed_prereqs, n)
 
-        # --- Parse reward prereqs ---
-        raw_reward_prereqs = [str(x).strip() for x in list(self.options.reward_prereqs.value or [])]
-        if len(raw_reward_prereqs) < n:
-            raw_reward_prereqs += [""] * (n - len(raw_reward_prereqs))
-        raw_reward_prereqs = raw_reward_prereqs[:n]
+        # --- Parse progressive groups ---
+        raw_prog_groups = [
+            str(g).strip() for g in (self.options.progressive_groups.value or [])
+            if str(g).strip()
+        ]
+        for gname in raw_prog_groups:
+            if _re.search(r'\d', gname):
+                raise Exception(
+                    f"Taskipelago: progressive group name '{gname}' must not contain digits."
+                )
+        if len(raw_prog_groups) != len(set(raw_prog_groups)):
+            raise Exception("Taskipelago: duplicate progressive group names.")
+        prog_group_set = set(raw_prog_groups)
+
+        # --- Map each reward to its group ---
+        raw_rpg = [str(x).strip() for x in (self.options.reward_progressive_group.value or [])]
+        if len(raw_rpg) < n:
+            raw_rpg += [""] * (n - len(raw_rpg))
+        raw_rpg = raw_rpg[:n]
+
+        group_to_reward_indices: Dict[str, List[int]] = {g: [] for g in raw_prog_groups}
+        reward_to_group: List[str] = []
+        for i, gname in enumerate(raw_rpg):
+            if gname:
+                if gname not in prog_group_set:
+                    raise Exception(
+                        f"Taskipelago: reward {i + 1} references unknown progressive group '{gname}'."
+                    )
+                group_to_reward_indices[gname].append(i)
+            reward_to_group.append(gname)
+
+        # --- Parse reward prereqs (extracting group refs first) ---
+        raw_reward_prereqs_input = [str(x).strip() for x in list(self.options.reward_prereqs.value or [])]
+        if len(raw_reward_prereqs_input) < n:
+            raw_reward_prereqs_input += [""] * (n - len(raw_reward_prereqs_input))
+        raw_reward_prereqs_input = raw_reward_prereqs_input[:n]
+
+        # Extract group refs from each task's reward prereq string, keeping only integers for the parser.
+        task_group_refs: List[List[Tuple[str, int | None]]] = []
+        raw_reward_prereqs: List[str] = []
+        for txt in raw_reward_prereqs_input:
+            refs, cleaned = _extract_group_refs(txt, prog_group_set)
+            task_group_refs.append(refs)
+            raw_reward_prereqs.append(cleaned)
+
+        # Validate group refs found in reward prereqs.
+        for i, refs in enumerate(task_group_refs):
+            for gname, n_val in refs:
+                group_size = len(group_to_reward_indices.get(gname, []))
+                if group_size == 0:
+                    raise Exception(
+                        f"Taskipelago: task {i + 1} references progressive group '{gname}' "
+                        f"which has no rewards assigned to it."
+                    )
+                if n_val is not None:
+                    if n_val < 1 or n_val > group_size:
+                        raise Exception(
+                            f"Taskipelago: task {i + 1} uses '{gname}-{n_val}' but group "
+                            f"'{gname}' only has {group_size} reward(s). "
+                            f"N must be between 1 and {group_size} (1-indexed)."
+                        )
+
+        # Resolve progressive unlock order per group.
+        task_progressive_reqs: List[List[Tuple[str, int]]] = [[] for _ in range(n)]
+        for gname in raw_prog_groups:
+            task_refs: List[Tuple[int, int | None]] = []
+            for i, refs in enumerate(task_group_refs):
+                for ref_group, ref_n in refs:
+                    if ref_group == gname:
+                        task_refs.append((i, ref_n))
+
+            if not task_refs:
+                continue
+
+            group_size = len(group_to_reward_indices[gname])
+            if len(task_refs) > group_size:
+                raise Exception(
+                    f"Taskipelago: progressive group '{gname}' has {group_size} reward(s) but "
+                    f"{len(task_refs)} task(s) require it. Add more rewards to the group or "
+                    f"reduce the number of tasks depending on it."
+                )
+
+            # Separate tasks with explicit positions from those relying on default order.
+            explicit_pos: Dict[int, int] = {}   # position (1-based) -> task_index
+            implicit_tasks: List[int] = []
+            for ti, n_val in task_refs:
+                if n_val is not None:
+                    if n_val in explicit_pos:
+                        raise Exception(
+                            f"Taskipelago: progressive group '{gname}' has multiple tasks "
+                            f"assigned to position {n_val}."
+                        )
+                    explicit_pos[n_val] = ti
+                else:
+                    implicit_tasks.append(ti)
+            implicit_tasks.sort()  # lower task index = lower unlock position
+
+            all_positions = set(range(1, len(task_refs) + 1))
+            free_positions = sorted(all_positions - set(explicit_pos.keys()))
+
+            for pos, ti in explicit_pos.items():
+                task_progressive_reqs[ti].append((gname, pos))
+            for ti, pos in zip(implicit_tasks, free_positions):
+                task_progressive_reqs[ti].append((gname, pos))
 
         parsed_reward_prereqs = []
         for i, txt in enumerate(raw_reward_prereqs):
@@ -159,18 +264,26 @@ class TaskipelagoWorld(World):
         self._goal_indices = sorted(set(collect_leaves(goal_ast))) if goal_ast else []
 
         # Any reward referenced as a prereq must be progression so logic can rely on it.
+        # All rewards in a progressive group are also forced to progression.
         forced_prog: set = set()
         for ast in parsed_prereqs:
             forced_prog.update(collect_leaves(ast))
         for ast in parsed_reward_prereqs:
             forced_prog.update(collect_leaves(ast))
+        for indices in group_to_reward_indices.values():
+            forced_prog.update(indices)
 
         self._raw_prereqs = raw_prereqs
         self._parsed_prereqs = parsed_prereqs       # List[Node | None]
-        self._raw_reward_prereqs = raw_reward_prereqs
+        self._raw_reward_prereqs = raw_reward_prereqs   # integer-only (group refs stripped)
         self._parsed_reward_prereqs = parsed_reward_prereqs  # List[Node | None]
         self._forced_progression_rewards = forced_prog
         self._lock_prereqs = bool(self.options.lock_prereqs)
+
+        self._progressive_groups = raw_prog_groups
+        self._reward_to_group = reward_to_group
+        self._group_to_reward_indices = group_to_reward_indices
+        self._task_progressive_reqs = task_progressive_reqs
 
         # Stable names for this generation.
         self._reward_location_names = [f"Task {i + 1} (Reward)" for i in range(n)]
@@ -181,6 +294,10 @@ class TaskipelagoWorld(World):
             for i, r in enumerate(rewards)
         ]
         self._token_item_names = [f"Task Complete {i + 1}" for i in range(n)]
+        self._group_item_display_names: Dict[str, List[str]] = {
+            gname: [self._reward_display_names[idx] for idx in indices]
+            for gname, indices in group_to_reward_indices.items()
+        }
 
     def create_regions(self) -> None:
         menu = Region("Menu", self.player, self.multiworld)
@@ -242,7 +359,6 @@ class TaskipelagoWorld(World):
 
         # Goal condition: either specific goal tasks, or all tasks by default.
         if self._goal_ast is not None:
-            from .prereq_parser import eval_node
             complete_names = self._complete_location_names
             # Goal: the boolean expression over complete locations
             complete_locs = {
@@ -315,10 +431,95 @@ class TaskipelagoWorld(World):
             "sent_player_names": sent_player_names,
             "goal_indices": sorted(self._goal_indices),
             "goal_expression": self._raw_goal,
+            "progressive_groups": list(self._progressive_groups),
+            "reward_progressive_group": list(self._reward_to_group),
+            "task_progressive_reqs": [
+                [{"group": g, "count": c} for g, c in reqs]
+                for reqs in self._task_progressive_reqs
+            ],
         }
 
 
 # --- Helpers ---
+
+def _extract_group_refs(
+    text: str, known_groups: set
+) -> Tuple[List[Tuple[str, int | None]], str]:
+    """
+    Scan a reward prereq expression string and pull out any progressive group references.
+    A group ref is a token whose base name (letters/underscores/hyphens, no digits) matches
+    a known group name, optionally followed by -<N> (the explicit unlock order).
+
+    Returns:
+        (group_refs, cleaned_text)
+        group_refs  : list of (group_name, explicit_n_or_None)
+        cleaned_text: original text with group tokens removed and dangling operators cleaned up
+    """
+    group_refs: List[Tuple[str, int | None]] = []
+    parts: List[str] = []
+    i = 0
+    length = len(text)
+
+    while i < length:
+        c = text[i]
+
+        if c.isspace():
+            parts.append(c)
+            i += 1
+
+        elif text[i:i+2] in ('&&', '||'):
+            parts.append(text[i:i+2])
+            i += 2
+
+        elif c in ('(', ')', ','):
+            parts.append(c)
+            i += 1
+
+        elif c.isdigit():
+            j = i
+            while j < length and text[j].isdigit():
+                j += 1
+            parts.append(text[i:j])
+            i = j
+
+        elif c.isalpha() or c == '_':
+            # Read until a separator (space, paren, comma, or start of && / ||)
+            j = i
+            while j < length:
+                ch = text[j]
+                if ch.isspace() or ch in ('(', ')', ','):
+                    break
+                if text[j:j+2] in ('&&', '||'):
+                    break
+                j += 1
+            token = text[i:j]
+
+            # Try to split off a trailing -<digits> suffix.
+            # The base must end in a letter or underscore (guaranteeing no digits in group name).
+            suffix_m = _re.match(r'^(.+[a-zA-Z_])-(\d+)$', token)
+            if suffix_m:
+                base, n_val = suffix_m.group(1), int(suffix_m.group(2))
+            else:
+                base, n_val = token, None
+
+            if base in known_groups:
+                group_refs.append((base, n_val))
+                # Remove token from output
+            else:
+                parts.append(token)
+            i = j
+
+        else:
+            parts.append(c)
+            i += 1
+
+    cleaned = ''.join(parts)
+    # Clean up operator residue left by removed tokens.
+    cleaned = _re.sub(r'(?:&&|,)\s*(?:&&|,)', '&&', cleaned)
+    cleaned = _re.sub(r'^\s*(?:&&|,|\|\|)\s*', '', cleaned)
+    cleaned = _re.sub(r'\s*(?:&&|,|\|\|)\s*$', '', cleaned)
+    return group_refs, cleaned.strip()
+
 
 def _parse_prereq_list(txt: str, task_index: int, n: int, label: str) -> List[int]:
     """Parse a comma-separated prereq string into a deduplicated list of 0-based indices."""
@@ -348,7 +549,6 @@ def _parse_prereq_list(txt: str, task_index: int, n: int, label: str) -> List[in
 
 def _assert_no_cycles(parsed_prereqs: list, n: int) -> None:
     """DFS Cycle detection on the prereq graph. Raises if a cycle is found, otherwise does nothing."""
-    from .prereq_parser import collect_leaves
     visiting: set = set()
     visited: set = set()
 

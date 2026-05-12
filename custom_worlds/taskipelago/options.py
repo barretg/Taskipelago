@@ -96,6 +96,23 @@ class GoalTasks(OptionList):
     display_name = "Goal Tasks"
     default: List[str] = []
 
+class ProgressiveGroups(OptionList):
+    """
+    List of progressive group name strings (letters, underscores, and hyphens only — no digits).
+    Each name defines a set of interchangeable reward items that are treated as a progression counter.
+    """
+    display_name = "Progressive Groups"
+    default: List[str] = []
+
+class RewardProgressiveGroup(OptionList):
+    """
+    Parallel list aligned with rewards/tasks.
+    Each entry is a progressive group name (from progressive_groups) or empty string.
+    Rewards assigned to a group are interchangeable and always forced to progression classification.
+    """
+    display_name = "Reward Progressive Group"
+    default: List[str] = []
+
 @dataclass
 class TaskipelagoOptions(PerGameCommonOptions):
     tasks: Tasks
@@ -110,3 +127,5 @@ class TaskipelagoOptions(PerGameCommonOptions):
     death_link_pool: DeathLinkPool
     death_link_weights: DeathLinkWeights
     death_link_amnesty: DeathLinkAmnesty
+    progressive_groups: ProgressiveGroups
+    reward_progressive_group: RewardProgressiveGroup
