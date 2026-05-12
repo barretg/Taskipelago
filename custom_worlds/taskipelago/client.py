@@ -936,10 +936,10 @@ class TaskipelagoApp(tk.Tk):
         new_group_entry.pack(side="left", padx=(0, 6))
         new_group_entry.bind("<Return>", lambda _: self._add_prog_group())
         ttk.Button(add_row, text="Add Group", command=self._add_prog_group).pack(side="left")
-        _pg_hint = ttk.Label(add_row, text="(letters, underscores, hyphens — no digits)", style="Muted.TLabel", cursor="question_arrow")
+        _pg_hint = ttk.Label(add_row, text="(letters, underscores, hyphens - no digits)", style="Muted.TLabel", cursor="question_arrow")
         _pg_hint.pack(side="left", padx=(8, 0))
         Tooltip(_pg_hint, (
-            "Group names may only contain letters, underscores, and hyphens — no digits.\n\n"
+            "Group names may only contain letters, underscores, and hyphens - no digits.\n\n"
             "Reference a group in the 'Reward prereqs' column using the group name:\n"
             "  mygroup    →  require 1 item from 'mygroup'\n"
             "  mygroup-2  →  require 2 items from 'mygroup'\n\n"
@@ -983,10 +983,10 @@ class TaskipelagoApp(tk.Tk):
         )
         _type_tip = (
             "Item classification for the Archipelago multiworld:\n\n"
-            "  junk        — low-priority filler item\n"
-            "  useful      — helpful but not sphere-gating\n"
-            "  progression — placed early; advances sphere logic\n"
-            "  trap        — negative-effect item\n\n"
+            "  junk        - low-priority filler item\n"
+            "  useful      - helpful but not sphere-gating\n"
+            "  progression - placed early; advances sphere logic\n"
+            "  trap        - negative-effect item\n\n"
             "Rewards in a progressive group are always forced to 'progression'."
         )
         _filler_tip = (
@@ -996,7 +996,7 @@ class TaskipelagoApp(tk.Tk):
         )
         _prog_group_tip = (
             "Assign this reward to a progressive group.\n\n"
-            "Group items are interchangeable — receiving any of them increments the group "
+            "Group items are interchangeable - receiving any of them increments the group "
             "counter. Other tasks can require N items from the group in 'Reward prereqs':\n"
             "  groupname    →  require 1 item from the group\n"
             "  groupname-2  →  require 2 items from the group\n\n"
@@ -1863,7 +1863,7 @@ class TaskipelagoApp(tk.Tk):
         reward_prog_group = list(getattr(self.ctx, "reward_progressive_group", []) or [])
         base = getattr(self.ctx, "base_item_id", None)
         if not isinstance(base, int):
-            return True  # can't evaluate without base id — optimistic
+            return True  # can't evaluate without base id - optimistic
         have = self._received_item_ids()
         count = sum(
             1 for idx, g in enumerate(reward_prog_group)

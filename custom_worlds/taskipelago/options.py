@@ -98,7 +98,7 @@ class GoalTasks(OptionList):
 
 class ProgressiveGroups(OptionList):
     """
-    List of progressive group name strings (letters, underscores, and hyphens only — no digits).
+    List of progressive group name strings (letters, underscores, and hyphens only - no digits).
     Each name defines a set of interchangeable reward items that are treated as a progression counter.
     """
     display_name = "Progressive Groups"
