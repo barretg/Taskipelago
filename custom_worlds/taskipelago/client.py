@@ -941,8 +941,9 @@ class TaskipelagoApp(tk.Tk):
         Tooltip(_pg_hint, (
             "Group names may only contain letters, underscores, and hyphens - no digits.\n\n"
             "Reference a group in the 'Reward prereqs' column using the group name:\n"
-            "  mygroup    →  require 1 item from 'mygroup'\n"
-            "  mygroup-2  →  require 2 items from 'mygroup'\n\n"
+            "  mygroup    →  unlock order inferred from task position (1st task to\n"
+            "               reference the group needs 1, 2nd needs 2, and so on)\n"
+            "  mygroup-2  →  explicitly requires 2 items from the group\n\n"
             "Receiving any item assigned to a group counts toward that group's total.\n"
             "All group items are forced to 'progression' classification."
         ))
@@ -977,9 +978,10 @@ class TaskipelagoApp(tk.Tk):
             "Which task REWARDS must be received before this task can be checked off.\n\n"
             "Supports the same boolean logic as Task prereqs, plus progressive group refs:\n"
             "  1, 2       →  rewards 1 AND 2 required\n"
-            "  1 || 2     →  reward 1 OR reward 2\n"
-            "  mygroup    →  1 item from 'mygroup' required\n"
-            "  mygroup-2  →  2 items from 'mygroup' required"
+            "  1 || 2     →  reward 1 OR reward 2\n\n"
+            "Progressive group refs:\n"
+            "  mygroup    →  unlock order inferred from task position among all tasks that reference this group (1st = needs 1, 2nd = needs 2, ...)\n"
+            "  mygroup-2  →  explicitly requires exactly 2 items from 'mygroup'"
         )
         _type_tip = (
             "Item classification for the Archipelago multiworld:\n\n"
