@@ -263,11 +263,11 @@ class TaskipelagoWorld(World):
         # 0-based indices of all tasks referenced in goal (for slot data)
         self._goal_indices = sorted(set(collect_leaves(goal_ast))) if goal_ast else []
 
-        # Any reward referenced as a prereq must be progression so logic can rely on it.
-        # All rewards in a progressive group are also forced to progression.
+        # Rewards that other tasks require to be *received* must be progression so AP
+        # places them early enough. Task-completion prereqs gate via completion tokens
+        # (always progression themselves), so they do NOT force reward items to progression.
+        # Progressive group members are also always forced to progression.
         forced_prog: set = set()
-        for ast in parsed_prereqs:
-            forced_prog.update(collect_leaves(ast))
         for ast in parsed_reward_prereqs:
             forced_prog.update(collect_leaves(ast))
         for indices in group_to_reward_indices.values():

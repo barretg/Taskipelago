@@ -246,6 +246,63 @@ class ScrollableFrame(ttk.Frame):
 
 
 # ----------------------------
+# Tooltip helper
+# ----------------------------
+class Tooltip:
+    """Show a tooltip popup after a short hover delay."""
+
+    _DELAY = 600
+    _WRAP  = 360
+
+    def __init__(self, widget: tk.Widget, text: str):
+        self._widget = widget
+        self._text   = text
+        self._job    = None
+        self._tip    = None
+        widget.bind("<Enter>",  self._on_enter, add=True)
+        widget.bind("<Leave>",  self._on_leave, add=True)
+        widget.bind("<Button>", self._on_leave, add=True)
+
+    def _on_enter(self, _=None):
+        self._job = self._widget.after(self._DELAY, self._show)
+
+    def _on_leave(self, _=None):
+        if self._job:
+            self._widget.after_cancel(self._job)
+            self._job = None
+        self._hide()
+
+    def _show(self):
+        if self._tip:
+            return
+        x = self._widget.winfo_rootx() + 10
+        y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
+        self._tip = tk.Toplevel(self._widget)
+        self._tip.wm_overrideredirect(True)
+        self._tip.wm_geometry(f"+{x}+{y}")
+        tk.Label(
+            self._tip, text=self._text, justify="left", relief="solid",
+            borderwidth=1, wraplength=self._WRAP,
+            bg="#2d2d30", fg="#e6e6e6", padx=6, pady=4, font=("Segoe UI", 9),
+        ).pack()
+
+    def _hide(self):
+        if self._tip:
+            self._tip.destroy()
+            self._tip = None
+
+
+def _make_tip_header(parent: tk.Widget, text: str, tip_text: str) -> ttk.Frame:
+    """Return a frame with a header label and a hoverable ? tooltip icon."""
+    frame = ttk.Frame(parent)
+    ttk.Label(frame, text=text).pack(side="left")
+    q = ttk.Label(frame, text=" ?", style="Muted.TLabel", cursor="question_arrow")
+    q.pack(side="left")
+    Tooltip(q, tip_text)
+    return frame
+
+
+# ----------------------------
 # Rows (YAML Generator)
 # ----------------------------
 class TaskRow:
@@ -749,8 +806,8 @@ class TaskipelagoApp(tk.Tk):
         super().__init__()
 
         self.title("Taskipelago")
-        self.geometry("980x740")
-        self.minsize(850, 640)
+        self.geometry("1080x740")
+        self.minsize(950, 640)
 
         self.colors = apply_dark_theme(self)
         ScrollableFrame.bind_mousewheel_to_root(self)
@@ -879,7 +936,16 @@ class TaskipelagoApp(tk.Tk):
         new_group_entry.pack(side="left", padx=(0, 6))
         new_group_entry.bind("<Return>", lambda _: self._add_prog_group())
         ttk.Button(add_row, text="Add Group", command=self._add_prog_group).pack(side="left")
-        ttk.Label(add_row, text="(letters, underscores, hyphens — no digits)", style="Muted.TLabel").pack(side="left", padx=(8, 0))
+        _pg_hint = ttk.Label(add_row, text="(letters, underscores, hyphens — no digits)", style="Muted.TLabel", cursor="question_arrow")
+        _pg_hint.pack(side="left", padx=(8, 0))
+        Tooltip(_pg_hint, (
+            "Group names may only contain letters, underscores, and hyphens — no digits.\n\n"
+            "Reference a group in the 'Reward prereqs' column using the group name:\n"
+            "  mygroup    →  require 1 item from 'mygroup'\n"
+            "  mygroup-2  →  require 2 items from 'mygroup'\n\n"
+            "Receiving any item assigned to a group counts toward that group's total.\n"
+            "All group items are forced to 'progression' classification."
+        ))
 
         self._refresh_prog_groups_panel()
 
@@ -899,11 +965,49 @@ class TaskipelagoApp(tk.Tk):
         ttk.Label(tbl, text="#").grid(row=0, column=0, sticky="w", padx=(0, 8))
         ttk.Label(tbl, text="Task").grid(row=0, column=1, sticky="w", padx=(0, 8))
         ttk.Label(tbl, text="Reward / Challenge").grid(row=0, column=2, sticky="w", padx=(0, 8))
-        ttk.Label(tbl, text="Task prereqs").grid(row=0, column=3, sticky="w", padx=(0, 8))
-        ttk.Label(tbl, text="Reward prereqs").grid(row=0, column=4, sticky="w", padx=(0, 8))
-        ttk.Label(tbl, text="Type").grid(row=0, column=5, sticky="w", padx=(0, 8))
-        ttk.Label(tbl, text="").grid(row=0, column=6, sticky="w")   # Filler (no header)
-        ttk.Label(tbl, text="Prog. Group").grid(row=0, column=7, sticky="w", padx=(0, 8))
+        _task_prereq_tip = (
+            "Which tasks must be COMPLETED before this task can be checked off.\n\n"
+            "Format: comma-separated task numbers, or use boolean logic:\n"
+            "  1, 2, 5       →  tasks 1 AND 2 AND 5\n"
+            "  1 && 2        →  tasks 1 AND 2\n"
+            "  1 || 2        →  task 1 OR task 2\n"
+            "  (1 || 2) && 3 →  (1 or 2) and also 3"
+        )
+        _reward_prereq_tip = (
+            "Which task REWARDS must be received before this task can be checked off.\n\n"
+            "Supports the same boolean logic as Task prereqs, plus progressive group refs:\n"
+            "  1, 2       →  rewards 1 AND 2 required\n"
+            "  1 || 2     →  reward 1 OR reward 2\n"
+            "  mygroup    →  1 item from 'mygroup' required\n"
+            "  mygroup-2  →  2 items from 'mygroup' required"
+        )
+        _type_tip = (
+            "Item classification for the Archipelago multiworld:\n\n"
+            "  junk        — low-priority filler item\n"
+            "  useful      — helpful but not sphere-gating\n"
+            "  progression — placed early; advances sphere logic\n"
+            "  trap        — negative-effect item\n\n"
+            "Rewards in a progressive group are always forced to 'progression'."
+        )
+        _filler_tip = (
+            "Mark this task as a filler task.\n\n"
+            "Filler tasks grant no item to the multiworld. The task can still be "
+            "completed and count toward prerequisites, but the reward slot is empty."
+        )
+        _prog_group_tip = (
+            "Assign this reward to a progressive group.\n\n"
+            "Group items are interchangeable — receiving any of them increments the group "
+            "counter. Other tasks can require N items from the group in 'Reward prereqs':\n"
+            "  groupname    →  require 1 item from the group\n"
+            "  groupname-2  →  require 2 items from the group\n\n"
+            "Items in a group are always forced to 'progression' classification.\n"
+            "Groups are defined in the Progressive Groups panel above."
+        )
+        _make_tip_header(tbl, "Task prereqs",  _task_prereq_tip).grid(row=0, column=3, sticky="w", padx=(0, 8))
+        _make_tip_header(tbl, "Reward prereqs", _reward_prereq_tip).grid(row=0, column=4, sticky="w", padx=(0, 8))
+        _make_tip_header(tbl, "Type",          _type_tip).grid(row=0, column=5, sticky="w", padx=(0, 8))
+        _make_tip_header(tbl, "Filler",        _filler_tip).grid(row=0, column=6, sticky="w", padx=(0, 4))
+        _make_tip_header(tbl, "Prog. Group",   _prog_group_tip).grid(row=0, column=7, sticky="w", padx=(0, 8))
         ttk.Label(tbl, text="").grid(row=0, column=8, sticky="w")   # Remove (no header)
 
         # Muted hint text
