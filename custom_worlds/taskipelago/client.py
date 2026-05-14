@@ -1115,6 +1115,7 @@ class TaskipelagoApp(tk.Tk):
         tasks_frame.grid(row=2, column=0, sticky="nsew", padx=(0, 10), pady=(10, 0))
 
         self._local_enforce_var = tk.BooleanVar(value=False)
+        self._show_locked_var = tk.BooleanVar(value=False)
         self._enforce_header_frame = ttk.Frame(tasks_frame)
         ttk.Label(
             self._enforce_header_frame,
@@ -1124,8 +1125,16 @@ class TaskipelagoApp(tk.Tk):
             self._enforce_header_frame,
             text="Enforce locally",
             variable=self._local_enforce_var,
-            command=self.refresh_play_tab,
+            command=self._on_enforce_toggle,
         ).pack(side="left", pady=4)
+        self._show_locked_frame = ttk.Frame(tasks_frame)
+        self._show_locked_checkbox = ttk.Checkbutton(
+            self._show_locked_frame,
+            text="Show hidden tasks",
+            variable=self._show_locked_var,
+            command=self.refresh_play_tab,
+        )
+        self._show_locked_checkbox.pack(side="left", padx=(10, 8), pady=4)
 
         self.play_tasks_scroll = ScrollableFrame(tasks_frame, colors=self.colors)
         self.play_tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
@@ -1583,6 +1592,8 @@ class TaskipelagoApp(tk.Tk):
         self.pending_reward_locations = set()
         if hasattr(self, "_local_enforce_var"):
             self._local_enforce_var.set(False)
+        if hasattr(self, "_show_locked_var"):
+            self._show_locked_var.set(False)
         if getattr(self, "ctx", None):
             self.ctx.tasks = []
             self.ctx.rewards = []
@@ -1686,6 +1697,11 @@ class TaskipelagoApp(tk.Tk):
         self.loop.run_forever()
 
     # ---------------- Network -> UI updates ----------------
+    def _on_enforce_toggle(self):
+        if not self._local_enforce_var.get():
+            self._show_locked_var.set(False)
+        self.refresh_play_tab()
+
     def on_network_update(self):
         if self.connection_state == "connecting":
             self.connection_state = "connected"
@@ -1714,10 +1730,17 @@ class TaskipelagoApp(tk.Tk):
             and self.ctx.base_complete_location_id is not None
         )
         yaml_lock = bool(getattr(self.ctx, "lock_prereqs", False)) if getattr(self, "ctx", None) else True
+        hide_tasks = bool(getattr(self.ctx, "hide_unreachable_tasks", True)) if getattr(self, "ctx", None) else True
+        local_enforce = self._local_enforce_var.get()
         if connected and not yaml_lock:
             self._enforce_header_frame.pack(side="top", fill="x", before=self.play_tasks_scroll)
         else:
             self._enforce_header_frame.pack_forget()
+        effective_lock_for_header = yaml_lock or local_enforce
+        if connected and effective_lock_for_header and hide_tasks:
+            self._show_locked_frame.pack(side="top", fill="x", before=self.play_tasks_scroll)
+        else:
+            self._show_locked_frame.pack_forget()
 
         if not connected:
             return
@@ -1775,7 +1798,10 @@ class TaskipelagoApp(tk.Tk):
                     reward_prereq_ok = False
                 prog_hint_parts.append(f"group '{g}' (need {c})")
 
-            locked_hidden = (not task_prereq_ok or not reward_prereq_ok) and getattr(self.ctx, "hide_unreachable_tasks", True) and effective_lock
+            would_hide = (not task_prereq_ok or not reward_prereq_ok) and hide_tasks and effective_lock
+            show_as_locked = would_hide and self._show_locked_var.get()
+            if would_hide and not show_as_locked:
+                continue
 
             card = tk.Frame(self.play_tasks_scroll.inner, bg=panel, highlightbackground=border, highlightthickness=1)
             card.pack(fill="x", pady=6, padx=4)
@@ -1783,7 +1809,7 @@ class TaskipelagoApp(tk.Tk):
             top = tk.Frame(card, bg=panel)
             top.pack(fill="x", padx=10, pady=(8, 2))
 
-            if locked_hidden:
+            if show_as_locked:
                 display_text = f"{i+1}. Locked Task"
                 task_color = muted
             elif completed:
