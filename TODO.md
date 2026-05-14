@@ -10,6 +10,7 @@ take that Jira.
 
 ### Medium Prio:
 * Notification history
+* Submission box and presets for community made yamls?
 
 ### Low Prio:
 * Tasklock integration to force all task locks to be in the taskipelago world (generate tasklock yaml with plando logic included, warn user to enable plando items in host.yaml)
