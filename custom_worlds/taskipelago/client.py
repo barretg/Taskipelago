@@ -1775,9 +1775,7 @@ class TaskipelagoApp(tk.Tk):
                     reward_prereq_ok = False
                 prog_hint_parts.append(f"group '{g}' (need {c})")
 
-            #Hide tasks that have unfinished prerequisites if enabled
-            if (not task_prereq_ok or not reward_prereq_ok) and getattr(self.ctx, "hide_unreachable_tasks", True) and effective_lock:
-                continue
+            locked_hidden = (not task_prereq_ok or not reward_prereq_ok) and getattr(self.ctx, "hide_unreachable_tasks", True) and effective_lock
 
             card = tk.Frame(self.play_tasks_scroll.inner, bg=panel, highlightbackground=border, highlightthickness=1)
             card.pack(fill="x", pady=6, padx=4)
@@ -1785,11 +1783,15 @@ class TaskipelagoApp(tk.Tk):
             top = tk.Frame(card, bg=panel)
             top.pack(fill="x", padx=10, pady=(8, 2))
 
-            display_text = f"{i+1}. {task_name}"
-            task_color = fg
-            if completed:
-                display_text = "✔ " + display_text
+            if locked_hidden:
+                display_text = f"{i+1}. Locked Task"
                 task_color = muted
+            elif completed:
+                display_text = f"✔ {i+1}. {task_name}"
+                task_color = muted
+            else:
+                display_text = f"{i+1}. {task_name}"
+                task_color = fg
 
             task_label = tk.Label(
                 top,
