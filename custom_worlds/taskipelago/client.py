@@ -1114,6 +1114,19 @@ class TaskipelagoApp(tk.Tk):
         tasks_frame = ttk.LabelFrame(play_root, text="Tasks")
         tasks_frame.grid(row=2, column=0, sticky="nsew", padx=(0, 10), pady=(10, 0))
 
+        self._local_enforce_var = tk.BooleanVar(value=False)
+        self._enforce_header_frame = ttk.Frame(tasks_frame)
+        ttk.Label(
+            self._enforce_header_frame,
+            text="Prereqs are optional in your YAML (lock_prereqs is off).",
+        ).pack(side="left", padx=(10, 8), pady=4)
+        ttk.Checkbutton(
+            self._enforce_header_frame,
+            text="Enforce locally",
+            variable=self._local_enforce_var,
+            command=self.refresh_play_tab,
+        ).pack(side="left", pady=4)
+
         self.play_tasks_scroll = ScrollableFrame(tasks_frame, colors=self.colors)
         self.play_tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -1568,6 +1581,8 @@ class TaskipelagoApp(tk.Tk):
 
     def _clear_play_state(self):
         self.pending_reward_locations = set()
+        if hasattr(self, "_local_enforce_var"):
+            self._local_enforce_var.set(False)
         if getattr(self, "ctx", None):
             self.ctx.tasks = []
             self.ctx.rewards = []
@@ -1692,12 +1707,19 @@ class TaskipelagoApp(tk.Tk):
         for child in self.play_tasks_scroll.inner.winfo_children():
             child.destroy()
 
-        if (
-            not getattr(self, "ctx", None)
-            or not self.ctx.tasks
-            or self.ctx.base_reward_location_id is None
-            or self.ctx.base_complete_location_id is None
-        ):
+        connected = bool(
+            getattr(self, "ctx", None)
+            and self.ctx.tasks
+            and self.ctx.base_reward_location_id is not None
+            and self.ctx.base_complete_location_id is not None
+        )
+        yaml_lock = bool(getattr(self.ctx, "lock_prereqs", False)) if getattr(self, "ctx", None) else True
+        if connected and not yaml_lock:
+            self._enforce_header_frame.pack(side="top", fill="x", before=self.play_tasks_scroll)
+        else:
+            self._enforce_header_frame.pack_forget()
+
+        if not connected:
             return
 
         panel = self.colors.get("panel", "#252526")
@@ -1709,7 +1731,8 @@ class TaskipelagoApp(tk.Tk):
 
         prereq_list = list(getattr(self.ctx, "task_prereqs", []) or [])
         reward_prereq_list = list(getattr(self.ctx, "reward_prereqs", []) or [])
-        lock_prereqs = bool(getattr(self.ctx, "lock_prereqs", False))
+        lock_prereqs = yaml_lock
+        effective_lock = lock_prereqs or self._local_enforce_var.get()
 
         for i, task_name in enumerate(self.ctx.tasks):
             complete_loc_id = self.ctx.base_complete_location_id + i
@@ -1753,7 +1776,7 @@ class TaskipelagoApp(tk.Tk):
                 prog_hint_parts.append(f"group '{g}' (need {c})")
 
             #Hide tasks that have unfinished prerequisites if enabled
-            if (not task_prereq_ok or not reward_prereq_ok) and getattr(self.ctx, "hide_unreachable_tasks", True) and getattr(self.ctx, "lock_prereqs", False):
+            if (not task_prereq_ok or not reward_prereq_ok) and getattr(self.ctx, "hide_unreachable_tasks", True) and effective_lock:
                 continue
 
             card = tk.Frame(self.play_tasks_scroll.inner, bg=panel, highlightbackground=border, highlightthickness=1)
@@ -1782,7 +1805,7 @@ class TaskipelagoApp(tk.Tk):
 
             if not completed:
                 can_complete = True
-                if lock_prereqs and (not task_prereq_ok or not reward_prereq_ok):
+                if effective_lock and (not task_prereq_ok or not reward_prereq_ok):
                     can_complete = False
 
                 btn = ttk.Button(
@@ -1799,7 +1822,7 @@ class TaskipelagoApp(tk.Tk):
             # Hints: show task line if locked behind tasks; reward line if locked behind rewards
             showed_hint = False
 
-            if (not completed) and lock_prereqs and task_prereq_text and not task_prereq_ok:
+            if (not completed) and task_prereq_text and not task_prereq_ok:
                 hint = tk.Label(
                     card,
                     text=f"Locked behind task(s): {task_prereq_text}",
@@ -1813,7 +1836,7 @@ class TaskipelagoApp(tk.Tk):
                 hint.pack(fill="x", padx=28, pady=(0, 2))
                 showed_hint = True
 
-            if (not completed) and lock_prereqs and (reward_prereq_text or prog_hint_parts) and not reward_prereq_ok:
+            if (not completed) and (reward_prereq_text or prog_hint_parts) and not reward_prereq_ok:
                 hint_parts = []
                 if reward_prereq_text:
                     hint_parts.append(self._reward_prereq_display(reward_prereq_text))
