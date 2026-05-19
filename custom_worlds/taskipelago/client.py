@@ -28,15 +28,25 @@ DEFAULT_REWARD_TYPE = "useful"
 
 
 def _bingo_lines(X: int, Y: int) -> list:
-    """Return list of lists of 0-based space indices for each bingo line (rows, cols, diagonals)."""
+    """Return list of lists of 0-based space indices for each bingo line (rows, cols, diagonals).
+
+    For rectangular boards, all full-length diagonals of length min(X, Y) are included.
+    A square 5x5 board has 2 diagonals; a rectangular 7x5 board has 6 (3 down-right + 3 down-left).
+    """
     lines = []
     for r in range(Y):
         lines.append([r * X + c for c in range(X)])
     for c in range(X):
         lines.append([r * X + c for r in range(Y)])
     d = min(X, Y)
-    lines.append([i * X + i for i in range(d)])
-    lines.append([i * X + (X - 1 - i) for i in range(d)])
+    # All full-length down-right diagonals
+    for r0 in range(Y - d + 1):
+        for c0 in range(X - d + 1):
+            lines.append([(r0 + i) * X + (c0 + i) for i in range(d)])
+    # All full-length down-left (anti) diagonals
+    for r0 in range(Y - d + 1):
+        for c0 in range(d - 1, X):
+            lines.append([(r0 + i) * X + (c0 - i) for i in range(d)])
     return lines
 
 
@@ -2244,12 +2254,17 @@ class TaskipelagoApp(tk.Tk):
         ttk.Button(btn_frame, text="Clear", command=self._clear_bingo_tab).grid(
             row=0, column=1, sticky="e", padx=(0, 6)
         )
-        ttk.Button(btn_frame, text="Import Bingo YAML", command=self._import_bingo_yaml).grid(
+        ttk.Button(btn_frame, text="Save Settings", command=self._save_bingo_settings).grid(
             row=0, column=2, sticky="e", padx=(0, 6)
         )
-        ttk.Button(btn_frame, text="Export Bingo YAML", command=self._export_bingo_yaml).grid(
-            row=0, column=3, sticky="e"
+        ttk.Button(btn_frame, text="Load", command=self._load_bingo).grid(
+            row=0, column=3, sticky="e", padx=(0, 6)
         )
+        ttk.Button(btn_frame, text="Export Bingo YAML", command=self._export_bingo_yaml).grid(
+            row=0, column=4, sticky="e"
+        )
+
+        self._update_bingo_counts()
 
     def _update_bingo_counts(self, _=None):
         X = self._safe_int(self.bingo_x_var, 5)
@@ -2265,7 +2280,7 @@ class TaskipelagoApp(tk.Tk):
             text=f"Enter one space per line (need {needed}, have {have}{suffix})"
         )
 
-        n_filler = 1 + X + Y + 2  # free space + line tasks
+        n_filler = 1 + len(_bingo_lines(X, Y))  # free space + line tasks
         rewards = self._get_bingo_rewards()
         have_rw = len(rewards)
         if have_rw == 0:
@@ -2328,16 +2343,21 @@ class TaskipelagoApp(tk.Tk):
         lines = _bingo_lines(X, Y)
         L = len(lines)
         n_rows, n_cols = Y, X
+        d = min(X, Y)
+        n_main_diags = (Y - d + 1) * (X - d + 1)
+        n_anti_diags = n_main_diags
 
         for li, line in enumerate(lines):
             if li < n_rows:
                 name = f"Row {li + 1} Bingo"
             elif li < n_rows + n_cols:
                 name = f"Column {li - n_rows + 1} Bingo"
-            elif li == n_rows + n_cols:
-                name = "Diagonal Bingo (top-left to bottom-right)"
+            elif li < n_rows + n_cols + n_main_diags:
+                idx = li - n_rows - n_cols
+                name = "Diagonal Bingo (↘)" if n_main_diags == 1 else f"Diagonal Bingo (↘ #{idx + 1})"
             else:
-                name = "Diagonal Bingo (top-right to bottom-left)"
+                idx = li - n_rows - n_cols - n_main_diags
+                name = "Diagonal Bingo (↙)" if n_anti_diags == 1 else f"Diagonal Bingo (↙ #{idx + 1})"
             tasks.append(name)
             rewards.append(FILLER_TOKEN)
             task_prereqs.append(", ".join(str(s + 1) for s in line))
@@ -2432,20 +2452,123 @@ class TaskipelagoApp(tk.Tk):
         self.bingo_deathlink_text.delete("1.0", "end")
         self._update_bingo_counts()
 
+    def _save_bingo_settings(self):
+        path = filedialog.asksaveasfilename(
+            defaultextension=".bingo",
+            filetypes=[("Bingo Settings", "*.bingo"), ("All Files", "*.*")],
+        )
+        if not path:
+            return
+        data = {
+            "spaces": self._get_bingo_spaces(),
+            "rewards": self._get_bingo_rewards(),
+            "player_name": self.bingo_player_var.get().strip(),
+            "bingo_x": self._safe_int(self.bingo_x_var, 5),
+            "bingo_y": self._safe_int(self.bingo_y_var, 5),
+            "bingoal": self._safe_int(self.bingo_goal_var, 3),
+            "progression_balancing": self._safe_int(self.bingo_prog_var, 50),
+            "accessibility": self.bingo_access_var.get(),
+            "death_link_enabled": bool(self.bingo_deathlink_var.get()),
+            "death_link_amnesty": self._safe_int(self.bingo_deathlink_amnesty_var, 0),
+            "death_link_pool": [
+                l.strip()
+                for l in self.bingo_deathlink_text.get("1.0", "end-1c").splitlines()
+                if l.strip()
+            ],
+        }
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+            messagebox.showinfo("Saved", f"Bingo settings saved to:\n{path}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save:\n{e}")
+
+    def _load_bingo(self):
+        """Load either a .bingo settings file or an AP bingo YAML."""
+        path = filedialog.askopenfilename(
+            filetypes=[
+                ("Bingo Files", "*.bingo *.yaml *.yml"),
+                ("Bingo Settings", "*.bingo"),
+                ("YAML Files", "*.yaml *.yml"),
+                ("All Files", "*.*"),
+            ]
+        )
+        if not path:
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                doc = yaml.safe_load(f)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to read file:\n{e}")
+            return
+
+        if isinstance(doc, dict) and "spaces" in doc:
+            self._load_bingo_settings_doc(doc, path)
+        else:
+            self._load_bingo_yaml_doc(doc, path)
+
+
+    def _load_bingo_settings_doc(self, doc: dict, path: str):
+        """Populate bingo tab from a .bingo settings file."""
+        name = doc.get("player_name", "")
+        if isinstance(name, str) and name.strip():
+            self.bingo_player_var.set(name.strip())
+
+        try:
+            self.bingo_x_var.set(int(doc.get("bingo_x", 5) or 5))
+            self.bingo_y_var.set(int(doc.get("bingo_y", 5) or 5))
+            self.bingo_goal_var.set(int(doc.get("bingoal", 3) or 3))
+            self.bingo_prog_var.set(int(doc.get("progression_balancing", 50) or 50))
+        except Exception:
+            pass
+
+        acc = doc.get("accessibility", "full")
+        if isinstance(acc, str) and acc.strip():
+            self.bingo_access_var.set(acc.strip())
+
+        dl_enabled = doc.get("death_link_enabled", False)
+        self.bingo_deathlink_var.set(bool(dl_enabled))
+        try:
+            self.bingo_deathlink_amnesty_var.set(int(doc.get("death_link_amnesty", 0) or 0))
+        except Exception:
+            pass
+
+        self.bingo_deathlink_text.delete("1.0", "end")
+        for entry in list(doc.get("death_link_pool", []) or []):
+            s = str(entry).strip()
+            if s:
+                self.bingo_deathlink_text.insert("end", s + "\n")
+
+        self.bingo_spaces_text.delete("1.0", "end")
+        for s in list(doc.get("spaces", []) or []):
+            entry = str(s).strip()
+            if entry:
+                self.bingo_spaces_text.insert("end", entry + "\n")
+
+        self.bingo_rewards_text.delete("1.0", "end")
+        for r in list(doc.get("rewards", []) or []):
+            entry = str(r).strip()
+            if entry:
+                self.bingo_rewards_text.insert("end", entry + "\n")
+
+        self._update_bingo_counts()
+        messagebox.showinfo("Loaded", f"Bingo settings loaded from:\n{path}")
+
     def _import_bingo_yaml(self):
         path = filedialog.askopenfilename(
             filetypes=[("YAML Files", "*.yaml *.yml"), ("All Files", "*.*")]
         )
         if not path:
             return
-
         try:
             with open(path, "r", encoding="utf-8") as f:
                 doc = yaml.safe_load(f)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to read YAML:\n{e}")
             return
+        self._load_bingo_yaml_doc(doc, path)
 
+    def _load_bingo_yaml_doc(self, doc, path: str):
         player_name, block = self._extract_taskipelago_block(doc)
         if not isinstance(block, dict):
             messagebox.showerror("Error", "Could not find a Taskipelago section in this YAML.")
@@ -2503,7 +2626,7 @@ class TaskipelagoApp(tk.Tk):
 
         rewards = list(block.get("rewards", []) or [])
         middle = n_spaces // 2
-        n_lines = X + Y + 2
+        n_lines = len(_bingo_lines(X, Y))
         filler_rewards = []
         if middle < len(rewards):
             rw = str(rewards[middle]).strip()
