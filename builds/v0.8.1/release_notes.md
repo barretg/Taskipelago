@@ -1,4 +1,4 @@
-# Taskipelago Version 0.8.1
+# Taskipelago/Taskipelabingo Version 0.8.1
 ### That's a bingo!
 No breaking changes, but adds a bingo mode because it's fun.
 
