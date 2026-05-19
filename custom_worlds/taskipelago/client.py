@@ -2106,8 +2106,9 @@ class TaskipelagoApp(tk.Tk):
     def _build_bingo_tab(self):
         tab = self.bingo_tab
         tab.grid_columnconfigure(0, weight=1)
-        tab.grid_rowconfigure(1, weight=1)
-        tab.grid_rowconfigure(2, weight=0)
+        tab.grid_rowconfigure(1, weight=2)
+        tab.grid_rowconfigure(2, weight=1)
+        tab.grid_rowconfigure(3, weight=0)
 
         meta = ttk.LabelFrame(tab, text="Bingo Settings")
         meta.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 6))
@@ -2127,12 +2128,14 @@ class TaskipelagoApp(tk.Tk):
         ttk.Spinbox(settings_row, from_=1, to=20, textvariable=self.bingo_x_var, width=4).grid(
             row=0, column=1, padx=(4, 16), sticky="w"
         )
+        self.bingo_x_var.trace_add("write", lambda *_: self._update_bingo_counts())
 
         ttk.Label(settings_row, text="Rows (Y):").grid(row=0, column=2, sticky="w")
         self.bingo_y_var = tk.IntVar(value=5)
         ttk.Spinbox(settings_row, from_=1, to=20, textvariable=self.bingo_y_var, width=4).grid(
             row=0, column=3, padx=(4, 16), sticky="w"
         )
+        self.bingo_y_var.trace_add("write", lambda *_: self._update_bingo_counts())
 
         ttk.Label(settings_row, text="Bingos to goal:").grid(row=0, column=4, sticky="w")
         self.bingo_goal_var = tk.IntVar(value=3)
@@ -2153,6 +2156,9 @@ class TaskipelagoApp(tk.Tk):
             values=["full", "items", "minimal"], state="readonly", width=10,
         ).grid(row=0, column=9, padx=(4, 0))
 
+        field_bg = "#2d2d30"
+        text_fg = self.colors.get("fg", "#e6e6e6")
+
         spaces_frame = ttk.LabelFrame(tab, text="Spaces (one per line)")
         spaces_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 6))
         spaces_frame.grid_rowconfigure(1, weight=1)
@@ -2165,8 +2171,6 @@ class TaskipelagoApp(tk.Tk):
         )
         self._bingo_count_label.grid(row=0, column=0, sticky="w", padx=10, pady=(6, 2))
 
-        field_bg = "#2d2d30"
-        text_fg = self.colors.get("fg", "#e6e6e6")
         self.bingo_spaces_text = tk.Text(
             spaces_frame,
             bg=field_bg, fg=text_fg, insertbackground=text_fg,
@@ -2174,10 +2178,31 @@ class TaskipelagoApp(tk.Tk):
             undo=True, wrap="word",
         )
         self.bingo_spaces_text.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 6))
-        self.bingo_spaces_text.bind("<KeyRelease>", self._on_bingo_spaces_changed)
+        self.bingo_spaces_text.bind("<KeyRelease>", lambda _: self._update_bingo_counts())
+
+        rewards_frame = ttk.LabelFrame(tab, text="Rewards (one per line, optional)")
+        rewards_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=(0, 6))
+        rewards_frame.grid_rowconfigure(1, weight=1)
+        rewards_frame.grid_columnconfigure(0, weight=1)
+
+        self._bingo_rewards_count_label = ttk.Label(
+            rewards_frame,
+            text="Optional: replace filler reward slots (free space + bingo line tasks)",
+            style="Muted.TLabel",
+        )
+        self._bingo_rewards_count_label.grid(row=0, column=0, sticky="w", padx=10, pady=(6, 2))
+
+        self.bingo_rewards_text = tk.Text(
+            rewards_frame,
+            bg=field_bg, fg=text_fg, insertbackground=text_fg,
+            font=("Segoe UI", 10), relief="flat", padx=6, pady=6,
+            undo=True, wrap="word",
+        )
+        self.bingo_rewards_text.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 6))
+        self.bingo_rewards_text.bind("<KeyRelease>", lambda _: self._update_bingo_counts())
 
         btn_frame = ttk.Frame(tab)
-        btn_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 10))
+        btn_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 10))
         btn_frame.grid_columnconfigure(0, weight=1)
 
         ttk.Button(btn_frame, text="Clear", command=self._clear_bingo_tab).grid(
@@ -2187,7 +2212,7 @@ class TaskipelagoApp(tk.Tk):
             row=0, column=2, sticky="e"
         )
 
-    def _on_bingo_spaces_changed(self, _=None):
+    def _update_bingo_counts(self, _=None):
         X = self._safe_int(self.bingo_x_var, 5)
         Y = self._safe_int(self.bingo_y_var, 5)
         needed = X * Y
@@ -2201,8 +2226,25 @@ class TaskipelagoApp(tk.Tk):
             text=f"Enter one space per line (need {needed}, have {have}{suffix})"
         )
 
+        n_filler = 1 + X + Y + 2  # free space + line tasks
+        rewards = self._get_bingo_rewards()
+        have_rw = len(rewards)
+        if have_rw == 0:
+            rw_suffix = f"all {n_filler} slots will be filler"
+        elif have_rw >= n_filler:
+            rw_suffix = f"all {n_filler} slots covered"
+        else:
+            rw_suffix = f"{have_rw} replaced, {n_filler - have_rw} remain filler"
+        self._bingo_rewards_count_label.config(
+            text=f"Reward slots available: {n_filler} - {rw_suffix}"
+        )
+
     def _get_bingo_spaces(self) -> list:
         text = self.bingo_spaces_text.get("1.0", "end-1c")
+        return [line.strip() for line in text.splitlines() if line.strip()]
+
+    def _get_bingo_rewards(self) -> list:
+        text = self.bingo_rewards_text.get("1.0", "end-1c")
         return [line.strip() for line in text.splitlines() if line.strip()]
 
     def _safe_int(self, var, default: int) -> int:
@@ -2263,6 +2305,22 @@ class TaskipelagoApp(tk.Tk):
             reward_prereqs.append("")
             reward_types.append("junk")
 
+        # Assign user-provided rewards to filler slots (free space + line tasks)
+        reward_pool = self._get_bingo_rewards()
+        random.shuffle(reward_pool)
+        reward_iter = iter(reward_pool)
+
+        user_rw = next(reward_iter, None)
+        if user_rw:
+            rewards[middle] = user_rw
+            reward_types[middle] = "useful"
+
+        for li in range(L):
+            user_rw = next(reward_iter, None)
+            if user_rw:
+                rewards[n_spaces + li] = user_rw
+                reward_types[n_spaces + li] = "useful"
+
         bingoal = max(1, min(bingoal, L))
         goal_expr = _gen_bingoal_expr(n_spaces, L, bingoal)
 
@@ -2313,7 +2371,8 @@ class TaskipelagoApp(tk.Tk):
         self.bingo_prog_var.set(50)
         self.bingo_access_var.set("full")
         self.bingo_spaces_text.delete("1.0", "end")
-        self._on_bingo_spaces_changed()
+        self.bingo_rewards_text.delete("1.0", "end")
+        self._update_bingo_counts()
 
     def _prereqs_satisfied(self, prereq_text: str, checked_locations: set) -> bool:
         """Best-effort client-side prereq check for UI lock hints."""
