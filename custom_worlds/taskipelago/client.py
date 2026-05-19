@@ -1991,8 +1991,9 @@ class TaskipelagoApp(tk.Tk):
 
         received = self._received_item_ids()
 
+        middle = n_spaces // 2
         space_completed = [(base_complete + i) in checked for i in range(n_spaces)]
-        space_unlocked = [(base_item + i) in received for i in range(n_spaces)]
+        space_unlocked = [(base_item + i) in received or i == middle for i in range(n_spaces)]
 
         lines = _bingo_lines(X, Y)
         L = len(lines)
@@ -2233,13 +2234,14 @@ class TaskipelagoApp(tk.Tk):
         selected = random.sample(spaces_pool, n_spaces)
 
         tasks, rewards, task_prereqs, reward_prereqs, reward_types = [], [], [], [], []
+        middle = n_spaces // 2
 
         for i in range(n_spaces):
             r, c = divmod(i, X)
             tasks.append(selected[i])
             rewards.append(f"Bingo {r + 1},{c + 1} Unlock")
             task_prereqs.append("")
-            reward_prereqs.append(str(i + 1))
+            reward_prereqs.append("" if i == middle else str(i + 1))
             reward_types.append("progression")
 
         lines = _bingo_lines(X, Y)
