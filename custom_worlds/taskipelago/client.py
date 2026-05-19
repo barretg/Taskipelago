@@ -2106,8 +2106,8 @@ class TaskipelagoApp(tk.Tk):
     def _build_bingo_tab(self):
         tab = self.bingo_tab
         tab.grid_columnconfigure(0, weight=1)
-        tab.grid_rowconfigure(1, weight=2)
-        tab.grid_rowconfigure(2, weight=1)
+        tab.grid_rowconfigure(1, weight=1)
+        tab.grid_rowconfigure(2, weight=0)
         tab.grid_rowconfigure(3, weight=0)
 
         meta = ttk.LabelFrame(tab, text="Bingo Settings")
@@ -2159,8 +2159,15 @@ class TaskipelagoApp(tk.Tk):
         field_bg = "#2d2d30"
         text_fg = self.colors.get("fg", "#e6e6e6")
 
-        spaces_frame = ttk.LabelFrame(tab, text="Spaces (one per line)")
-        spaces_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 6))
+        # Spaces and rewards side by side
+        content_frame = ttk.Frame(tab)
+        content_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 6))
+        content_frame.grid_columnconfigure(0, weight=1)
+        content_frame.grid_columnconfigure(1, weight=1)
+        content_frame.grid_rowconfigure(0, weight=1)
+
+        spaces_frame = ttk.LabelFrame(content_frame, text="Spaces (one per line)")
+        spaces_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 3))
         spaces_frame.grid_rowconfigure(1, weight=1)
         spaces_frame.grid_columnconfigure(0, weight=1)
 
@@ -2180,8 +2187,8 @@ class TaskipelagoApp(tk.Tk):
         self.bingo_spaces_text.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 6))
         self.bingo_spaces_text.bind("<KeyRelease>", lambda _: self._update_bingo_counts())
 
-        rewards_frame = ttk.LabelFrame(tab, text="Rewards (one per line, optional)")
-        rewards_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=(0, 6))
+        rewards_frame = ttk.LabelFrame(content_frame, text="Rewards (one per line, optional)")
+        rewards_frame.grid(row=0, column=1, sticky="nsew", padx=(3, 0))
         rewards_frame.grid_rowconfigure(1, weight=1)
         rewards_frame.grid_columnconfigure(0, weight=1)
 
@@ -2201,6 +2208,35 @@ class TaskipelagoApp(tk.Tk):
         self.bingo_rewards_text.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 6))
         self.bingo_rewards_text.bind("<KeyRelease>", lambda _: self._update_bingo_counts())
 
+        # DeathLink section
+        dl_frame = ttk.LabelFrame(tab, text="DeathLink")
+        dl_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 6))
+        dl_frame.grid_columnconfigure(1, weight=1)
+
+        dl_top = ttk.Frame(dl_frame)
+        dl_top.grid(row=0, column=0, columnspan=2, sticky="w", padx=10, pady=(6, 4))
+
+        self.bingo_deathlink_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(dl_top, text="Enable DeathLink", variable=self.bingo_deathlink_var).pack(
+            side="left"
+        )
+        ttk.Label(dl_top, text="Amnesty:").pack(side="left", padx=(20, 4))
+        self.bingo_deathlink_amnesty_var = tk.IntVar(value=0)
+        ttk.Spinbox(dl_top, from_=0, to=999, textvariable=self.bingo_deathlink_amnesty_var, width=5).pack(
+            side="left"
+        )
+
+        ttk.Label(dl_frame, text="Pool (one per line):").grid(
+            row=1, column=0, sticky="nw", padx=10, pady=(0, 6)
+        )
+        self.bingo_deathlink_text = tk.Text(
+            dl_frame,
+            bg=field_bg, fg=text_fg, insertbackground=text_fg,
+            font=("Segoe UI", 10), relief="flat", padx=6, pady=4,
+            undo=True, wrap="word", height=3,
+        )
+        self.bingo_deathlink_text.grid(row=1, column=1, sticky="ew", padx=(0, 10), pady=(0, 6))
+
         btn_frame = ttk.Frame(tab)
         btn_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 10))
         btn_frame.grid_columnconfigure(0, weight=1)
@@ -2208,8 +2244,11 @@ class TaskipelagoApp(tk.Tk):
         ttk.Button(btn_frame, text="Clear", command=self._clear_bingo_tab).grid(
             row=0, column=1, sticky="e", padx=(0, 6)
         )
+        ttk.Button(btn_frame, text="Import Bingo YAML", command=self._import_bingo_yaml).grid(
+            row=0, column=2, sticky="e", padx=(0, 6)
+        )
         ttk.Button(btn_frame, text="Export Bingo YAML", command=self._export_bingo_yaml).grid(
-            row=0, column=2, sticky="e"
+            row=0, column=3, sticky="e"
         )
 
     def _update_bingo_counts(self, _=None):
@@ -2305,6 +2344,19 @@ class TaskipelagoApp(tk.Tk):
             reward_prereqs.append("")
             reward_types.append("junk")
 
+        if self.bingo_deathlink_var.get():
+            dl_pool = [
+                l.strip() for l in self.bingo_deathlink_text.get("1.0", "end-1c").splitlines()
+                if l.strip()
+            ]
+            if not dl_pool:
+                messagebox.showerror(
+                    "Error",
+                    "DeathLink is enabled but the pool is empty.\n"
+                    "Add at least one entry or disable DeathLink."
+                )
+                return
+
         # Assign user-provided rewards to filler slots (free space + line tasks)
         reward_pool = self._get_bingo_rewards()
         random.shuffle(reward_pool)
@@ -2331,7 +2383,7 @@ class TaskipelagoApp(tk.Tk):
             "Taskipelago": {
                 "progression_balancing": self._safe_int(self.bingo_prog_var, 50),
                 "accessibility": self.bingo_access_var.get(),
-                "death_link": {"true": 0, "false": 50},
+                "death_link": {"true": 50, "false": 0} if self.bingo_deathlink_var.get() else {"true": 0, "false": 50},
                 "progressive_groups": [],
                 "reward_progressive_group": [""] * len(tasks),
                 "tasks": tasks,
@@ -2342,9 +2394,12 @@ class TaskipelagoApp(tk.Tk):
                 "lock_prereqs": True,
                 "hide_unreachable_tasks": True,
                 "goal_tasks": [goal_expr] if goal_expr else [],
-                "death_link_pool": [],
+                "death_link_pool": [
+                    l.strip() for l in self.bingo_deathlink_text.get("1.0", "end-1c").splitlines()
+                    if l.strip()
+                ],
                 "death_link_weights": [],
-                "death_link_amnesty": 0,
+                "death_link_amnesty": self._safe_int(self.bingo_deathlink_amnesty_var, 0),
                 "bingo_mode": True,
                 "bingo_dimension_x": X,
                 "bingo_dimension_y": Y,
@@ -2370,9 +2425,103 @@ class TaskipelagoApp(tk.Tk):
         self.bingo_goal_var.set(3)
         self.bingo_prog_var.set(50)
         self.bingo_access_var.set("full")
+        self.bingo_deathlink_var.set(False)
+        self.bingo_deathlink_amnesty_var.set(0)
         self.bingo_spaces_text.delete("1.0", "end")
         self.bingo_rewards_text.delete("1.0", "end")
+        self.bingo_deathlink_text.delete("1.0", "end")
         self._update_bingo_counts()
+
+    def _import_bingo_yaml(self):
+        path = filedialog.askopenfilename(
+            filetypes=[("YAML Files", "*.yaml *.yml"), ("All Files", "*.*")]
+        )
+        if not path:
+            return
+
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                doc = yaml.safe_load(f)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to read YAML:\n{e}")
+            return
+
+        player_name, block = self._extract_taskipelago_block(doc)
+        if not isinstance(block, dict):
+            messagebox.showerror("Error", "Could not find a Taskipelago section in this YAML.")
+            return
+        if not block.get("bingo_mode"):
+            messagebox.showerror("Error", "This YAML does not have bingo_mode enabled.")
+            return
+
+        if player_name:
+            self.bingo_player_var.set(player_name)
+
+        X = int(block.get("bingo_dimension_x", 5) or 5)
+        Y = int(block.get("bingo_dimension_y", 5) or 5)
+        try:
+            self.bingo_x_var.set(X)
+            self.bingo_y_var.set(Y)
+            self.bingo_goal_var.set(int(block.get("bingoal", 3) or 3))
+            self.bingo_prog_var.set(int(block.get("progression_balancing", 50) or 50))
+        except Exception:
+            pass
+
+        acc = block.get("accessibility", "full")
+        if isinstance(acc, str) and acc.strip():
+            self.bingo_access_var.set(acc.strip())
+
+        dl = block.get("death_link")
+        if isinstance(dl, dict):
+            try:
+                t = int(dl.get("true", 0) or 0)
+                f = int(dl.get("false", 0) or 0)
+                self.bingo_deathlink_var.set((t > 0) and (t >= f))
+            except Exception:
+                pass
+        elif isinstance(dl, (bool, int)):
+            self.bingo_deathlink_var.set(bool(dl))
+
+        try:
+            self.bingo_deathlink_amnesty_var.set(int(block.get("death_link_amnesty", 0) or 0))
+        except Exception:
+            pass
+
+        self.bingo_deathlink_text.delete("1.0", "end")
+        for entry in list(block.get("death_link_pool", []) or []):
+            s = str(entry).strip()
+            if s:
+                self.bingo_deathlink_text.insert("end", s + "\n")
+
+        n_spaces = X * Y
+        tasks = list(block.get("tasks", []) or [])
+        self.bingo_spaces_text.delete("1.0", "end")
+        for t in tasks[:n_spaces]:
+            s = str(t).strip()
+            if s:
+                self.bingo_spaces_text.insert("end", s + "\n")
+
+        rewards = list(block.get("rewards", []) or [])
+        middle = n_spaces // 2
+        n_lines = X + Y + 2
+        filler_rewards = []
+        if middle < len(rewards):
+            rw = str(rewards[middle]).strip()
+            if rw and rw != FILLER_TOKEN and not rw.startswith("Bingo "):
+                filler_rewards.append(rw)
+        for li in range(n_lines):
+            idx = n_spaces + li
+            if idx < len(rewards):
+                rw = str(rewards[idx]).strip()
+                if rw and rw != FILLER_TOKEN:
+                    filler_rewards.append(rw)
+
+        self.bingo_rewards_text.delete("1.0", "end")
+        for rw in filler_rewards:
+            self.bingo_rewards_text.insert("end", rw + "\n")
+
+        self._update_bingo_counts()
+        messagebox.showinfo("Imported", f"Imported Bingo YAML from:\n{path}")
 
     def _prereqs_satisfied(self, prereq_text: str, checked_locations: set) -> bool:
         """Best-effort client-side prereq check for UI lock hints."""
