@@ -437,6 +437,10 @@ class TaskipelagoWorld(World):
                 [{"group": g, "count": c} for g, c in reqs]
                 for reqs in self._task_progressive_reqs
             ],
+            "bingo_mode": bool(self.options.bingo_mode),
+            "bingo_dimension_x": int(self.options.bingo_dimension_x),
+            "bingo_dimension_y": int(self.options.bingo_dimension_y),
+            "bingoal": int(self.options.bingoal),
         }
 
 

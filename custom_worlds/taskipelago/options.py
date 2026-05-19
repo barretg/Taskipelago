@@ -113,6 +113,33 @@ class RewardProgressiveGroup(OptionList):
     display_name = "Reward Progressive Group"
     default: List[str] = []
 
+class BingoMode(Toggle):
+    """If enabled, this slot is treated as a bingo board by the client."""
+    display_name = "Bingo Mode"
+    default = 0
+
+class BingoDimensionX(Range):
+    """Number of columns in the bingo board (only used when bingo_mode is on)."""
+    display_name = "Bingo Dimension X (Columns)"
+    range_start = 1
+    range_end = 20
+    default = 5
+
+class BingoDimensionY(Range):
+    """Number of rows in the bingo board (only used when bingo_mode is on)."""
+    display_name = "Bingo Dimension Y (Rows)"
+    range_start = 1
+    range_end = 20
+    default = 5
+
+class Bingoal(Range):
+    """Number of bingos required to complete the goal."""
+    display_name = "Bingoal (bingos required)"
+    range_start = 1
+    range_end = 100
+    default = 3
+
+
 @dataclass
 class TaskipelagoOptions(PerGameCommonOptions):
     tasks: Tasks
@@ -129,3 +156,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     death_link_amnesty: DeathLinkAmnesty
     progressive_groups: ProgressiveGroups
     reward_progressive_group: RewardProgressiveGroup
+    bingo_mode: BingoMode
+    bingo_dimension_x: BingoDimensionX
+    bingo_dimension_y: BingoDimensionY
+    bingoal: Bingoal

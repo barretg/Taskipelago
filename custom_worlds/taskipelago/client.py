@@ -1,6 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
+from itertools import combinations
 from pathlib import Path
 import random
 import re
@@ -24,6 +25,35 @@ from NetUtils import Endpoint, decode
 FILLER_TOKEN = "nothing here, get pranked nerd"
 REWARD_TYPE_VALUES = ("junk", "useful", "progression", "trap")
 DEFAULT_REWARD_TYPE = "useful"
+
+
+def _bingo_lines(X: int, Y: int) -> list:
+    """Return list of lists of 0-based space indices for each bingo line (rows, cols, diagonals)."""
+    lines = []
+    for r in range(Y):
+        lines.append([r * X + c for c in range(X)])
+    for c in range(X):
+        lines.append([r * X + c for r in range(Y)])
+    d = min(X, Y)
+    lines.append([i * X + i for i in range(d)])
+    lines.append([i * X + (X - 1 - i) for i in range(d)])
+    return lines
+
+
+def _gen_bingoal_expr(n_spaces: int, n_lines: int, bingoal: int) -> str:
+    """Generate a goal prereq expression requiring any bingoal of the n_lines bingo line tasks."""
+    if n_lines == 0 or bingoal <= 0:
+        return ""
+    bingoal = min(bingoal, n_lines)
+    line_1based = list(range(n_spaces + 1, n_spaces + n_lines + 1))
+    if bingoal == n_lines:
+        return ", ".join(str(i) for i in line_1based)
+    terms = [
+        "(" + " && ".join(str(i) for i in combo) + ")"
+        for combo in combinations(line_1based, bingoal)
+    ]
+    return " || ".join(terms)
+
 
 # parsing help
 def _eval_prereq_expr(text: str, leaf_fn) -> bool:
@@ -520,6 +550,11 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.reward_progressive_group = []
         self.task_progressive_reqs = []
 
+        self.bingo_mode = False
+        self.bingo_dimension_x = 5
+        self.bingo_dimension_y = 5
+        self.bingoal = 3
+
         # persist received notification state
         self._notify_state_path = Path.cwd() / "taskipelago_notify_state.json"
         self._notify_key = None
@@ -554,6 +589,11 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.progressive_groups = list(self.slot_data.get("progressive_groups", []) or [])
         self.reward_progressive_group = list(self.slot_data.get("reward_progressive_group", []) or [])
         self.task_progressive_reqs = list(self.slot_data.get("task_progressive_reqs", []) or [])
+
+        self.bingo_mode = bool(self.slot_data.get("bingo_mode", False))
+        self.bingo_dimension_x = int(self.slot_data.get("bingo_dimension_x", 5) or 5)
+        self.bingo_dimension_y = int(self.slot_data.get("bingo_dimension_y", 5) or 5)
+        self.bingoal = int(self.slot_data.get("bingoal", 3) or 3)
 
         if callable(self.on_state_changed):
             self.on_state_changed()
@@ -842,6 +882,9 @@ class TaskipelagoApp(tk.Tk):
 
         self.editor_tab = ttk.Frame(notebook)
         notebook.add(self.editor_tab, text="YAML Generator")
+
+        self.bingo_tab = ttk.Frame(notebook)
+        notebook.add(self.bingo_tab, text="Taskipelabingo")
 
         notebook.select(self.play_tab)
 
@@ -1139,6 +1182,16 @@ class TaskipelagoApp(tk.Tk):
         self.play_tasks_scroll = ScrollableFrame(tasks_frame, colors=self.colors)
         self.play_tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
 
+        bg = self.colors.get("bg", "#1e1e1e")
+        self.play_bingo_frame = ttk.Frame(tasks_frame)
+        self._bingo_counter_label = ttk.Label(self.play_bingo_frame, text="")
+        self._bingo_counter_label.pack(side="top", anchor="w", padx=10, pady=(6, 0))
+        self.play_bingo_canvas = tk.Canvas(self.play_bingo_frame, bg=bg, highlightthickness=0)
+        self.play_bingo_canvas.pack(fill="both", expand=True)
+        self.play_bingo_canvas.bind("<Configure>", lambda e: self._render_bingo_board())
+        self._bingo_buttons = []
+        # play_bingo_frame intentionally not packed here; toggled in refresh_play_tab
+
         # ---- Notifications panel ----
         notif_frame = ttk.LabelFrame(play_root, text="Notifications")
         notif_frame.grid(row=0, column=1, rowspan=3, sticky="nsew")
@@ -1152,6 +1205,7 @@ class TaskipelagoApp(tk.Tk):
         self.notif_scroll = ScrollableFrame(notif_frame, colors=self.colors)
         self.notif_scroll.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
 
+        self._build_bingo_tab()
 
     # ---------------- YAML generator actions ----------------
     def add_task_row(self):
@@ -1613,6 +1667,10 @@ class TaskipelagoApp(tk.Tk):
             self.ctx.progressive_groups = []
             self.ctx.reward_progressive_group = []
             self.ctx.task_progressive_reqs = []
+            self.ctx.bingo_mode = False
+            self.ctx.bingo_dimension_x = 5
+            self.ctx.bingo_dimension_y = 5
+            self.ctx.bingoal = 3
         self.refresh_play_tab()
 
     # ---------------- Notifications stuff ----------------
@@ -1729,21 +1787,35 @@ class TaskipelagoApp(tk.Tk):
             and self.ctx.base_reward_location_id is not None
             and self.ctx.base_complete_location_id is not None
         )
+        bingo_mode = bool(getattr(self.ctx, "bingo_mode", False)) if getattr(self, "ctx", None) else False
         yaml_lock = bool(getattr(self.ctx, "lock_prereqs", False)) if getattr(self, "ctx", None) else True
         hide_tasks = bool(getattr(self.ctx, "hide_unreachable_tasks", True)) if getattr(self, "ctx", None) else True
         local_enforce = self._local_enforce_var.get()
-        if connected and not yaml_lock:
+
+        # Header frames are only relevant in non-bingo mode
+        if connected and not yaml_lock and not bingo_mode:
             self._enforce_header_frame.pack(side="top", fill="x", before=self.play_tasks_scroll)
         else:
             self._enforce_header_frame.pack_forget()
         effective_lock_for_header = yaml_lock or local_enforce
-        if connected and effective_lock_for_header and hide_tasks:
+        if connected and effective_lock_for_header and hide_tasks and not bingo_mode:
             self._show_locked_frame.pack(side="top", fill="x", before=self.play_tasks_scroll)
         else:
             self._show_locked_frame.pack_forget()
 
         if not connected:
+            self.play_bingo_frame.pack_forget()
+            self.play_tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
             return
+
+        if bingo_mode:
+            self.play_tasks_scroll.pack_forget()
+            self.play_bingo_frame.pack(fill="both", expand=True, padx=10, pady=10)
+            self._render_bingo_board()
+            return
+        else:
+            self.play_bingo_frame.pack_forget()
+            self.play_tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
 
         panel = self.colors.get("panel", "#252526")
         border = self.colors.get("border", "#3a3a3a")
@@ -1885,6 +1957,361 @@ class TaskipelagoApp(tk.Tk):
             if not showed_hint:
                 spacer = tk.Frame(card, bg=panel, height=6)
                 spacer.pack(fill="x")
+
+    def _render_bingo_board(self):
+        for btn in getattr(self, "_bingo_buttons", []):
+            try:
+                btn.destroy()
+            except Exception:
+                pass
+        self._bingo_buttons = []
+
+        canvas = self.play_bingo_canvas
+        canvas.delete("all")
+
+        if not getattr(self, "ctx", None):
+            return
+
+        X = int(getattr(self.ctx, "bingo_dimension_x", 5) or 5)
+        Y = int(getattr(self.ctx, "bingo_dimension_y", 5) or 5)
+        bingoal = int(getattr(self.ctx, "bingoal", 3) or 3)
+        n_spaces = X * Y
+
+        tasks = list(getattr(self.ctx, "tasks", []) or [])
+        if len(tasks) < n_spaces:
+            return
+
+        checked = set(getattr(self.ctx, "checked_locations_set", set()) or set())
+        base_complete = getattr(self.ctx, "base_complete_location_id", None)
+        base_reward = getattr(self.ctx, "base_reward_location_id", None)
+        base_item = getattr(self.ctx, "base_item_id", None)
+
+        if base_complete is None or base_reward is None or base_item is None:
+            return
+
+        received = self._received_item_ids()
+
+        space_completed = [(base_complete + i) in checked for i in range(n_spaces)]
+        space_unlocked = [(base_item + i) in received for i in range(n_spaces)]
+
+        lines = _bingo_lines(X, Y)
+        L = len(lines)
+        line_completed = [all(space_completed[s] for s in line) for line in lines]
+        n_bingos = sum(line_completed)
+
+        space_in_bingo = [False] * n_spaces
+        for li, line in enumerate(lines):
+            if line_completed[li]:
+                for s in line:
+                    space_in_bingo[s] = True
+
+        self._auto_complete_bingo_lines(lines, space_completed, base_complete, base_reward, checked)
+
+        needed_more = max(0, bingoal - n_bingos)
+        self._bingo_counter_label.config(
+            text=f"{n_bingos} of {L} bingos complete (need {needed_more} more)"
+        )
+
+        w = canvas.winfo_width()
+        h = canvas.winfo_height()
+        if w <= 1 or h <= 1:
+            canvas.after(50, self._render_bingo_board)
+            return
+
+        panel = self.colors.get("panel", "#252526")
+        border = self.colors.get("border", "#3a3a3a")
+        fg = self.colors.get("fg", "#e6e6e6")
+        muted = self.colors.get("muted", "#bdbdbd")
+
+        cell_size = max(10, min(w // X, h // Y))
+        grid_w = cell_size * X
+        grid_h = cell_size * Y
+        grid_x = (w - grid_w) // 2
+        grid_y = (h - grid_h) // 2
+
+        font_size = max(7, cell_size // 12)
+        font = ("Segoe UI", font_size)
+        padding = 6
+
+        for i in range(n_spaces):
+            row = i // X
+            col = i % X
+            x0 = grid_x + col * cell_size
+            y0 = grid_y + row * cell_size
+            x1 = x0 + cell_size
+            y1 = y0 + cell_size
+
+            if space_in_bingo[i]:
+                cell_bg = "#1a4a1a"
+            elif space_completed[i]:
+                cell_bg = "#4a3a00"
+            else:
+                cell_bg = panel
+
+            canvas.create_rectangle(x0, y0, x1, y1, fill=cell_bg, outline=border, width=1)
+
+            if not space_unlocked[i]:
+                canvas.create_text(
+                    (x0 + x1) // 2, (y0 + y1) // 2,
+                    text="Locked", fill=muted, font=font, anchor="center",
+                    width=cell_size - 2 * padding,
+                )
+            elif space_completed[i]:
+                canvas.create_text(
+                    (x0 + x1) // 2, (y0 + y1) // 2,
+                    text=f"✔ {tasks[i]}", fill=muted, font=font, anchor="center",
+                    width=cell_size - 2 * padding,
+                )
+            else:
+                btn_h = 22
+                text_cy = y0 + padding + (cell_size - btn_h - 2 * padding) // 2
+                canvas.create_text(
+                    (x0 + x1) // 2, text_cy,
+                    text=tasks[i], fill=fg, font=font, anchor="center",
+                    width=cell_size - 2 * padding,
+                )
+                btn = ttk.Button(
+                    canvas, text="Complete",
+                    command=lambda idx=i: self.complete_task(idx),
+                )
+                canvas.create_window((x0 + x1) // 2, y1 - padding, window=btn, anchor="s")
+                self._bingo_buttons.append(btn)
+
+    def _auto_complete_bingo_lines(
+        self, lines: list, space_completed: list,
+        base_complete: int, base_reward: int, checked: set,
+    ):
+        n_spaces = len(space_completed)
+        for li, line in enumerate(lines):
+            if all(space_completed[s] for s in line):
+                line_task_idx = n_spaces + li
+                line_complete_id = base_complete + line_task_idx
+                line_reward_id = base_reward + line_task_idx
+                if (line_complete_id not in checked
+                        and line_complete_id not in self.pending_reward_locations):
+                    self.pending_reward_locations.add(line_complete_id)
+
+                    async def _send_line(cid=line_complete_id, rid=line_reward_id):
+                        await self.ctx.send_msgs([{
+                            "cmd": "LocationChecks",
+                            "locations": [cid, rid],
+                        }])
+
+                    self.loop.call_soon_threadsafe(
+                        lambda s=_send_line: asyncio.create_task(s())
+                    )
+
+    # ---------------- Bingo generator tab ----------------
+    def _build_bingo_tab(self):
+        tab = self.bingo_tab
+        tab.grid_columnconfigure(0, weight=1)
+        tab.grid_rowconfigure(1, weight=1)
+        tab.grid_rowconfigure(2, weight=0)
+
+        meta = ttk.LabelFrame(tab, text="Bingo Settings")
+        meta.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 6))
+        meta.grid_columnconfigure(1, weight=1)
+
+        ttk.Label(meta, text="Player Name:").grid(row=0, column=0, padx=10, pady=8, sticky="w")
+        self.bingo_player_var = tk.StringVar()
+        ttk.Entry(meta, textvariable=self.bingo_player_var).grid(
+            row=0, column=1, sticky="ew", padx=(0, 10), pady=8
+        )
+
+        settings_row = ttk.Frame(meta)
+        settings_row.grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 8))
+
+        ttk.Label(settings_row, text="Columns (X):").grid(row=0, column=0, sticky="w")
+        self.bingo_x_var = tk.IntVar(value=5)
+        ttk.Spinbox(settings_row, from_=1, to=20, textvariable=self.bingo_x_var, width=4).grid(
+            row=0, column=1, padx=(4, 16), sticky="w"
+        )
+
+        ttk.Label(settings_row, text="Rows (Y):").grid(row=0, column=2, sticky="w")
+        self.bingo_y_var = tk.IntVar(value=5)
+        ttk.Spinbox(settings_row, from_=1, to=20, textvariable=self.bingo_y_var, width=4).grid(
+            row=0, column=3, padx=(4, 16), sticky="w"
+        )
+
+        ttk.Label(settings_row, text="Bingos to goal:").grid(row=0, column=4, sticky="w")
+        self.bingo_goal_var = tk.IntVar(value=3)
+        ttk.Spinbox(settings_row, from_=1, to=100, textvariable=self.bingo_goal_var, width=4).grid(
+            row=0, column=5, padx=(4, 16), sticky="w"
+        )
+
+        ttk.Label(settings_row, text="Prog. Balancing:").grid(row=0, column=6, sticky="w")
+        self.bingo_prog_var = tk.IntVar(value=50)
+        ttk.Spinbox(settings_row, from_=0, to=99, textvariable=self.bingo_prog_var, width=5).grid(
+            row=0, column=7, padx=(4, 16), sticky="w"
+        )
+
+        ttk.Label(settings_row, text="Accessibility:").grid(row=0, column=8, sticky="w")
+        self.bingo_access_var = tk.StringVar(value="full")
+        ttk.Combobox(
+            settings_row, textvariable=self.bingo_access_var,
+            values=["full", "items", "minimal"], state="readonly", width=10,
+        ).grid(row=0, column=9, padx=(4, 0))
+
+        spaces_frame = ttk.LabelFrame(tab, text="Spaces (one per line)")
+        spaces_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 6))
+        spaces_frame.grid_rowconfigure(1, weight=1)
+        spaces_frame.grid_columnconfigure(0, weight=1)
+
+        self._bingo_count_label = ttk.Label(
+            spaces_frame,
+            text="Enter one space per line (need X*Y, have 0)",
+            style="Muted.TLabel",
+        )
+        self._bingo_count_label.grid(row=0, column=0, sticky="w", padx=10, pady=(6, 2))
+
+        field_bg = "#2d2d30"
+        text_fg = self.colors.get("fg", "#e6e6e6")
+        self.bingo_spaces_text = tk.Text(
+            spaces_frame,
+            bg=field_bg, fg=text_fg, insertbackground=text_fg,
+            font=("Segoe UI", 10), relief="flat", padx=6, pady=6,
+            undo=True, wrap="word",
+        )
+        self.bingo_spaces_text.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 6))
+        self.bingo_spaces_text.bind("<KeyRelease>", self._on_bingo_spaces_changed)
+
+        btn_frame = ttk.Frame(tab)
+        btn_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 10))
+        btn_frame.grid_columnconfigure(0, weight=1)
+
+        ttk.Button(btn_frame, text="Clear", command=self._clear_bingo_tab).grid(
+            row=0, column=1, sticky="e", padx=(0, 6)
+        )
+        ttk.Button(btn_frame, text="Export Bingo YAML", command=self._export_bingo_yaml).grid(
+            row=0, column=2, sticky="e"
+        )
+
+    def _on_bingo_spaces_changed(self, _=None):
+        X = self._safe_int(self.bingo_x_var, 5)
+        Y = self._safe_int(self.bingo_y_var, 5)
+        needed = X * Y
+        spaces = self._get_bingo_spaces()
+        have = len(spaces)
+        if have >= needed:
+            suffix = " (enough)" if have == needed else f" ({have - needed} extra)"
+        else:
+            suffix = f" (need {needed - have} more)"
+        self._bingo_count_label.config(
+            text=f"Enter one space per line (need {needed}, have {have}{suffix})"
+        )
+
+    def _get_bingo_spaces(self) -> list:
+        text = self.bingo_spaces_text.get("1.0", "end-1c")
+        return [line.strip() for line in text.splitlines() if line.strip()]
+
+    def _safe_int(self, var, default: int) -> int:
+        try:
+            return int(var.get())
+        except Exception:
+            return default
+
+    def _export_bingo_yaml(self):
+        player_name = self.bingo_player_var.get().strip()
+        if not player_name:
+            messagebox.showerror("Error", "Player name is required.")
+            return
+
+        X = self._safe_int(self.bingo_x_var, 5)
+        Y = self._safe_int(self.bingo_y_var, 5)
+        bingoal = self._safe_int(self.bingo_goal_var, 3)
+        n_spaces = X * Y
+
+        spaces_pool = self._get_bingo_spaces()
+        if len(spaces_pool) < n_spaces:
+            messagebox.showerror(
+                "Error",
+                f"Need at least {n_spaces} spaces for a {X}x{Y} board, "
+                f"but only {len(spaces_pool)} entered.",
+            )
+            return
+
+        selected = random.sample(spaces_pool, n_spaces)
+
+        tasks, rewards, task_prereqs, reward_prereqs, reward_types = [], [], [], [], []
+
+        for i in range(n_spaces):
+            r, c = divmod(i, X)
+            tasks.append(selected[i])
+            rewards.append(f"Bingo {r + 1},{c + 1} Unlock")
+            task_prereqs.append("")
+            reward_prereqs.append(str(i + 1))
+            reward_types.append("progression")
+
+        lines = _bingo_lines(X, Y)
+        L = len(lines)
+        n_rows, n_cols = Y, X
+
+        for li, line in enumerate(lines):
+            if li < n_rows:
+                name = f"Row {li + 1} Bingo"
+            elif li < n_rows + n_cols:
+                name = f"Column {li - n_rows + 1} Bingo"
+            elif li == n_rows + n_cols:
+                name = "Diagonal Bingo (top-left to bottom-right)"
+            else:
+                name = "Diagonal Bingo (top-right to bottom-left)"
+            tasks.append(name)
+            rewards.append(FILLER_TOKEN)
+            task_prereqs.append(", ".join(str(s + 1) for s in line))
+            reward_prereqs.append("")
+            reward_types.append("junk")
+
+        bingoal = max(1, min(bingoal, L))
+        goal_expr = _gen_bingoal_expr(n_spaces, L, bingoal)
+
+        data = {
+            "name": player_name,
+            "game": "Taskipelago",
+            "description": "Taskipelabingo YAML",
+            "Taskipelago": {
+                "progression_balancing": self._safe_int(self.bingo_prog_var, 50),
+                "accessibility": self.bingo_access_var.get(),
+                "death_link": {"true": 0, "false": 50},
+                "progressive_groups": [],
+                "reward_progressive_group": [""] * len(tasks),
+                "tasks": tasks,
+                "rewards": rewards,
+                "reward_types": reward_types,
+                "task_prereqs": task_prereqs,
+                "reward_prereqs": reward_prereqs,
+                "lock_prereqs": True,
+                "hide_unreachable_tasks": True,
+                "goal_tasks": [goal_expr] if goal_expr else [],
+                "death_link_pool": [],
+                "death_link_weights": [],
+                "death_link_amnesty": 0,
+                "bingo_mode": True,
+                "bingo_dimension_x": X,
+                "bingo_dimension_y": Y,
+                "bingoal": bingoal,
+            },
+        }
+
+        path = filedialog.asksaveasfilename(
+            defaultextension=".yaml", filetypes=[("YAML Files", "*.yaml")]
+        )
+        if not path:
+            return
+
+        with open(path, "w", encoding="utf-8") as f:
+            yaml.dump(data, f, sort_keys=False, allow_unicode=True)
+
+        messagebox.showinfo("Success", f"Bingo YAML exported to:\n{path}")
+
+    def _clear_bingo_tab(self):
+        self.bingo_player_var.set("")
+        self.bingo_x_var.set(5)
+        self.bingo_y_var.set(5)
+        self.bingo_goal_var.set(3)
+        self.bingo_prog_var.set(50)
+        self.bingo_access_var.set("full")
+        self.bingo_spaces_text.delete("1.0", "end")
+        self._on_bingo_spaces_changed()
 
     def _prereqs_satisfied(self, prereq_text: str, checked_locations: set) -> bool:
         """Best-effort client-side prereq check for UI lock hints."""
