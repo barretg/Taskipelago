@@ -994,9 +994,10 @@ class TaskipelagoApp(tk.Tk):
         Tooltip(_pg_hint, (
             "Group names may only contain letters, underscores, and hyphens - no digits.\n\n"
             "Reference a group in the 'Reward prereqs' column using the group name:\n"
-            "  mygroup    →  unlock order inferred from task position (1st task to\n"
-            "               reference the group needs 1, 2nd needs 2, and so on)\n"
-            "  mygroup-2  →  explicitly requires 2 items from the group\n\n"
+            "  mygroup    →  required count inferred (assigned to lowest unused threshold)\n"
+            "  mygroup-2  →  explicitly requires at least 2 items from the group\n\n"
+            "Multiple tasks may share the same explicit count (e.g. two tasks both using\n"
+            "mygroup-2 will both unlock when 2 items from the group are received).\n\n"
             "Receiving any item assigned to a group counts toward that group's total.\n"
             "All group items are forced to 'progression' classification."
         ))
@@ -1033,8 +1034,9 @@ class TaskipelagoApp(tk.Tk):
             "  1, 2       →  rewards 1 AND 2 required\n"
             "  1 || 2     →  reward 1 OR reward 2\n\n"
             "Progressive group refs:\n"
-            "  mygroup    →  unlock order inferred from task position among all tasks that reference this group (1st = needs 1, 2nd = needs 2, ...)\n"
-            "  mygroup-2  →  explicitly requires exactly 2 items from 'mygroup'"
+            "  mygroup    →  required count inferred (assigned to lowest unused threshold as determined by task order)\n"
+            "  mygroup-2  →  unlock when at least 2 items from 'mygroup' are received\n\n"
+            "Multiple tasks may use the same -N and will all unlock at that threshold."
         )
         _type_tip = (
             "Item classification for the Archipelago multiworld:\n\n"
@@ -1053,8 +1055,9 @@ class TaskipelagoApp(tk.Tk):
             "Assign this reward to a progressive group.\n\n"
             "Group items are interchangeable - receiving any of them increments the group "
             "counter. Other tasks can require N items from the group in 'Reward prereqs':\n"
-            "  groupname    →  require 1 item from the group\n"
-            "  groupname-2  →  require 2 items from the group\n\n"
+            "  groupname    →  required count inferred (assigned to lowest unused threshold)\n"
+            "  groupname-2  →  unlock when at least 2 items from the group are received\n\n"
+            "Multiple tasks may share the same -N count; they all unlock at that threshold.\n"
             "Items in a group are always forced to 'progression' classification.\n"
             "Groups are defined in the Progressive Groups panel above."
         )

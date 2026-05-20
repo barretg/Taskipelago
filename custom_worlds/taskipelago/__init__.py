@@ -203,10 +203,12 @@ class TaskipelagoWorld(World):
                         raise Exception(
                             f"Taskipelago: task {i + 1} uses '{gname}-{n_val}' but group "
                             f"'{gname}' only has {group_size} reward(s). "
-                            f"N must be between 1 and {group_size} (1-indexed)."
+                            f"Required count must be between 1 and {group_size}."
                         )
 
-        # Resolve progressive unlock order per group.
+        # Resolve progressive unlock thresholds per group.
+        # prog-N means "require at least N items from the group"; multiple tasks may share N.
+        # Tasks referencing the group without a number are assigned the lowest unused thresholds.
         task_progressive_reqs: List[List[Tuple[str, int]]] = [[] for _ in range(n)]
         for gname in raw_prog_groups:
             task_refs: List[Tuple[int, int | None]] = []
@@ -219,35 +221,36 @@ class TaskipelagoWorld(World):
                 continue
 
             group_size = len(group_to_reward_indices[gname])
-            if len(task_refs) > group_size:
-                raise Exception(
-                    f"Taskipelago: progressive group '{gname}' has {group_size} reward(s) but "
-                    f"{len(task_refs)} task(s) require it. Add more rewards to the group or "
-                    f"reduce the number of tasks depending on it."
-                )
 
-            # Separate tasks with explicit positions from those relying on default order.
-            explicit_pos: Dict[int, int] = {}   # position (1-based) -> task_index
+            # Split into explicit-threshold tasks and implicit tasks.
+            explicit_threshold_tasks: Dict[int, List[int]] = {}  # threshold -> [task indices]
             implicit_tasks: List[int] = []
             for ti, n_val in task_refs:
                 if n_val is not None:
-                    if n_val in explicit_pos:
-                        raise Exception(
-                            f"Taskipelago: progressive group '{gname}' has multiple tasks "
-                            f"assigned to position {n_val}."
-                        )
-                    explicit_pos[n_val] = ti
+                    explicit_threshold_tasks.setdefault(n_val, []).append(ti)
                 else:
                     implicit_tasks.append(ti)
-            implicit_tasks.sort()  # lower task index = lower unlock position
+            implicit_tasks.sort()  # lower task index = lower threshold
 
-            all_positions = set(range(1, len(task_refs) + 1))
-            free_positions = sorted(all_positions - set(explicit_pos.keys()))
+            # Each unique explicit threshold plus each implicit task occupies one unlock step.
+            num_steps = len(explicit_threshold_tasks) + len(implicit_tasks)
+            if num_steps > group_size:
+                raise Exception(
+                    f"Taskipelago: progressive group '{gname}' has {group_size} reward(s) but "
+                    f"requires {num_steps} distinct unlock steps "
+                    f"({len(explicit_threshold_tasks)} unique explicit threshold(s) + "
+                    f"{len(implicit_tasks)} implicit task(s)). "
+                    f"Add more rewards to the group or reduce the number of tasks depending on it."
+                )
 
-            for pos, ti in explicit_pos.items():
-                task_progressive_reqs[ti].append((gname, pos))
-            for ti, pos in zip(implicit_tasks, free_positions):
-                task_progressive_reqs[ti].append((gname, pos))
+            # Free thresholds are positions 1..group_size not taken by any explicit ref.
+            free_thresholds = [p for p in range(1, group_size + 1) if p not in explicit_threshold_tasks]
+
+            for threshold, task_list in explicit_threshold_tasks.items():
+                for ti in task_list:
+                    task_progressive_reqs[ti].append((gname, threshold))
+            for ti, threshold in zip(implicit_tasks, free_thresholds):
+                task_progressive_reqs[ti].append((gname, threshold))
 
         parsed_reward_prereqs = []
         for i, txt in enumerate(raw_reward_prereqs):
@@ -452,7 +455,7 @@ def _extract_group_refs(
     """
     Scan a reward prereq expression string and pull out any progressive group references.
     A group ref is a token whose base name (letters/underscores/hyphens, no digits) matches
-    a known group name, optionally followed by -<N> (the explicit unlock order).
+    a known group name, optionally followed by -<N> (minimum item count required from the group).
 
     Returns:
         (group_refs, cleaned_text)
