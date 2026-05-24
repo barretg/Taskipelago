@@ -8,18 +8,18 @@ class Tasks(OptionList):
     default: List[str] = []
 
 
-class Rewards(OptionList):
-    display_name = "Rewards"
+class Items(OptionList):
+    display_name = "Items"
     default: List[str] = []
 
 
-class RewardTypes(OptionList):
+class ItemTypes(OptionList):
     """
-    Parallel list aligned with rewards/tasks. Each entry  is one of:
+    Parallel list aligned with items/tasks. Each entry is one of:
         "trap" | "junk" | "useful" | "progression"
     Missing/invalid entries will be treated as "junk".
     """
-    display_name = "Reward Types"
+    display_name = "Item Types"
     default: List[str] = []
 
 
@@ -34,17 +34,17 @@ class TaskPrereqs(OptionList):
     display_name = "Task Prereqs"
     default: List[str] = []
 
-class RewardPrereqs(OptionList):
+class ItemPrereqs(OptionList):
     """
     NOTE: The application contains a YAML generator that makes it easier to populate this!
     Parallel list aligned with tasks.
-    Each entry is a comma-separated list of task indices whose *Reward {n}* items are required.
+    Each entry is a comma-separated list of task indices whose *Item {n}* items are required.
     Examples:
-      ""            -> no reward prereqs
-      "1"           -> requires Reward 1
-      "1, 2, 5"     -> requires Reward 1, Reward 2, Reward 5
+      ""            -> no item prereqs
+      "1"           -> requires Item 1
+      "1, 2, 5"     -> requires Item 1, Item 2, Item 5
     """
-    display_name = "Reward Prereqs"
+    display_name = "Item Prereqs"
     default: List[str] = []
 
 class LockPreqreqs(Toggle):
@@ -63,7 +63,7 @@ class HideUnreachableTasks(Toggle):
 
 class DeathLink(Toggle):
     """
-    If enabled, receiving certain rewards can trigger DeathLink.
+    If enabled, receiving deathlinks trigger a weighted random deathlink task from the user supplied deathlink task pool.
     """
     display_name = "DeathLink"
     default = 0
@@ -99,18 +99,18 @@ class GoalTasks(OptionList):
 class ProgressiveGroups(OptionList):
     """
     List of progressive group name strings (letters, underscores, and hyphens only - no digits).
-    Each name defines a set of interchangeable reward items that are treated as a progression counter.
+    Each name defines a set of interchangeable item entries that are treated as a progression counter.
     """
     display_name = "Progressive Groups"
     default: List[str] = []
 
-class RewardProgressiveGroup(OptionList):
+class ItemProgressiveGroup(OptionList):
     """
-    Parallel list aligned with rewards/tasks.
+    Parallel list aligned with items/tasks.
     Each entry is a progressive group name (from progressive_groups) or empty string.
-    Rewards assigned to a group are interchangeable and always forced to progression classification.
+    Items assigned to a group are interchangeable and always forced to progression classification.
     """
-    display_name = "Reward Progressive Group"
+    display_name = "Item Progressive Group"
     default: List[str] = []
 
 class BingoMode(Toggle):
@@ -143,10 +143,10 @@ class Bingoal(Range):
 @dataclass
 class TaskipelagoOptions(PerGameCommonOptions):
     tasks: Tasks
-    rewards: Rewards
-    reward_types: RewardTypes
+    items: Items
+    item_types: ItemTypes
     task_prereqs: TaskPrereqs
-    reward_prereqs: RewardPrereqs
+    item_prereqs: ItemPrereqs
     lock_prereqs: LockPreqreqs
     goal_tasks: GoalTasks
     hide_unreachable_tasks: HideUnreachableTasks
@@ -155,7 +155,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     death_link_weights: DeathLinkWeights
     death_link_amnesty: DeathLinkAmnesty
     progressive_groups: ProgressiveGroups
-    reward_progressive_group: RewardProgressiveGroup
+    item_progressive_group: ItemProgressiveGroup
     bingo_mode: BingoMode
     bingo_dimension_x: BingoDimensionX
     bingo_dimension_y: BingoDimensionY

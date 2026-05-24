@@ -70,32 +70,58 @@ class TaskipelagoWorld(World):
     _group_item_display_names: Dict[str, List[str]]
 
     def generate_early(self) -> None:
-        tasks = [str(t).strip() for t in self.options.tasks.value if str(t).strip()]
-        rewards = [str(r).strip() for r in self.options.rewards.value if str(r).strip()]
+        import random as _random
+        import sys as _sys
 
-        reward_types_raw = list(self.options.reward_types.value)
-        reward_types = [str(x).strip().lower() for x in reward_types_raw if str(x).strip()]
+        _FILLER_ITEMS = [
+            "Several pats on the back",
+            "A big thumbs up",
+            "Free dopamine",
+            "One (1) sense of accomplishment",
+            "Mildly increased self-esteem",
+            "A crisp high five",
+            "A firm handshake",
+            "A tiny mental victory parade",
+            "Temporary immunity to self-criticism",
+            "An imaginary star sticker",
+            "A nod of respect",
+        ]
+
+        tasks = [str(t).strip() for t in self.options.tasks.value if str(t).strip()]
+        items_raw = [str(r).strip() for r in self.options.items.value]
+
+        item_types_raw = list(self.options.item_types.value)
+        item_types = [str(x).strip().lower() for x in item_types_raw if str(x).strip()]
 
         if not tasks:
             raise Exception("Taskipelago: tasks list is empty.")
-        if len(tasks) != len(rewards):
-            raise Exception(
-                f"Taskipelago: tasks ({len(tasks)}) and rewards ({len(rewards)}) must be the same length."
-            )
 
         n = len(tasks)
         if n > MAX_TASKS:
             raise Exception(f"Taskipelago: too many tasks ({n}). Max is {MAX_TASKS}.")
 
-        # Normalize reward_types to task count, defaulting to "junk".
+        # Pad or truncate items to match task count, warning if unbalanced.
+        n_items = len([x for x in items_raw if x])
+        if n_items != n:
+            print(
+                f"[Taskipelago] WARNING: Unbalanced item and task counts can lead to generation failures. "
+                f"Tasks: {n}, Items: {n_items}.",
+                file=_sys.stderr,
+            )
+        if len(items_raw) < n:
+            items_raw += [_random.choice(_FILLER_ITEMS) for _ in range(n - len(items_raw))]
+        items_raw = items_raw[:n]
+        rewards = [x if x else _random.choice(_FILLER_ITEMS) for x in items_raw]
+
+        # Normalize item_types to task count, defaulting to "junk".
         allowed_types = {"trap", "junk", "useful", "progression"}
-        if len(reward_types) < n:
-            reward_types += ["junk"] * (n - len(reward_types))
-        reward_types = [rt if rt in allowed_types else "junk" for rt in reward_types[:n]]
+        if len(item_types) < n:
+            item_types += ["junk"] * (n - len(item_types))
+        item_types = [rt if rt in allowed_types else "junk" for rt in item_types[:n]]
 
         self._tasks = tasks
         self._rewards = rewards
-        self._reward_types = reward_types
+        self._reward_types = item_types
 
         # --- DeathLink validation ---
         if bool(self.options.death_link):
@@ -160,8 +186,8 @@ class TaskipelagoWorld(World):
             raise Exception("Taskipelago: duplicate progressive group names.")
         prog_group_set = set(raw_prog_groups)
 
-        # --- Map each reward to its group ---
-        raw_rpg = [str(x).strip() for x in (self.options.reward_progressive_group.value or [])]
+        # --- Map each item to its group ---
+        raw_rpg = [str(x).strip() for x in (self.options.item_progressive_group.value or [])]
         if len(raw_rpg) < n:
             raw_rpg += [""] * (n - len(raw_rpg))
         raw_rpg = raw_rpg[:n]
@@ -177,8 +203,8 @@ class TaskipelagoWorld(World):
                 group_to_reward_indices[gname].append(i)
             reward_to_group.append(gname)
 
-        # --- Parse reward prereqs (extracting group refs first) ---
-        raw_reward_prereqs_input = [str(x).strip() for x in list(self.options.reward_prereqs.value or [])]
+        # --- Parse item prereqs (extracting group refs first) ---
+        raw_reward_prereqs_input = [str(x).strip() for x in list(self.options.item_prereqs.value or [])]
         if len(raw_reward_prereqs_input) < n:
             raw_reward_prereqs_input += [""] * (n - len(raw_reward_prereqs_input))
         raw_reward_prereqs_input = raw_reward_prereqs_input[:n]
@@ -300,7 +326,7 @@ class TaskipelagoWorld(World):
         self._reward_location_names = [f"{prefix}Task {i + 1} (Reward)" for i in range(n)]
         self._complete_location_names = [f"{prefix}Task {i + 1} (Complete)" for i in range(n)]
         self._reward_item_names = [
-            f"{prefix}Reward {i + 1}: {rewards[i]}" if rewards[i].strip() else f"{prefix}Reward {i + 1}"
+            f"{prefix}Item {i + 1}: {rewards[i]}" if rewards[i].strip() else f"{prefix}Item {i + 1}"
             for i in range(n)
         ]
         self._reward_display_names = list(self._reward_item_names)
@@ -326,15 +352,15 @@ class TaskipelagoWorld(World):
             prefix = f"[{player_name}] " if multi_slot else ""
 
             tasks = [str(t).strip() for t in world.options.tasks.value if str(t).strip()]
-            rewards_raw = [str(r).strip() for r in world.options.rewards.value]
+            items_raw = [str(r).strip() for r in world.options.items.value]
             n = min(len(tasks), MAX_TASKS)
 
             for i in range(n):
-                reward_text = rewards_raw[i] if i < len(rewards_raw) else ""
+                reward_text = items_raw[i] if i < len(items_raw) else ""
                 item_name = (
-                    f"{prefix}Reward {i + 1}: {reward_text}"
+                    f"{prefix}Item {i + 1}: {reward_text}"
                     if reward_text
-                    else f"{prefix}Reward {i + 1}"
+                    else f"{prefix}Item {i + 1}"
                 )
                 token_name = f"{prefix}Task {i + 1} Complete"
                 reward_loc_name = f"{prefix}Task {i + 1} (Reward)"
@@ -457,10 +483,10 @@ class TaskipelagoWorld(World):
 
         return {
             "tasks": list(self._tasks),
-            "rewards": list(self._rewards),
-            "reward_types": list(self._reward_types),
+            "items": list(self._rewards),
+            "item_types": list(self._reward_types),
             "task_prereqs": list(self._raw_prereqs),
-            "reward_prereqs": list(self._raw_reward_prereqs),
+            "item_prereqs": list(self._raw_reward_prereqs),
             "lock_prereqs": bool(self._lock_prereqs),
             "hide_unreachable_tasks": bool(self._hide_unreachable_tasks),
             "death_link_pool": [
@@ -480,7 +506,7 @@ class TaskipelagoWorld(World):
             "goal_indices": sorted(self._goal_indices),
             "goal_expression": self._raw_goal,
             "progressive_groups": list(self._progressive_groups),
-            "reward_progressive_group": list(self._reward_to_group),
+            "item_progressive_group": list(self._reward_to_group),
             "task_progressive_reqs": [
                 [{"group": g, "count": c} for g, c in reqs]
                 for reqs in self._task_progressive_reqs
