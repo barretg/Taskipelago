@@ -68,6 +68,12 @@ class TaskipelagoWorld(World):
     _group_to_reward_indices: Dict[str, List[int]]
     _task_progressive_reqs: List[List[Tuple[str, int]]]
     _group_item_display_names: Dict[str, List[str]]
+    _regions: List[str]
+    _region_default_pcts: Dict[str, int]
+    _task_region: List[str]
+    _task_region_reqs: List[List[Tuple[str, int]]]
+    _region_to_task_indices: Dict[str, List[int]]
+    _region_token_names: Dict[str, List[str]]
 
     def generate_early(self) -> None:
         import random as _random
@@ -156,21 +162,53 @@ class TaskipelagoWorld(World):
         # --- set hiding of unreachable tasks ---
         self._hide_unreachable_tasks = bool(self.options.hide_unreachable_tasks.value)
         
-        # --- Parse task prereqs ---
-        raw_prereqs = [str(x).strip() for x in list(self.options.task_prereqs.value or [])]
-        if len(raw_prereqs) < n:
-            raw_prereqs += [""] * (n - len(raw_prereqs))
-        raw_prereqs = raw_prereqs[:n]
+        # --- Parse regions ---
+        raw_regions = [
+            str(g).strip() for g in (self.options.regions.value or [])
+            if str(g).strip()
+        ]
+        for rname in raw_regions:
+            if _re.search(r'\d', rname):
+                raise Exception(
+                    f"Taskipelago: region name '{rname}' must not contain digits."
+                )
+        if len(raw_regions) != len(set(raw_regions)):
+            raise Exception("Taskipelago: duplicate region names.")
+        region_set = set(raw_regions)
 
-        parsed_prereqs = []
-        for i, txt in enumerate(raw_prereqs):
-            ast = parse_prereq(txt, n, i, "task prereq")
-            if ast is not None and i in collect_leaves(ast):
-                raise Exception(f"Taskipelago: task {i + 1} cannot require itself.")
-            parsed_prereqs.append(ast)
+        raw_rdp = [str(x).strip() for x in (self.options.region_default_pcts.value or [])]
+        if len(raw_rdp) < len(raw_regions):
+            raw_rdp += ["100"] * (len(raw_regions) - len(raw_rdp))
+        raw_rdp = raw_rdp[:len(raw_regions)]
+        region_default_pcts: Dict[str, int] = {}
+        for rname, pct_str in zip(raw_regions, raw_rdp):
+            try:
+                pct = int(pct_str) if pct_str else 100
+            except ValueError:
+                raise Exception(
+                    f"Taskipelago: invalid default percentage '{pct_str}' for region '{rname}'."
+                )
+            if pct < 0 or pct > 100:
+                raise Exception(
+                    f"Taskipelago: region '{rname}' default percentage {pct} must be 0-100."
+                )
+            region_default_pcts[rname] = pct
 
-        # Cycle detection via DFS.
-        _assert_no_cycles(parsed_prereqs, n)
+        raw_task_region = [str(x).strip() for x in (self.options.task_region.value or [])]
+        if len(raw_task_region) < n:
+            raw_task_region += [""] * (n - len(raw_task_region))
+        raw_task_region = raw_task_region[:n]
+        for i, rname in enumerate(raw_task_region):
+            if rname and rname not in region_set:
+                raise Exception(
+                    f"Taskipelago: task {i + 1} references unknown region '{rname}'."
+                )
+        task_region = raw_task_region
+
+        region_to_task_indices: Dict[str, List[int]] = {r: [] for r in raw_regions}
+        for i, rname in enumerate(task_region):
+            if rname:
+                region_to_task_indices[rname].append(i)
 
         # --- Parse progressive groups ---
         raw_prog_groups = [
@@ -284,6 +322,47 @@ class TaskipelagoWorld(World):
         for i, txt in enumerate(raw_reward_prereqs):
             parsed_reward_prereqs.append(parse_prereq(txt, n, i, "reward prereq"))
 
+        # --- Parse task prereqs (extract region refs first) ---
+        raw_prereqs_input = [str(x).strip() for x in list(self.options.task_prereqs.value or [])]
+        if len(raw_prereqs_input) < n:
+            raw_prereqs_input += [""] * (n - len(raw_prereqs_input))
+        raw_prereqs_input = raw_prereqs_input[:n]
+
+        task_region_refs_extracted: List[List[Tuple[str, int | None]]] = []
+        raw_prereqs: List[str] = []
+        for txt in raw_prereqs_input:
+            refs, cleaned = _extract_region_refs(txt, region_set)
+            task_region_refs_extracted.append(refs)
+            raw_prereqs.append(cleaned)
+
+        task_region_reqs: List[List[Tuple[str, int]]] = []
+        for i, refs in enumerate(task_region_refs_extracted):
+            reqs: List[Tuple[str, int]] = []
+            for rname, pct_val in refs:
+                if task_region[i] == rname:
+                    raise Exception(
+                        f"Taskipelago: task {i + 1} cannot depend on its own region '{rname}'."
+                    )
+                pct = pct_val if pct_val is not None else region_default_pcts.get(rname, 100)
+                if pct < 0 or pct > 100:
+                    raise Exception(
+                        f"Taskipelago: task {i + 1} region prereq '{rname}' percentage {pct} must be 0-100."
+                    )
+                if not region_to_task_indices.get(rname):
+                    raise Exception(
+                        f"Taskipelago: task {i + 1} references region '{rname}' which has no tasks assigned."
+                    )
+                reqs.append((rname, pct))
+            task_region_reqs.append(reqs)
+
+        parsed_prereqs = []
+        for i, txt in enumerate(raw_prereqs):
+            ast = parse_prereq(txt, n, i, "task prereq")
+            if ast is not None and i in collect_leaves(ast):
+                raise Exception(f"Taskipelago: task {i + 1} cannot require itself.")
+            parsed_prereqs.append(ast)
+        _assert_no_cycles(parsed_prereqs, n)
+
         # --- Parse goal tasks ---
         raw_goal_parts = [str(x).strip() for x in list(self.options.goal_tasks.value or []) if str(x).strip()]
         raw_goal = ", ".join(raw_goal_parts)  # rejoin into single expression
@@ -315,6 +394,11 @@ class TaskipelagoWorld(World):
         self._reward_to_group = reward_to_group
         self._group_to_reward_indices = group_to_reward_indices
         self._task_progressive_reqs = task_progressive_reqs
+        self._regions = raw_regions
+        self._region_default_pcts = region_default_pcts
+        self._task_region = task_region
+        self._task_region_reqs = task_region_reqs
+        self._region_to_task_indices = region_to_task_indices
 
         # Stable names for this generation.
         # stage_generate_early runs before this and sets the class-level dicts;
@@ -334,6 +418,10 @@ class TaskipelagoWorld(World):
         self._group_item_display_names: Dict[str, List[str]] = {
             gname: [self._reward_item_names[idx] for idx in indices]
             for gname, indices in group_to_reward_indices.items()
+        }
+        self._region_token_names: Dict[str, List[str]] = {
+            rname: [self._token_item_names[idx] for idx in indices]
+            for rname, indices in region_to_task_indices.items()
         }
 
     @classmethod
@@ -377,21 +465,28 @@ class TaskipelagoWorld(World):
 
     def create_regions(self) -> None:
         menu = Region("Menu", self.player, self.multiworld)
-        tasks_region = Region("Tasks", self.player, self.multiworld)
+        fallback = Region("Tasks", self.player, self.multiworld)
+
+        ap_region_map: Dict[str, Region] = {
+            rname: Region(rname, self.player, self.multiworld)
+            for rname in self._regions
+        }
 
         for i in range(len(self._tasks)):
-            rname = self._reward_location_names[i]
-            cname = self._complete_location_names[i]
-
-            tasks_region.locations.append(
-                TaskipelagoLocation(self.player, rname, self.location_name_to_id[rname], tasks_region)
+            rlocname = self._reward_location_names[i]
+            clocname = self._complete_location_names[i]
+            target = ap_region_map.get(self._task_region[i], fallback)
+            target.locations.append(
+                TaskipelagoLocation(self.player, rlocname, self.location_name_to_id[rlocname], target)
             )
-            tasks_region.locations.append(
-                TaskipelagoLocation(self.player, cname, self.location_name_to_id[cname], tasks_region)
+            target.locations.append(
+                TaskipelagoLocation(self.player, clocname, self.location_name_to_id[clocname], target)
             )
 
-        self.multiworld.regions += [menu, tasks_region]
-        menu.connect(tasks_region)
+        all_regions = [menu, fallback] + list(ap_region_map.values())
+        self.multiworld.regions += all_regions
+        for region in [fallback] + list(ap_region_map.values()):
+            menu.connect(region)
 
     def create_items(self) -> None:
         """
@@ -511,6 +606,13 @@ class TaskipelagoWorld(World):
                 [{"group": g, "count": c} for g, c in reqs]
                 for reqs in self._task_progressive_reqs
             ],
+            "regions": list(self._regions),
+            "region_default_pcts": dict(self._region_default_pcts),
+            "task_region": list(self._task_region),
+            "task_region_reqs": [
+                [{"region": r, "pct": p} for r, p in reqs]
+                for reqs in self._task_region_reqs
+            ],
             "bingo_mode": bool(self.options.bingo_mode),
             "bingo_dimension_x": int(self.options.bingo_dimension_x),
             "bingo_dimension_y": int(self.options.bingo_dimension_y),
@@ -597,6 +699,75 @@ def _extract_group_refs(
     cleaned = _re.sub(r'^\s*(?:&&|,|\|\|)\s*', '', cleaned)
     cleaned = _re.sub(r'\s*(?:&&|,|\|\|)\s*$', '', cleaned)
     return group_refs, cleaned.strip()
+
+
+def _extract_region_refs(
+    text: str, known_regions: set
+) -> Tuple[List[Tuple[str, int | None]], str]:
+    """
+    Identical in structure to _extract_group_refs but for task-region prereqs.
+    A region ref token matches a known region name, optionally followed by -<pct> (0-100 percentage).
+    Returns (region_refs, cleaned_text) where region tokens are removed from the expression.
+    """
+    region_refs: List[Tuple[str, int | None]] = []
+    parts: List[str] = []
+    i = 0
+    length = len(text)
+
+    while i < length:
+        c = text[i]
+
+        if c.isspace():
+            parts.append(c)
+            i += 1
+
+        elif text[i:i+2] in ('&&', '||'):
+            parts.append(text[i:i+2])
+            i += 2
+
+        elif c in ('(', ')', ','):
+            parts.append(c)
+            i += 1
+
+        elif c.isdigit():
+            j = i
+            while j < length and text[j].isdigit():
+                j += 1
+            parts.append(text[i:j])
+            i = j
+
+        elif c.isalpha() or c == '_':
+            j = i
+            while j < length:
+                ch = text[j]
+                if ch.isspace() or ch in ('(', ')', ','):
+                    break
+                if text[j:j+2] in ('&&', '||'):
+                    break
+                j += 1
+            token = text[i:j]
+
+            suffix_m = _re.match(r'^(.+[a-zA-Z_])-(\d+)$', token)
+            if suffix_m:
+                base, pct_val = suffix_m.group(1), int(suffix_m.group(2))
+            else:
+                base, pct_val = token, None
+
+            if base in known_regions:
+                region_refs.append((base, pct_val))
+            else:
+                parts.append(token)
+            i = j
+
+        else:
+            parts.append(c)
+            i += 1
+
+    cleaned = ''.join(parts)
+    cleaned = _re.sub(r'(?:&&|,)\s*(?:&&|,)', '&&', cleaned)
+    cleaned = _re.sub(r'^\s*(?:&&|,|\|\|)\s*', '', cleaned)
+    cleaned = _re.sub(r'\s*(?:&&|,|\|\|)\s*$', '', cleaned)
+    return region_refs, cleaned.strip()
 
 
 def _parse_prereq_list(txt: str, task_index: int, n: int, label: str) -> List[int]:

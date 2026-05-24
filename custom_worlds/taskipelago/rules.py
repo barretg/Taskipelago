@@ -1,4 +1,5 @@
 from __future__ import annotations
+import math as _math
 from typing import TYPE_CHECKING, List
 from .prereq_parser import Node, eval_node, _has_or, collect_leaves
 
@@ -23,10 +24,11 @@ def set_rules(world: "TaskipelagoWorld") -> None:
 
 
 def _set_rules_builder(world: "TaskipelagoWorld", player: int, n: int) -> None:
-    # Fall back to lambdas if any OR nodes exist or any progressive requirements exist
+    # Fall back to lambdas if any OR nodes exist, progressive reqs, or region reqs exist
     # (RuleBuilder has no has_from_list support).
     has_prog = any(reqs for reqs in world._task_progressive_reqs)
-    if has_prog or any(_has_or(ast) for ast in world._parsed_prereqs + world._parsed_reward_prereqs):
+    has_region = any(reqs for reqs in world._task_region_reqs)
+    if has_prog or has_region or any(_has_or(ast) for ast in world._parsed_prereqs + world._parsed_reward_prereqs):
         _set_rules_lambda(world, player, n)
         return
 
@@ -58,21 +60,29 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
     reward_names = world._reward_display_names
     prog_reqs_list = world._task_progressive_reqs       # List[List[Tuple[str,int]]]
     group_items = world._group_item_display_names       # Dict[str, List[str]]
+    region_reqs_list = world._task_region_reqs          # List[List[Tuple[str,int]]]
+    region_tokens = world._region_token_names           # Dict[str, List[str]]
 
     for i in range(n):
         token_ast = world._parsed_prereqs[i]
         reward_ast = world._parsed_reward_prereqs[i]
-        prog_reqs = prog_reqs_list[i]                   # List[Tuple[str,int]], may be empty
+        prog_reqs = prog_reqs_list[i]
+        region_reqs = region_reqs_list[i]
 
-        if token_ast is not None or reward_ast is not None or prog_reqs:
+        if token_ast is not None or reward_ast is not None or prog_reqs or region_reqs:
             complete_loc = world.multiworld.get_location(world._complete_location_names[i], player)
 
-            def complete_rule(state, ta=token_ast, ra=reward_ast, pr=prog_reqs,
-                              p=player, tn=token_names, rn=reward_names, gi=group_items) -> bool:
+            def complete_rule(state, ta=token_ast, ra=reward_ast, pr=prog_reqs, rr=region_reqs,
+                              p=player, tn=token_names, rn=reward_names,
+                              gi=group_items, rt=region_tokens) -> bool:
                 return (
                     eval_node(ta, state, p, tn)
                     and eval_node(ra, state, p, rn)
                     and all(state.has_from_list(gi[g], p, c) for g, c in pr)
+                    and all(
+                        state.has_from_list(rt[r], p, _math.ceil(len(rt[r]) * pct / 100))
+                        for r, pct in rr
+                    )
                 )
 
             complete_loc.access_rule = complete_rule
@@ -80,13 +90,18 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
         reward_loc = world.multiworld.get_location(world._reward_location_names[i], player)
         my_token = world._token_item_names[i]
 
-        def reward_rule(state, mt=my_token, ta=token_ast, ra=reward_ast, pr=prog_reqs,
-                        p=player, tn=token_names, rn=reward_names, gi=group_items) -> bool:
+        def reward_rule(state, mt=my_token, ta=token_ast, ra=reward_ast, pr=prog_reqs, rr=region_reqs,
+                        p=player, tn=token_names, rn=reward_names,
+                        gi=group_items, rt=region_tokens) -> bool:
             return (
                 state.has(mt, p)
                 and eval_node(ta, state, p, tn)
                 and eval_node(ra, state, p, rn)
                 and all(state.has_from_list(gi[g], p, c) for g, c in pr)
+                and all(
+                    state.has_from_list(rt[r], p, _math.ceil(len(rt[r]) * pct / 100))
+                    for r, pct in rr
+                )
             )
 
         reward_loc.access_rule = reward_rule

@@ -113,6 +113,35 @@ class ItemProgressiveGroup(OptionList):
     display_name = "Item Progressive Group"
     default: List[str] = []
 
+class Regions(OptionList):
+    """
+    List of region name strings (letters, underscores, and hyphens only - no digits).
+    Each name defines a set of tasks that can be used as percentage-based completion prerequisites.
+    """
+    display_name = "Regions"
+    default: List[str] = []
+
+class RegionDefaultPcts(OptionList):
+    """
+    Parallel list aligned with regions.
+    Each entry is the default completion percentage (0-100) required when a task prereq
+    references the region by name without an explicit percentage.
+    Missing or invalid entries default to 100.
+    """
+    display_name = "Region Default Percentages"
+    default: List[str] = []
+
+class TaskRegion(OptionList):
+    """
+    Parallel list aligned with tasks.
+    Each entry is a region name (from regions) or empty string.
+    Tasks assigned to a region can be used as region-based completion prerequisites.
+    A task cannot depend on its own region.
+    """
+    display_name = "Task Region"
+    default: List[str] = []
+
+
 class BingoMode(Toggle):
     """If enabled, this slot is treated as a bingo board by the client."""
     display_name = "Bingo Mode"
@@ -156,6 +185,9 @@ class TaskipelagoOptions(PerGameCommonOptions):
     death_link_amnesty: DeathLinkAmnesty
     progressive_groups: ProgressiveGroups
     item_progressive_group: ItemProgressiveGroup
+    regions: Regions
+    region_default_pcts: RegionDefaultPcts
+    task_region: TaskRegion
     bingo_mode: BingoMode
     bingo_dimension_x: BingoDimensionX
     bingo_dimension_y: BingoDimensionY
