@@ -2,8 +2,10 @@ from BaseClasses import Location
 
 GAME_NAME = "Taskipelago"
 
-BASE_REWARD_LOC_ID = 910_000
-BASE_COMPLETE_LOC_ID = 920_000
+# IDs use formula: BASE + (player - 1) * MAX_TASKS + task_index
+# Bases are spaced 1_000_000 apart to support up to 1000 players * 1000 tasks each.
+BASE_REWARD_LOC_ID = 910_000_000
+BASE_COMPLETE_LOC_ID = 913_000_000
 MAX_TASKS = 1000
 
 

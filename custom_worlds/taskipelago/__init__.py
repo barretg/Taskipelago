@@ -40,6 +40,8 @@ class TaskipelagoWorld(World):
     web = TaskipelagoWeb()
     options_dataclass = TaskipelagoOptions
 
+    # Static fallbacks used before any generation (e.g. server startup, data package requests).
+    # stage_generate_early replaces these with actual reward names and player-specific IDs.
     item_name_to_id: Dict[str, int] = ITEM_NAME_TO_ID
     location_name_to_id: Dict[str, int] = LOCATION_NAME_TO_ID
 
@@ -289,18 +291,63 @@ class TaskipelagoWorld(World):
         self._task_progressive_reqs = task_progressive_reqs
 
         # Stable names for this generation.
-        self._reward_location_names = [f"Task {i + 1} (Reward)" for i in range(n)]
-        self._complete_location_names = [f"Task {i + 1} (Complete)" for i in range(n)]
-        self._reward_item_names = [f"Reward {i + 1}" for i in range(n)]
-        self._reward_display_names = [
-            r if r.strip() else f"Reward {i + 1}"
-            for i, r in enumerate(rewards)
+        # stage_generate_early runs before this and sets the class-level dicts;
+        # we reproduce the same naming formula here so instance methods use matching names.
+        multi_slot = len(list(self.multiworld.get_game_worlds(self.game))) > 1
+        _pname = self.multiworld.player_name[self.player]
+        prefix = f"[{_pname}] " if multi_slot else ""
+
+        self._reward_location_names = [f"{prefix}Task {i + 1} (Reward)" for i in range(n)]
+        self._complete_location_names = [f"{prefix}Task {i + 1} (Complete)" for i in range(n)]
+        self._reward_item_names = [
+            f"{prefix}Reward {i + 1}: {rewards[i]}" if rewards[i].strip() else f"{prefix}Reward {i + 1}"
+            for i in range(n)
         ]
-        self._token_item_names = [f"Task Complete {i + 1}" for i in range(n)]
+        self._reward_display_names = list(self._reward_item_names)
+        self._token_item_names = [f"{prefix}Task {i + 1} Complete" for i in range(n)]
         self._group_item_display_names: Dict[str, List[str]] = {
-            gname: [self._reward_display_names[idx] for idx in indices]
+            gname: [self._reward_item_names[idx] for idx in indices]
             for gname, indices in group_to_reward_indices.items()
         }
+
+    @classmethod
+    def stage_generate_early(cls, multiworld) -> None:
+        import worlds as _worlds
+
+        task_worlds = list(multiworld.get_game_worlds(cls.game))
+        multi_slot = len(task_worlds) > 1
+
+        item_name_to_id: Dict[str, int] = {}
+        location_name_to_id: Dict[str, int] = {}
+
+        for world in task_worlds:
+            p = world.player
+            player_name = multiworld.player_name[p]
+            prefix = f"[{player_name}] " if multi_slot else ""
+
+            tasks = [str(t).strip() for t in world.options.tasks.value if str(t).strip()]
+            rewards_raw = [str(r).strip() for r in world.options.rewards.value]
+            n = min(len(tasks), MAX_TASKS)
+
+            for i in range(n):
+                reward_text = rewards_raw[i] if i < len(rewards_raw) else ""
+                item_name = (
+                    f"{prefix}Reward {i + 1}: {reward_text}"
+                    if reward_text
+                    else f"{prefix}Reward {i + 1}"
+                )
+                token_name = f"{prefix}Task {i + 1} Complete"
+                reward_loc_name = f"{prefix}Task {i + 1} (Reward)"
+                complete_loc_name = f"{prefix}Task {i + 1} (Complete)"
+
+                item_name_to_id[item_name] = BASE_ITEM_ID + (p - 1) * MAX_TASKS + i
+                item_name_to_id[token_name] = BASE_TOKEN_ID + (p - 1) * MAX_TASKS + i
+                location_name_to_id[reward_loc_name] = BASE_REWARD_LOC_ID + (p - 1) * MAX_TASKS + i
+                location_name_to_id[complete_loc_name] = BASE_COMPLETE_LOC_ID + (p - 1) * MAX_TASKS + i
+
+        cls.item_name_to_id = item_name_to_id
+        cls.location_name_to_id = location_name_to_id
+        _worlds.network_data_package["games"][cls.game] = cls.get_data_package_data()
 
     def create_regions(self) -> None:
         menu = Region("Menu", self.player, self.multiworld)
@@ -309,14 +356,12 @@ class TaskipelagoWorld(World):
         for i in range(len(self._tasks)):
             rname = self._reward_location_names[i]
             cname = self._complete_location_names[i]
-            rid = LOCATION_NAME_TO_ID[rname]
-            cid = LOCATION_NAME_TO_ID[cname]
 
             tasks_region.locations.append(
-                TaskipelagoLocation(self.player, rname, rid, tasks_region)
+                TaskipelagoLocation(self.player, rname, self.location_name_to_id[rname], tasks_region)
             )
             tasks_region.locations.append(
-                TaskipelagoLocation(self.player, cname, cid, tasks_region)
+                TaskipelagoLocation(self.player, cname, self.location_name_to_id[cname], tasks_region)
             )
 
         self.multiworld.regions += [menu, tasks_region]
@@ -333,12 +378,11 @@ class TaskipelagoWorld(World):
             forced = i in self._forced_progression_rewards
             cls = get_item_classification(rt, forced)
 
-            display_name = self._reward_display_names[i]
             self.multiworld.itempool.append(
                 TaskipelagoItem(
-                    display_name,
+                    name,
                     cls,
-                    ITEM_NAME_TO_ID[name],  # stable ID keyed off "Reward {i+1}"
+                    self.item_name_to_id[name],
                     self.player,
                 )
             )
@@ -355,7 +399,7 @@ class TaskipelagoWorld(World):
                 TaskipelagoItem(
                     token_name,
                     ItemClassification.progression,
-                    ITEM_NAME_TO_ID[token_name],
+                    self.item_name_to_id[token_name],
                     self.player,
                 )
             )
@@ -427,9 +471,10 @@ class TaskipelagoWorld(World):
             "death_link_weights": list(self._death_link_weights),
             "death_link_amnesty": int(self._death_link_amnesty),
             "death_link_enabled": bool(self.options.death_link),
-            "base_reward_location_id": BASE_REWARD_LOC_ID,
-            "base_complete_location_id": BASE_COMPLETE_LOC_ID,
-            "base_item_id": BASE_ITEM_ID,
+            "base_reward_location_id": BASE_REWARD_LOC_ID + (self.player - 1) * MAX_TASKS,
+            "base_complete_location_id": BASE_COMPLETE_LOC_ID + (self.player - 1) * MAX_TASKS,
+            "base_item_id": BASE_ITEM_ID + (self.player - 1) * MAX_TASKS,
+            "base_token_id": BASE_TOKEN_ID + (self.player - 1) * MAX_TASKS,
             "sent_item_names": sent_item_names,
             "sent_player_names": sent_player_names,
             "goal_indices": sorted(self._goal_indices),

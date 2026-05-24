@@ -2,8 +2,10 @@ from BaseClasses import Item, ItemClassification
 
 GAME_NAME = "Taskipelago"
 
-BASE_ITEM_ID = 911_000
-BASE_TOKEN_ID = 912_000
+# IDs use formula: BASE + (player - 1) * MAX_TASKS + task_index
+# Bases are spaced 1_000_000 apart to support up to 1000 players * 1000 tasks each.
+BASE_ITEM_ID = 911_000_000
+BASE_TOKEN_ID = 912_000_000
 MAX_TASKS = 1000
 
 CLASSIFICATION_MAP = {
