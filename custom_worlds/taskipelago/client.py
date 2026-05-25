@@ -378,17 +378,21 @@ class TaskRow:
         self.task_var = tk.StringVar()
         self.prereq_var = tk.StringVar()
         self.item_prereq_var = tk.StringVar()
+        self.cost_var = tk.StringVar()
         self.region_var = tk.StringVar(value="")
+        self.count_var = tk.IntVar(value=1)
 
         self.num_label = ttk.Label(parent, text=str(index), width=3)
         self.task_entry = ttk.Entry(parent, textvariable=self.task_var)
         self.prereq_entry = ttk.Entry(parent, textvariable=self.prereq_var)
         self.item_prereq_entry = ttk.Entry(parent, textvariable=self.item_prereq_var)
+        self.cost_entry = ttk.Entry(parent, textvariable=self.cost_var)
         self.region_cb = ttk.Combobox(
             parent, textvariable=self.region_var,
             values=[""] + list(regions or []),
             state="readonly", width=12,
         )
+        self.count_spinbox = ttk.Spinbox(parent, from_=1, to=999, textvariable=self.count_var, width=5)
         self.remove_btn = ttk.Button(parent, text="Remove", width=8, command=self.remove)
 
         self._grid()
@@ -399,12 +403,15 @@ class TaskRow:
         self.task_entry.grid(row=r, column=1, padx=(0, 8), sticky="ew", pady=4)
         self.prereq_entry.grid(row=r, column=2, sticky="ew", padx=(0, 8), pady=4)
         self.item_prereq_entry.grid(row=r, column=3, sticky="ew", padx=(0, 8), pady=4)
-        self.region_cb.grid(row=r, column=4, sticky="w", padx=(0, 8), pady=4)
-        self.remove_btn.grid(row=r, column=5, padx=(0, 0), pady=4)
+        self.cost_entry.grid(row=r, column=4, sticky="ew", padx=(0, 8), pady=4)
+        self.region_cb.grid(row=r, column=5, sticky="w", padx=(0, 8), pady=4)
+        self.count_spinbox.grid(row=r, column=6, sticky="w", padx=(0, 8), pady=4)
+        self.remove_btn.grid(row=r, column=7, padx=(0, 0), pady=4)
 
     def remove(self):
         for w in (self.num_label, self.task_entry, self.prereq_entry,
-                  self.item_prereq_entry, self.region_cb, self.remove_btn):
+                  self.item_prereq_entry, self.cost_entry, self.region_cb,
+                  self.count_spinbox, self.remove_btn):
             try:
                 w.destroy()
             except Exception:
@@ -419,11 +426,17 @@ class TaskRow:
             self.region_var.set("")
 
     def get_data(self):
+        try:
+            count = max(1, int(self.count_var.get()))
+        except (ValueError, tk.TclError):
+            count = 1
         return (
             self.task_var.get().strip(),
             self.prereq_var.get().strip(),
             self.item_prereq_var.get().strip(),
+            self.cost_var.get().strip(),
             self.region_var.get().strip(),
+            count,
         )
 
 
@@ -435,10 +448,12 @@ class ItemRow:
 
         self.item_var = tk.StringVar()
         self.filler_var = tk.BooleanVar(value=False)
+        self.consumable_var = tk.BooleanVar(value=False)
         self.reward_type_var = tk.StringVar(value=DEFAULT_REWARD_TYPE)
         self._saved_reward_type = DEFAULT_REWARD_TYPE
         self._saved_item = ""
         self._saved_prog_group = ""
+        self.count_var = tk.IntVar(value=1)
 
         self.prog_group_var = tk.StringVar(value="")
         self.prog_group_cb = ttk.Combobox(
@@ -463,6 +478,10 @@ class ItemRow:
         self.filler_cb = ttk.Checkbutton(
             parent, text="Filler", variable=self.filler_var, command=self.on_filler_toggle
         )
+        self.consumable_cb = ttk.Checkbutton(
+            parent, text="Consumable", variable=self.consumable_var
+        )
+        self.count_spinbox = ttk.Spinbox(parent, from_=1, to=999, textvariable=self.count_var, width=5)
         self.remove_btn = ttk.Button(parent, text="Remove", width=8, command=self.remove)
 
         self._grid()
@@ -473,8 +492,10 @@ class ItemRow:
         self.item_entry.grid(row=r, column=1, padx=(0, 8), sticky="ew", pady=4)
         self.reward_type_cb.grid(row=r, column=2, sticky="w", padx=(0, 8), pady=4)
         self.filler_cb.grid(row=r, column=3, padx=(0, 8), sticky="w", pady=4)
-        self.prog_group_cb.grid(row=r, column=4, sticky="w", padx=(0, 8), pady=4)
-        self.remove_btn.grid(row=r, column=5, padx=(0, 0), pady=4)
+        self.consumable_cb.grid(row=r, column=4, padx=(0, 8), sticky="w", pady=4)
+        self.prog_group_cb.grid(row=r, column=5, sticky="w", padx=(0, 8), pady=4)
+        self.count_spinbox.grid(row=r, column=6, sticky="w", padx=(0, 8), pady=4)
+        self.remove_btn.grid(row=r, column=7, padx=(0, 0), pady=4)
 
     def remove(self):
         for w in (
@@ -482,7 +503,9 @@ class ItemRow:
             self.item_entry,
             self.reward_type_cb,
             self.filler_cb,
+            self.consumable_cb,
             self.prog_group_cb,
+            self.count_spinbox,
             self.remove_btn,
         ):
             try:
@@ -508,6 +531,8 @@ class ItemRow:
             self._saved_prog_group = self.prog_group_var.get()
             self.prog_group_var.set("")
             self.prog_group_cb.state(["disabled"])
+            self.consumable_var.set(False)
+            self.consumable_cb.state(["disabled"])
             self.item_var.set(_random_filler())
             self.item_entry.state(["disabled"])
             self.reward_type_var.set("junk")
@@ -516,6 +541,7 @@ class ItemRow:
             self.item_entry.state(["!disabled"])
             self.item_var.set(self._saved_item)
             self.prog_group_cb.state(["!disabled"])
+            self.consumable_cb.state(["!disabled"])
             self.prog_group_var.set(self._saved_prog_group)
             # _on_prog_group_change fires from the trace and restores type / disables as needed
 
@@ -542,11 +568,17 @@ class ItemRow:
             self.prog_group_var.set("")
 
     def get_data(self):
+        try:
+            count = max(1, int(self.count_var.get()))
+        except (ValueError, tk.TclError):
+            count = 1
         return (
             self.item_var.get().strip(),
             self.filler_var.get(),
             self.reward_type_var.get().strip().lower() or "useful",
             self.prog_group_var.get().strip(),
+            self.consumable_var.get(),
+            count,
         )
 
 
@@ -693,6 +725,11 @@ class TaskipelagoContext(CommonClient.CommonContext):
             self.slot_data.get("item_progressive_group", self.slot_data.get("reward_progressive_group", [])) or []
         )
         self.task_progressive_reqs = list(self.slot_data.get("task_progressive_reqs", []) or [])
+
+        self.task_costs = list(self.slot_data.get("task_costs", []) or [])
+        self.task_cost_amounts = list(self.slot_data.get("task_cost_amounts", []) or [])
+        self.item_consumable = list(self.slot_data.get("item_consumable", []) or [])
+        self.consumable_groups = dict(self.slot_data.get("consumable_groups", {}) or {})
 
         self.regions = list(self.slot_data.get("regions", []) or [])
         self.region_default_pcts = dict(self.slot_data.get("region_default_pcts", {}) or {})
@@ -976,6 +1013,7 @@ class TaskipelagoApp(tk.Tk):
         self.connection_state = "disconnected"
         self.sent_goal = False
         self.pending_reward_locations = set()  # only track reward loc pending (UI completion)
+        self._task_purchases: dict = {}  # {task_idx: {consumable_name: amount_spent}}
 
         # Dedupe popups
         self._last_deathlink_key = None
@@ -1124,8 +1162,10 @@ class TaskipelagoApp(tk.Tk):
         t_tbl.grid_columnconfigure(1, weight=3)   # Task
         t_tbl.grid_columnconfigure(2, weight=2)   # Task prereqs
         t_tbl.grid_columnconfigure(3, weight=2)   # Item prereqs
-        t_tbl.grid_columnconfigure(4, weight=1)   # Region
-        t_tbl.grid_columnconfigure(5, weight=0)   # Remove
+        t_tbl.grid_columnconfigure(4, weight=2)   # Cost
+        t_tbl.grid_columnconfigure(5, weight=1)   # Region
+        t_tbl.grid_columnconfigure(6, weight=0)   # Count
+        t_tbl.grid_columnconfigure(7, weight=0)   # Remove
 
         ttk.Label(t_tbl, text="#").grid(row=0, column=0, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text="Task").grid(row=0, column=1, sticky="w", padx=(0, 8))
@@ -1163,17 +1203,37 @@ class TaskipelagoApp(tk.Tk):
             "Regions also appear as Archipelago regions, enabling location hinting by region.\n"
             "A task cannot depend on its own region."
         )
+        _cost_col_tip = (
+            "Consumable items that must be spent to unlock (purchase) this task.\n\n"
+            'Format: "ItemName"-N or item index N-count:\n'
+            '  "Gold"-3             ->  spend 3 Gold\n'
+            '  "Gold"-3 && "Silver"-2  ->  spend 3 Gold AND 2 Silver\n'
+            '  "Gold"-5 || "Silver"-10  ->  player chooses which to spend\n\n'
+            "Items used as currency must be marked Consumable in the Items table.\n"
+            "Leave blank for no cost.\n"
+            "If enforce prereqs is off, purchase is skipped but cost is tracked."
+        )
+        _count_task_tip = (
+            "How many times this task is duplicated in the exported YAML.\n\n"
+            "All copies are generated with identical configuration.\n"
+            "A prereq referencing this task requires ALL copies to be completed.\n"
+            "Consecutive duplicate task rows are crunched into one row on import."
+        )
         _make_tip_header(t_tbl, "Task prereqs", _task_prereq_tip).grid(row=0, column=2, sticky="w", padx=(0, 8))
         _make_tip_header(t_tbl, "Item prereqs", _item_prereq_tip).grid(row=0, column=3, sticky="w", padx=(0, 8))
-        _make_tip_header(t_tbl, "Region", _region_col_tip).grid(row=0, column=4, sticky="w", padx=(0, 8))
-        ttk.Label(t_tbl, text="").grid(row=0, column=5, sticky="w")
+        _make_tip_header(t_tbl, "Cost",         _cost_col_tip).grid(row=0, column=4, sticky="w", padx=(0, 8))
+        _make_tip_header(t_tbl, "Region",       _region_col_tip).grid(row=0, column=5, sticky="w", padx=(0, 8))
+        _make_tip_header(t_tbl, "Count",        _count_task_tip).grid(row=0, column=6, sticky="w", padx=(0, 8))
+        ttk.Label(t_tbl, text="").grid(row=0, column=7, sticky="w")
 
         ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=0, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text="Location", style="Muted.TLabel").grid(row=1, column=1, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text='1  or  "Task Name"  or  region', style="Muted.TLabel").grid(row=1, column=2, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text='1  or  "Item Name"', style="Muted.TLabel").grid(row=1, column=3, sticky="w", padx=(0, 8))
-        ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=4, sticky="w", padx=(0, 8))
-        ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=5, sticky="w")
+        ttk.Label(t_tbl, text='"ItemName"-N', style="Muted.TLabel").grid(row=1, column=4, sticky="w", padx=(0, 8))
+        ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=5, sticky="w", padx=(0, 8))
+        ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=6, sticky="w", padx=(0, 8))
+        ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=7, sticky="w")
 
         tasks_btn_row = ttk.Frame(tasks_lf)
         tasks_btn_row.grid(row=3, column=0, sticky="ew", padx=10, pady=(4, 8))
@@ -1205,13 +1265,6 @@ class TaskipelagoApp(tk.Tk):
             state="readonly",
             width=10,
         ).pack(side="left")
-
-        self.allow_unbalanced_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(
-            item_settings, text="Allow unbalanced",
-            variable=self.allow_unbalanced_var,
-            command=self._on_allow_unbalanced_toggle,
-        ).pack(side="left", padx=(16, 0))
 
         self.items_counter_var = tk.StringVar(value="0/0 items")
         self.items_counter_lbl = ttk.Label(item_settings, textvariable=self.items_counter_var, style="Muted.TLabel")
@@ -1259,8 +1312,10 @@ class TaskipelagoApp(tk.Tk):
         i_tbl.grid_columnconfigure(1, weight=3)   # Item
         i_tbl.grid_columnconfigure(2, weight=1)   # Type
         i_tbl.grid_columnconfigure(3, weight=0)   # Filler
-        i_tbl.grid_columnconfigure(4, weight=1)   # Prog. Group
-        i_tbl.grid_columnconfigure(5, weight=0)   # Remove
+        i_tbl.grid_columnconfigure(4, weight=0)   # Consumable
+        i_tbl.grid_columnconfigure(5, weight=1)   # Prog. Group
+        i_tbl.grid_columnconfigure(6, weight=0)   # Count
+        i_tbl.grid_columnconfigure(7, weight=0)   # Remove
 
         ttk.Label(i_tbl, text="#").grid(row=0, column=0, sticky="w", padx=(0, 8))
         ttk.Label(i_tbl, text="Item").grid(row=0, column=1, sticky="w", padx=(0, 8))
@@ -1270,7 +1325,8 @@ class TaskipelagoApp(tk.Tk):
             "  useful      - helpful but not sphere-gating\n"
             "  progression - placed early; advances sphere logic\n"
             "  trap        - negative-effect item\n\n"
-            "Items in a progressive group are always forced to 'progression'."
+            "Items in a progressive group are always forced to 'progression'.\n"
+            "Consumable items are forced to 'progression' when used in task costs."
         )
         _filler_tip = (
             "Mark this as a filler item.\n\n"
@@ -1278,6 +1334,15 @@ class TaskipelagoApp(tk.Tk):
             "multiworld instead of a real item. The task can still be completed and\n"
             "count toward prerequisites.\n\n"
             "Leaving the item name blank also produces a filler item at export time."
+        )
+        _consumable_tip = (
+            "Mark this item as a consumable (currency).\n\n"
+            "Consumable items can be spent to purchase (unlock) tasks that have a Cost.\n"
+            "All copies with the same name are pooled together as shared currency.\n\n"
+            "When a task has a cost and all other prereqs are met, a Purchase button\n"
+            "appears. Spending locks the task until the cost is deducted.\n\n"
+            "Consumable items used in any task cost are forced to 'progression'.\n"
+            "Filler items cannot be consumable."
         )
         _prog_group_tip = (
             "Assign this item to a progressive group.\n\n"
@@ -1289,10 +1354,17 @@ class TaskipelagoApp(tk.Tk):
             "Items in a group are always forced to 'progression' classification.\n"
             "Groups are defined in the Progressive Groups panel above."
         )
+        _count_item_tip = (
+            "How many times this item is duplicated in the exported YAML.\n\n"
+            "All copies are generated as separate pool entries with the same name.\n"
+            "Consecutive duplicate item rows are crunched into one row on import."
+        )
         _make_tip_header(i_tbl, "Type",        _type_tip).grid(row=0, column=2, sticky="w", padx=(0, 8))
         _make_tip_header(i_tbl, "Filler",      _filler_tip).grid(row=0, column=3, sticky="w", padx=(0, 4))
-        _make_tip_header(i_tbl, "Prog. Group", _prog_group_tip).grid(row=0, column=4, sticky="w", padx=(0, 8))
-        ttk.Label(i_tbl, text="").grid(row=0, column=5, sticky="w")
+        _make_tip_header(i_tbl, "Consumable",  _consumable_tip).grid(row=0, column=4, sticky="w", padx=(0, 8))
+        _make_tip_header(i_tbl, "Prog. Group", _prog_group_tip).grid(row=0, column=5, sticky="w", padx=(0, 8))
+        _make_tip_header(i_tbl, "Count",       _count_item_tip).grid(row=0, column=6, sticky="w", padx=(0, 8))
+        ttk.Label(i_tbl, text="").grid(row=0, column=7, sticky="w")
 
         ttk.Label(i_tbl, text="", style="Muted.TLabel").grid(row=1, column=0, sticky="w", padx=(0, 8))
         ttk.Label(i_tbl, text="Multiworld item name (blank = filler)", style="Muted.TLabel").grid(row=1, column=1, sticky="w", padx=(0, 8))
@@ -1300,11 +1372,13 @@ class TaskipelagoApp(tk.Tk):
         ttk.Label(i_tbl, text="", style="Muted.TLabel").grid(row=1, column=3, sticky="w")
         ttk.Label(i_tbl, text="", style="Muted.TLabel").grid(row=1, column=4, sticky="w")
         ttk.Label(i_tbl, text="", style="Muted.TLabel").grid(row=1, column=5, sticky="w")
+        ttk.Label(i_tbl, text="", style="Muted.TLabel").grid(row=1, column=6, sticky="w")
+        ttk.Label(i_tbl, text="", style="Muted.TLabel").grid(row=1, column=7, sticky="w")
 
         items_btn_row = ttk.Frame(items_lf)
         items_btn_row.grid(row=3, column=0, sticky="ew", padx=10, pady=(4, 8))
         self.add_item_btn = ttk.Button(
-            items_btn_row, text="Add Item", command=self.add_item_row, state="disabled"
+            items_btn_row, text="Add Item", command=self.add_item_row
         )
         self.add_item_btn.pack(side="left")
 
@@ -1465,6 +1539,22 @@ class TaskipelagoApp(tk.Tk):
         self.items_received_scroll = ScrollableFrame(items_tab_frame, colors=self.colors)
         self.items_received_scroll.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
+        # -- Consumable Items tab --
+        consumable_tab_frame = ttk.Frame(notif_notebook)
+        notif_notebook.add(consumable_tab_frame, text="Consumable Items")
+        consumable_tab_frame.grid_rowconfigure(1, weight=1)
+        consumable_tab_frame.grid_columnconfigure(0, weight=1)
+
+        _ctab_hint = ttk.Label(
+            consumable_tab_frame,
+            text="Remaining balance of each consumable item type available to spend.",
+            style="Muted.TLabel",
+        )
+        _ctab_hint.grid(row=0, column=0, sticky="w", padx=10, pady=(6, 2))
+
+        self.consumable_tab_scroll = ScrollableFrame(consumable_tab_frame, colors=self.colors)
+        self.consumable_tab_scroll.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+
         self._build_bingo_tab()
         self._build_console_tab()
 
@@ -1477,16 +1567,10 @@ class TaskipelagoApp(tk.Tk):
             list(self.regions),
         )
         self.task_rows.append(row)
-        # In balanced mode, auto-add a corresponding blank item row
-        if not self.allow_unbalanced_var.get():
-            self._add_item_row_blank()
         self._update_item_counter()
         return row
 
     def add_item_row(self):
-        """Add a standalone item row - only callable when allow_unbalanced is on."""
-        if not self.allow_unbalanced_var.get():
-            return
         row = ItemRow(
             self.items_scroll.inner,
             len(self.item_rows) + 1,
@@ -1497,40 +1581,10 @@ class TaskipelagoApp(tk.Tk):
         self._refresh_item_remove_visibility()
         self._update_item_counter()
         return row
-
-    def _add_item_row_blank(self):
-        """Add a blank item row (filler defaults to False; blank name = filler at export)."""
-        row = ItemRow(
-            self.items_scroll.inner,
-            len(self.item_rows) + 1,
-            self._remove_item_row,
-            list(self.prog_groups),
-        )
-        self.item_rows.append(row)
-        self._refresh_item_remove_visibility()
-        return row
-
-    def _on_allow_unbalanced_toggle(self):
-        unbalanced = self.allow_unbalanced_var.get()
-        if unbalanced:
-            self.add_item_btn.config(state="normal")
-        else:
-            self.add_item_btn.config(state="disabled")
-            # Pad item rows up to task count if short; do NOT trim excess
-            n_tasks = len(self.task_rows)
-            n_items = len(self.item_rows)
-            for _ in range(n_tasks - n_items):
-                self._add_item_row_blank()
-        self._refresh_item_remove_visibility()
-        self._update_item_counter()
 
     def _refresh_item_remove_visibility(self):
-        """Show Remove buttons when unbalanced mode is on, or when items exceed tasks."""
-        n_tasks = len(self.task_rows)
-        n_items = len(self.item_rows)
-        show = self.allow_unbalanced_var.get() or n_items > n_tasks
         for row in self.item_rows:
-            row.set_remove_visible(show)
+            row.set_remove_visible(True)
 
     def _update_item_counter(self):
         if not hasattr(self, "items_counter_lbl"):
@@ -1538,10 +1592,6 @@ class TaskipelagoApp(tk.Tk):
         n_tasks = len(self.task_rows)
         n_items = len(self.item_rows)
         self.items_counter_var.set(f"{n_items}/{n_tasks} items")
-        if not self.allow_unbalanced_var.get() and n_items != n_tasks:
-            self.items_counter_lbl.configure(style="Warning.TLabel")
-        else:
-            self.items_counter_lbl.configure(style="Muted.TLabel")
 
     # ---------------- Progressive groups management ----------------
     def _add_prog_group(self):
@@ -1742,52 +1792,60 @@ class TaskipelagoApp(tk.Tk):
         result = re.sub(r'"([^"]*)"', replacer, text)
         return result, errors
 
+    @staticmethod
+    def _convert_cost_idx_to_quote(cost_text: str, item_names: list, item_counts: list) -> str:
+        """Replace integer-indexed cost refs with quoted names for items with count > 1."""
+        import re as _re
+        pattern = _re.compile(r'"[^"]*"-\d+|\b(\d+)-(\d+)\b')
+        def repl(m):
+            if m.group(1) is None:
+                return m.group(0)
+            idx = int(m.group(1))
+            n = m.group(2)
+            if 1 <= idx <= len(item_names) and item_counts[idx - 1] > 1:
+                return f'"{item_names[idx - 1]}"-{n}'
+            return m.group(0)
+        return pattern.sub(repl, cost_text)
+
     def export_yaml(self):
         player_name = self.player_name_var.get().strip()
         if not player_name:
             messagebox.showerror("Error", "Player name is required.")
             return
 
-        tasks, task_prereqs, item_prereqs_raw, task_region_list = [], [], [], []
+        tasks, task_prereqs, item_prereqs_raw, task_costs, task_region_list, task_counts = [], [], [], [], [], []
         for r in self.task_rows:
-            t, tpr, ipr, treg = r.get_data()
+            t, tpr, ipr, cost, treg, count = r.get_data()
             if not t:
                 continue
             tasks.append(t)
             task_prereqs.append(tpr or "")
             item_prereqs_raw.append(ipr or "")
+            task_costs.append(cost or "")
             task_region_list.append(treg or "")
+            task_counts.append(count)
 
         if not tasks:
             messagebox.showerror("Error", "No tasks defined.")
             return
 
         raw_item_names = []
-        items, item_types, item_fillers, item_prog_groups = [], [], [], []
+        items, item_types, item_fillers, item_prog_groups, item_consumables, item_counts = [], [], [], [], [], []
         for r in self.item_rows:
-            itm, filler, itype, pgrp = r.get_data()
+            itm, filler, itype, pgrp, consumable, count = r.get_data()
             raw_item_names.append(itm)
             is_filler_row = filler or not itm
             items.append(_random_filler() if is_filler_row else itm)
             item_types.append("junk" if is_filler_row else (itype or "junk"))
             item_fillers.append(bool(is_filler_row))
             item_prog_groups.append(pgrp if not is_filler_row else "")
+            item_consumables.append(consumable if not is_filler_row else False)
+            item_counts.append(count)
 
         n_tasks = len(tasks)
         n_items = len(items)
 
-        # Balance check
         if n_items != n_tasks:
-            if not self.allow_unbalanced_var.get():
-                diff = n_items - n_tasks
-                direction = f"Remove {diff} item(s)" if diff > 0 else f"Add {-diff} item(s)"
-                messagebox.showerror(
-                    "Unbalanced Counts",
-                    f"Item and task counts are unbalanced.\n\n"
-                    f"Tasks: {n_tasks}  |  Items: {n_items}\n\n"
-                    f"{direction} before exporting, or enable 'Allow unbalanced'."
-                )
-                return
             proceed = messagebox.askyesno(
                 "Unbalanced Counts",
                 f"Warning: Unbalanced item and task counts can lead to generation failures.\n\n"
@@ -1809,7 +1867,7 @@ class TaskipelagoApp(tk.Tk):
             messagebox.showerror("Invalid Names", "\n".join(quote_errors))
             return
 
-        # Validate quoted name references exist (resolution happens at generation time)
+        # Validate quoted name references exist
         name_errors = []
         for i, tpr in enumerate(task_prereqs):
             _, errs = self._resolve_name_refs(tpr, tasks)
@@ -1821,13 +1879,11 @@ class TaskipelagoApp(tk.Tk):
             messagebox.showerror("Unresolved Names", "Unresolved name references:\n\n" + "\n".join(name_errors))
             return
 
-        # Pad items with filler if fewer than tasks (unbalanced-mode export only)
-        while len(items) < n_tasks:
-            items.append(_random_filler())
-            item_prereqs_raw.append("")
-            item_types.append("junk")
-            item_fillers.append(True)
-            item_prog_groups.append("")
+        # Convert cost index refs to quoted names for items with count > 1
+        task_costs = [
+            self._convert_cost_idx_to_quote(cost, raw_item_names, item_counts)
+            for cost in task_costs
+        ]
 
         deathlink_pool = []
         deathlink_weights = []
@@ -1870,11 +1926,15 @@ class TaskipelagoApp(tk.Tk):
                 "task_region": task_region_list,
 
                 "tasks": tasks,
+                "task_count": [str(c) for c in task_counts],
                 "items": items,
                 "item_types": item_types,
                 "item_fillers": item_fillers,
+                "item_consumable": ["true" if c else "false" for c in item_consumables],
+                "item_count": [str(c) for c in item_counts],
                 "task_prereqs": task_prereqs,
                 "item_prereqs": item_prereqs_raw,
+                "task_cost": task_costs,
                 "lock_prereqs": bool(self.lock_prereqs_var.get()),
                 "hide_unreachable_tasks": bool(self.hide_unreachable_tasks.get()),
                 "goal_tasks": [goal_tasks_raw] if goal_tasks_raw else [],
@@ -1974,105 +2034,158 @@ class TaskipelagoApp(tk.Tk):
         self._refresh_regions_panel()
 
         # --------- Read tasks ---------
-        tasks = list(block.get("tasks", []) or [])
-        prereqs = list(block.get("task_prereqs", []) or [])
+        tasks_raw = list(block.get("tasks", []) or [])
+        prereqs_raw = list(block.get("task_prereqs", []) or [])
         task_regions_raw = list(block.get("task_region", []) or [])
-        n_tasks = len(tasks)
+        task_costs_raw = list(block.get("task_cost", []) or [])
+        item_prereqs_raw = list(block.get("item_prereqs", block.get("reward_prereqs", [])) or [])
+        task_count_raw = block.get("task_count", None)
 
         # --------- Read items (support both new and legacy key names) ---------
-        items = list(block.get("items", block.get("rewards", [])) or [])
-        item_prereqs_raw = list(block.get("item_prereqs", block.get("reward_prereqs", [])) or [])
-        item_types = list(block.get("item_types", block.get("reward_types", [])) or [])
+        items_raw = list(block.get("items", block.get("rewards", [])) or [])
+        item_types_raw = list(block.get("item_types", block.get("reward_types", [])) or [])
         item_fillers_raw = list(block.get("item_fillers", []) or [])
-        item_prog_group = list(block.get("item_progressive_group", block.get("reward_progressive_group", [])) or [])
+        item_prog_group_raw = list(block.get("item_progressive_group", block.get("reward_progressive_group", [])) or [])
+        item_consumable_raw = list(block.get("item_consumable", []) or [])
+        item_count_raw = block.get("item_count", None)
+
+        def _str(v, default=""):
+            return str(v).strip() if v is not None else default
+
+        # --------- Crunch or parse task counts ---------
+        if task_count_raw is not None:
+            task_count_list = [task_count_raw] if not isinstance(task_count_raw, list) else list(task_count_raw)
+            tasks = [_str(t) for t in tasks_raw]
+            task_counts = []
+            for i in range(len(tasks)):
+                try:
+                    c = max(1, int(task_count_list[i])) if i < len(task_count_list) else 1
+                except (ValueError, TypeError):
+                    c = 1
+                task_counts.append(c)
+            prereqs = [_str(prereqs_raw[i]) if i < len(prereqs_raw) else "" for i in range(len(tasks))]
+            task_regions = [_str(task_regions_raw[i]) if i < len(task_regions_raw) else "" for i in range(len(tasks))]
+            task_costs = [_str(task_costs_raw[i]) if i < len(task_costs_raw) else "" for i in range(len(tasks))]
+            item_prereqs = [_str(item_prereqs_raw[i]) if i < len(item_prereqs_raw) else "" for i in range(len(tasks))]
+        else:
+            # Crunch consecutive identical task names into single rows with count
+            tasks, prereqs, task_regions, task_costs, item_prereqs, task_counts = [], [], [], [], [], []
+            i = 0
+            while i < len(tasks_raw):
+                name = _str(tasks_raw[i])
+                count = 1
+                j = i + 1
+                while j < len(tasks_raw) and _str(tasks_raw[j]) == name:
+                    count += 1
+                    j += 1
+                tasks.append(name)
+                prereqs.append(_str(prereqs_raw[i]) if i < len(prereqs_raw) else "")
+                task_regions.append(_str(task_regions_raw[i]) if i < len(task_regions_raw) else "")
+                task_costs.append(_str(task_costs_raw[i]) if i < len(task_costs_raw) else "")
+                item_prereqs.append(_str(item_prereqs_raw[i]) if i < len(item_prereqs_raw) else "")
+                task_counts.append(count)
+                i = j
+
+        n_tasks = len(tasks)
+
+        # --------- Crunch or parse item counts ---------
+        if item_count_raw is not None:
+            item_count_list = [item_count_raw] if not isinstance(item_count_raw, list) else list(item_count_raw)
+            items = [_str(t) for t in items_raw]
+            item_types = [_str(item_types_raw[i], "useful") if i < len(item_types_raw) else "useful" for i in range(len(items))]
+            item_fillers = [item_fillers_raw[i] if i < len(item_fillers_raw) else None for i in range(len(items))]
+            item_prog_groups = [_str(item_prog_group_raw[i]) if i < len(item_prog_group_raw) else "" for i in range(len(items))]
+            item_consumables = [_str(item_consumable_raw[i]).lower() == "true" if i < len(item_consumable_raw) else False for i in range(len(items))]
+            item_counts = []
+            for i in range(len(items)):
+                try:
+                    c = max(1, int(item_count_list[i])) if i < len(item_count_list) else 1
+                except (ValueError, TypeError):
+                    c = 1
+                item_counts.append(c)
+        else:
+            # Crunch consecutive identical item names
+            items, item_types, item_fillers, item_prog_groups, item_consumables, item_counts = [], [], [], [], [], []
+            i = 0
+            while i < len(items_raw):
+                name = _str(items_raw[i])
+                count = 1
+                j = i + 1
+                while j < len(items_raw) and _str(items_raw[j]) == name:
+                    count += 1
+                    j += 1
+                items.append(name)
+                item_types.append(_str(item_types_raw[i], "useful") if i < len(item_types_raw) else "useful")
+                item_fillers.append(item_fillers_raw[i] if i < len(item_fillers_raw) else None)
+                item_prog_groups.append(_str(item_prog_group_raw[i]) if i < len(item_prog_group_raw) else "")
+                item_consumables.append(_str(item_consumable_raw[i]).lower() == "true" if i < len(item_consumable_raw) else False)
+                item_counts.append(count)
+                i = j
 
         n_items = len(items)
-        n = max(n_tasks, n_items)
 
-        # Detect unbalanced import
-        unbalanced = n_tasks != n_items
-        if unbalanced:
+        if n_tasks != n_items:
             messagebox.showwarning(
                 "Unbalanced Counts",
-                f"Warning: Unbalanced item and task counts can lead to generation failures.\n\n"
-                f"Tasks: {n_tasks}  |  Items: {n_items}\n\n"
-                "Enabling 'Allow unbalanced' mode."
+                f"Unbalanced item and task counts can lead to generation failures.\n\n"
+                f"Tasks: {n_tasks}  |  Items: {n_items}"
             )
-
-        # Normalize all lists to length n
-        tasks += [""] * (n - len(tasks))
-        prereqs += [""] * (n - len(prereqs))
-        task_regions_raw += [""] * (n - len(task_regions_raw))
-        items += [""] * (n - len(items))
-        item_prereqs_raw += [""] * (n - len(item_prereqs_raw))
-        item_types += ["useful"] * (n - len(item_types))
-        item_fillers_raw += [None] * (n - len(item_fillers_raw))
-        item_prog_group += [""] * (n - len(item_prog_group))
 
         # Wipe existing UI rows
         self._clear_task_rows()
         self._clear_item_rows()
 
-        # Set allow_unbalanced before adding rows so auto-sync doesn't fire incorrectly
-        self.allow_unbalanced_var.set(True)
-        self.add_item_btn.config(state="normal")
+        for i in range(n_tasks):
+            task_row = TaskRow(
+                self.tasks_scroll.inner, len(self.task_rows) + 1,
+                self._remove_task_row, list(self.regions),
+            )
+            self.task_rows.append(task_row)
+            task_row.task_var.set(tasks[i])
+            task_row.prereq_var.set(prereqs[i])
+            task_row.item_prereq_var.set(item_prereqs[i])
+            task_row.cost_var.set(task_costs[i])
+            task_row.count_var.set(task_counts[i])
+            if task_regions[i] in self.regions:
+                task_row.region_var.set(task_regions[i])
 
-        for i in range(n):
-            t = str(tasks[i]).strip() if tasks[i] is not None else ""
-            pr = str(prereqs[i]).strip() if prereqs[i] is not None else ""
-            itm = str(items[i]).strip() if items[i] is not None else ""
-            ipr = str(item_prereqs_raw[i]).strip() if item_prereqs_raw[i] is not None else ""
-            rt = str(item_types[i]).strip().lower() if item_types[i] is not None else "useful"
-            pgrp = str(item_prog_group[i]).strip() if item_prog_group[i] is not None else ""
-            explicit_filler = item_fillers_raw[i]
+        for i in range(n_items):
+            itm = items[i]
+            rt = item_types[i]
+            pgrp = item_prog_groups[i]
+            explicit_filler = item_fillers[i]
+            consumable = item_consumables[i]
+            count = item_counts[i]
 
-            # Detect filler: explicit flag takes priority, fall back to string check
             if isinstance(explicit_filler, bool):
                 is_filler = explicit_filler
             else:
                 is_filler = _is_filler(itm)
 
-            # Task row (item prereq lives on the task row now)
-            if i < n_tasks:
-                task_row = TaskRow(
-                    self.tasks_scroll.inner, len(self.task_rows) + 1,
-                    self._remove_task_row, list(self.regions),
-                )
-                self.task_rows.append(task_row)
-                task_row.task_var.set(t)
-                task_row.prereq_var.set(pr)
-                task_row.item_prereq_var.set(ipr)
-                treg = str(task_regions_raw[i]).strip() if task_regions_raw[i] is not None else ""
-                if treg in self.regions:
-                    task_row.region_var.set(treg)
+            item_row = ItemRow(
+                self.items_scroll.inner, len(self.item_rows) + 1,
+                self._remove_item_row, list(self.prog_groups),
+            )
+            self.item_rows.append(item_row)
+            item_row.set_remove_visible(True)
 
-            # Item row
-            if i < n:
-                item_row = ItemRow(
-                    self.items_scroll.inner, len(self.item_rows) + 1,
-                    self._remove_item_row, list(self.prog_groups),
-                )
-                self.item_rows.append(item_row)
-                item_row.set_remove_visible(True)
+            if rt not in ("trap", "junk", "useful", "progression"):
+                rt = "useful"
+            item_row.reward_type_var.set(rt)
+            item_row._saved_reward_type = rt
+            item_row.count_var.set(count)
 
-                if rt not in ("trap", "junk", "useful", "progression"):
-                    rt = "useful"
-                item_row.reward_type_var.set(rt)
-                item_row._saved_reward_type = rt
+            if is_filler:
+                item_row.filler_var.set(True)
+                item_row.on_filler_toggle()
+            else:
+                item_row.item_var.set(itm)
+                if consumable:
+                    item_row.consumable_var.set(True)
 
-                if is_filler:
-                    item_row.filler_var.set(True)
-                    item_row.on_filler_toggle()
-                else:
-                    item_row.item_var.set(itm)
+            if pgrp in self.prog_groups:
+                item_row.prog_group_var.set(pgrp)
 
-                if pgrp in self.prog_groups:
-                    item_row.prog_group_var.set(pgrp)
-
-        # Restore balanced mode if counts match
-        if not unbalanced:
-            self.allow_unbalanced_var.set(False)
-            self.add_item_btn.config(state="disabled")
         self._refresh_item_remove_visibility()
 
         # --------- Populate DeathLink pool ---------
@@ -2108,9 +2221,6 @@ class TaskipelagoApp(tk.Tk):
         self.lock_prereqs_var.set(True)
         self.hide_unreachable_tasks.set(True)
         self.goal_tasks_var.set("")
-
-        self.allow_unbalanced_var.set(False)
-        self.add_item_btn.config(state="disabled")
 
         self.prog_groups = []
         self._refresh_prog_groups_panel()
@@ -2184,6 +2294,7 @@ class TaskipelagoApp(tk.Tk):
 
     def _clear_play_state(self):
         self.pending_reward_locations = set()
+        self._task_purchases = {}
         if hasattr(self, "_local_enforce_var"):
             self._local_enforce_var.set(False)
         if hasattr(self, "_show_locked_var"):
@@ -2318,9 +2429,11 @@ class TaskipelagoApp(tk.Tk):
         checked = getattr(self.ctx, "checked_locations_set", set()) or set()
         self.pending_reward_locations.difference_update(checked)
 
+        self._recalculate_purchases_from_completed()
         self._maybe_send_goal_complete()
         self.after(0, self.refresh_play_tab)
         self.after(0, self._render_items_tab)
+        self.after(0, self._render_consumable_tab)
         if self.connection_state == "connected":
             self._update_console_connection_state(True)
 
@@ -2432,7 +2545,16 @@ class TaskipelagoApp(tk.Tk):
                     region_prereq_ok = False
                     region_hint_parts.append(f"region '{r}' ({pct}% completed)")
 
-            would_hide = (not task_prereq_ok or not item_prereq_ok or not region_prereq_ok) and hide_tasks and effective_lock
+            # Cost requirement
+            cost_amounts = list(getattr(self.ctx, "task_cost_amounts", []) or [])
+            task_has_cost = i < len(cost_amounts) and bool(cost_amounts[i])
+            cost_paid = not task_has_cost or (not effective_lock) or self._task_cost_is_paid(i)
+
+            other_prereqs_ok = task_prereq_ok and item_prereq_ok and region_prereq_ok
+            # "Cost-only locked" means all prereqs pass but cost isn't paid yet
+            cost_only_locked = other_prereqs_ok and not cost_paid
+
+            would_hide = (not other_prereqs_ok) and hide_tasks and effective_lock
             show_as_locked = would_hide and self._show_locked_var.get()
             if would_hide and not show_as_locked:
                 continue
@@ -2466,20 +2588,29 @@ class TaskipelagoApp(tk.Tk):
             task_label.pack(side="left", fill="x", expand=True)
 
             if not completed:
-                can_complete = True
-                if effective_lock and (not task_prereq_ok or not item_prereq_ok or not region_prereq_ok):
-                    can_complete = False
+                if cost_only_locked and effective_lock:
+                    # All prereqs met but cost not paid - show Purchase button
+                    purchase_btn = ttk.Button(
+                        top,
+                        text="Purchase",
+                        command=lambda idx=i: self._attempt_purchase(idx)
+                    )
+                    purchase_btn.pack(side="right", padx=(10, 0))
+                else:
+                    can_complete = True
+                    if effective_lock and (not other_prereqs_ok or not cost_paid):
+                        can_complete = False
 
-                btn = ttk.Button(
-                    top,
-                    text="Complete",
-                    command=lambda idx=i: self.complete_task(idx)
-                )
+                    btn = ttk.Button(
+                        top,
+                        text="Complete",
+                        command=lambda idx=i: self.complete_task(idx)
+                    )
 
-                if not can_complete:
-                    btn.state(["disabled"])
+                    if not can_complete:
+                        btn.state(["disabled"])
 
-                btn.pack(side="right", padx=(10, 0))
+                    btn.pack(side="right", padx=(10, 0))
 
             showed_hint = False
 
@@ -2526,8 +2657,30 @@ class TaskipelagoApp(tk.Tk):
                     justify="left",
                     wraplength=740
                 )
-                hint3.pack(fill="x", padx=28, pady=(0, 8))
+                hint3.pack(fill="x", padx=28, pady=(0, 2))
                 showed_hint = True
+
+            if (not completed) and cost_only_locked and effective_lock:
+                # Show cost hint
+                branches = cost_amounts[i] if i < len(cost_amounts) else []
+                if branches:
+                    cost_parts = []
+                    for branch in branches:
+                        bp = " && ".join(f"{amt} {name}" for name, amt in branch)
+                        cost_parts.append(bp)
+                    cost_text = " || ".join(f"({p})" if len(branches) > 1 else p for p in cost_parts)
+                    hint_cost = tk.Label(
+                        card,
+                        text=f"Requires purchase: {cost_text}",
+                        bg=panel,
+                        fg=muted,
+                        font=("Segoe UI", 10),
+                        anchor="w",
+                        justify="left",
+                        wraplength=740
+                    )
+                    hint_cost.pack(fill="x", padx=28, pady=(0, 2))
+                    showed_hint = True
 
             if not showed_hint:
                 spacer = tk.Frame(card, bg=panel, height=6)
@@ -2815,6 +2968,189 @@ class TaskipelagoApp(tk.Tk):
         self.loop.call_soon_threadsafe(
             lambda: asyncio.create_task(self.ctx.send_msgs([{"cmd": "Say", "text": msg}]))
         )
+
+    # ---------------- Consumable item helpers ----------------
+
+    def _consumable_received_counts(self) -> dict:
+        """Count received items per consumable display name."""
+        ctx = getattr(self, "ctx", None)
+        if not ctx:
+            return {}
+        base_item = getattr(ctx, "base_item_id", None)
+        items_text = list(getattr(ctx, "items", []) or [])
+        item_consumable = list(getattr(ctx, "item_consumable", []) or [])
+        items_received = list(getattr(ctx, "items_received", []) or [])
+        counts: dict = {}
+        for it in items_received:
+            item_id = getattr(it, "item", None)
+            if item_id is None or base_item is None:
+                continue
+            idx = item_id - base_item
+            if 0 <= idx < len(items_text):
+                consumable_flag = item_consumable[idx] if idx < len(item_consumable) else False
+                if consumable_flag:
+                    name = items_text[idx]
+                    counts[name] = counts.get(name, 0) + 1
+        return counts
+
+    def _consumable_spent_counts(self) -> dict:
+        """Sum up all recorded purchase deductions by consumable name."""
+        totals: dict = {}
+        for deduction in self._task_purchases.values():
+            for name, amt in deduction.items():
+                totals[name] = totals.get(name, 0) + amt
+        return totals
+
+    def _consumable_balance(self) -> dict:
+        """Remaining balance per consumable name (received - spent)."""
+        received = self._consumable_received_counts()
+        spent = self._consumable_spent_counts()
+        all_names = set(received) | set(spent)
+        return {name: received.get(name, 0) - spent.get(name, 0) for name in all_names}
+
+    def _task_cost_is_paid(self, task_idx: int) -> bool:
+        """True if the task has no cost or has been purchased."""
+        ctx = getattr(self, "ctx", None)
+        if not ctx:
+            return True
+        cost_amounts = list(getattr(ctx, "task_cost_amounts", []) or [])
+        if task_idx >= len(cost_amounts) or not cost_amounts[task_idx]:
+            return True
+        return task_idx in self._task_purchases
+
+    def _attempt_purchase(self, task_idx: int):
+        """Deduct cost for task_idx, prompting for OR branch if needed."""
+        ctx = getattr(self, "ctx", None)
+        if not ctx:
+            return
+        cost_amounts = list(getattr(ctx, "task_cost_amounts", []) or [])
+        if task_idx >= len(cost_amounts) or not cost_amounts[task_idx]:
+            return
+        branches = cost_amounts[task_idx]  # list of [[name, amt], ...]
+        if not branches:
+            return
+
+        balance = self._consumable_balance()
+
+        # Filter to branches the player can afford
+        def _can_afford(branch):
+            for name, amt in branch:
+                if balance.get(name, 0) < amt:
+                    return False
+            return True
+
+        affordable = [b for b in branches if _can_afford(b)]
+        if not affordable:
+            messagebox.showerror(
+                "Insufficient Funds",
+                "You don't have enough consumable items to purchase this task."
+            )
+            return
+
+        if len(branches) > 1:
+            # Show OR branch selection dialog
+            branch_labels = []
+            for b in affordable:
+                parts = ", ".join(f"{amt} {name}" for name, amt in b)
+                branch_labels.append(parts)
+
+            chosen_branch = self._choose_cost_branch(branch_labels)
+            if chosen_branch is None:
+                return
+            chosen = affordable[chosen_branch]
+        else:
+            chosen = affordable[0]
+
+        deduction = {name: amt for name, amt in chosen}
+        self._task_purchases[task_idx] = deduction
+        self.after(0, self.refresh_play_tab)
+        self.after(0, self._render_consumable_tab)
+
+    def _choose_cost_branch(self, branch_labels: list) -> "int | None":
+        """Show a dialog to choose an OR branch. Returns index or None."""
+        win = tk.Toplevel(self)
+        win.title("Choose Payment")
+        win.resizable(False, False)
+        win.grab_set()
+
+        ttk.Label(win, text="Choose how to pay for this task:").pack(padx=16, pady=(12, 4))
+
+        result = [None]
+
+        def pick(i):
+            result[0] = i
+            win.destroy()
+
+        for i, label in enumerate(branch_labels):
+            ttk.Button(win, text=label, command=lambda x=i: pick(x)).pack(
+                fill="x", padx=16, pady=3
+            )
+
+        ttk.Button(win, text="Cancel", command=win.destroy).pack(padx=16, pady=(4, 12))
+        self.wait_window(win)
+        return result[0]
+
+    def _recalculate_purchases_from_completed(self):
+        """On connect, retroactively deduct minimum cost for already-completed tasks."""
+        ctx = getattr(self, "ctx", None)
+        if not ctx:
+            return
+        checked = getattr(ctx, "checked_locations_set", set()) or set()
+        base_complete = getattr(ctx, "base_complete_location_id", None)
+        cost_amounts = list(getattr(ctx, "task_cost_amounts", []) or [])
+        if base_complete is None:
+            return
+        self._task_purchases = {}
+        for i, branches in enumerate(cost_amounts):
+            if not branches:
+                continue
+            complete_loc_id = base_complete + i
+            if complete_loc_id not in checked:
+                continue
+            # Already completed - deduct minimum cost branch
+            min_branch = min(
+                branches,
+                key=lambda b: sum(amt for _, amt in b)
+            )
+            self._task_purchases[i] = {name: amt for name, amt in min_branch}
+
+    def _render_consumable_tab(self):
+        if not hasattr(self, "consumable_tab_scroll"):
+            return
+        inner = self.consumable_tab_scroll.inner
+        for w in inner.winfo_children():
+            w.destroy()
+
+        ctx = getattr(self, "ctx", None)
+        cost_amounts = list(getattr(ctx, "task_cost_amounts", []) or []) if ctx else []
+        has_any_cost = any(c for c in cost_amounts)
+        if not ctx or not has_any_cost:
+            ttk.Label(inner, text="No consumable items in this session.", style="Muted.TLabel").pack(
+                anchor="w", padx=6, pady=4
+            )
+            return
+
+        balance = self._consumable_balance()
+        received = self._consumable_received_counts()
+        spent = self._consumable_spent_counts()
+        all_names = sorted(set(received) | set(spent))
+
+        if not all_names:
+            ttk.Label(inner, text="No consumable items received yet.", style="Muted.TLabel").pack(
+                anchor="w", padx=6, pady=4
+            )
+            return
+
+        for name in all_names:
+            recv = received.get(name, 0)
+            sp = spent.get(name, 0)
+            bal = balance.get(name, 0)
+            color_style = "Warning.TLabel" if bal < 0 else "TLabel"
+            ttk.Label(
+                inner,
+                text=f"{name}:  {bal} remaining  ({recv} received, {sp} spent)",
+                style=color_style,
+            ).pack(anchor="w", padx=6, pady=2)
 
     # ---------------- Items received tab ----------------
     def _render_items_tab(self):

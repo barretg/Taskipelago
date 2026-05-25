@@ -24,7 +24,8 @@ from .locations import (
 from .options import TaskipelagoOptions
 from .prereq_parser import (
     collect_leaves, collect_group_refs, collect_region_refs,
-    eval_node, parse_prereq, resolve_ast_refs, Node,
+    collect_cost_groups, collect_cost_groups_per_branch,
+    eval_node, parse_prereq, parse_cost_expr, resolve_ast_refs, Node,
 )
 from .rules import set_rules as _set_rules
 
@@ -44,7 +45,6 @@ class TaskipelagoWorld(World):
     options_dataclass = TaskipelagoOptions
 
     # Static fallbacks used before any generation (e.g. server startup, data package requests).
-    # stage_generate_early replaces these with actual reward names and player-specific IDs.
     item_name_to_id: Dict[str, int] = ITEM_NAME_TO_ID
     location_name_to_id: Dict[str, int] = LOCATION_NAME_TO_ID
 
@@ -52,10 +52,14 @@ class TaskipelagoWorld(World):
     _tasks: List[str]
     _rewards: List[str]
     _reward_types: List[str]
+    _item_consumable: List[bool]
     _raw_prereqs: List[str]
     _parsed_prereqs: List[Node | None]
     _raw_reward_prereqs: List[str]
     _parsed_reward_prereqs: List[Node | None]
+    _raw_costs: List[str]
+    _parsed_costs: List[Node | None]
+    _task_cost_reqs: List[List[Tuple[str, int]]]   # cumulative AND cost thresholds per task
     _forced_progression_rewards: set
     _lock_prereqs: bool
     _reward_location_names: List[str]
@@ -77,6 +81,7 @@ class TaskipelagoWorld(World):
     _task_region_reqs: List[List[Tuple[str, int]]]
     _region_to_task_indices: Dict[str, List[int]]
     _region_token_names: Dict[str, List[str]]
+    _consumable_groups: Dict[str, List[int]]   # name -> [0-based item indices]
 
     def generate_early(self) -> None:
         import random as _random
@@ -96,43 +101,200 @@ class TaskipelagoWorld(World):
             "A nod of respect",
         ]
 
-        tasks = [str(t).strip() for t in self.options.tasks.value if str(t).strip()]
-        items_raw = [str(r).strip() for r in self.options.items.value]
+        # ------------------------------------------------------------------ #
+        # 1. Read raw option lists (pre-expansion, editor-indexed)            #
+        # ------------------------------------------------------------------ #
+        tasks_raw = [str(t).strip() for t in self.options.tasks.value if str(t).strip()]
+        items_raw_input = [str(r).strip() for r in self.options.items.value]
 
-        item_types_raw = list(self.options.item_types.value)
-        item_types = [str(x).strip().lower() for x in item_types_raw if str(x).strip()]
+        item_types_raw = [str(x).strip().lower() for x in self.options.item_types.value if str(x).strip()]
+        item_consumable_raw = [str(x).strip().lower() for x in (self.options.item_consumable.value or [])]
+        item_count_raw = [str(x).strip() for x in (self.options.item_count.value or [])]
+        task_count_raw = [str(x).strip() for x in (self.options.task_count.value or [])]
+        task_cost_raw = [str(x).strip() for x in (self.options.task_cost.value or [])]
 
-        if not tasks:
+        if not tasks_raw:
             raise Exception("Taskipelago: tasks list is empty.")
 
-        n = len(tasks)
-        if n > MAX_TASKS:
-            raise Exception(f"Taskipelago: too many tasks ({n}). Max is {MAX_TASKS}.")
+        n_editor_tasks = len(tasks_raw)
+        n_editor_items = len([x for x in items_raw_input if x])
 
-        # Pad or truncate items to match task count, warning if unbalanced.
-        n_items = len([x for x in items_raw if x])
-        if n_items != n:
+        if n_editor_tasks > MAX_TASKS:
+            raise Exception(
+                f"Taskipelago: too many tasks ({n_editor_tasks}). Max is {MAX_TASKS}."
+            )
+
+        def _parse_count(s: str) -> int:
+            try:
+                return max(1, int(s)) if s else 1
+            except ValueError:
+                return 1
+
+        # Parse per-editor-row counts
+        task_counts_editor = [
+            _parse_count(task_count_raw[i] if i < len(task_count_raw) else "")
+            for i in range(n_editor_tasks)
+        ]
+
+        # Pad items_raw_input to editor task count, then normalize
+        allowed_types = {"trap", "junk", "useful", "progression"}
+
+        # Warn if item/task counts don't match (editor level)
+        if n_editor_items != n_editor_tasks:
             print(
                 f"[Taskipelago] WARNING: Unbalanced item and task counts can lead to generation failures. "
-                f"Tasks: {n}, Items: {n_items}.",
+                f"Tasks: {n_editor_tasks}, Items: {n_editor_items}.",
                 file=_sys.stderr,
             )
-        if len(items_raw) < n:
-            items_raw += [_random.choice(_FILLER_ITEMS) for _ in range(n - len(items_raw))]
-        items_raw = items_raw[:n]
-        rewards = [x if x else _random.choice(_FILLER_ITEMS) for x in items_raw]
+        if len(items_raw_input) < n_editor_tasks:
+            items_raw_input += [_random.choice(_FILLER_ITEMS) for _ in range(n_editor_tasks - len(items_raw_input))]
+        items_raw_input = items_raw_input[:n_editor_tasks]
+        items_raw_editor = [x if x else _random.choice(_FILLER_ITEMS) for x in items_raw_input]
 
-        # Normalize item_types to task count, defaulting to "junk".
-        allowed_types = {"trap", "junk", "useful", "progression"}
-        if len(item_types) < n:
-            item_types += ["junk"] * (n - len(item_types))
-        item_types = [rt if rt in allowed_types else "junk" for rt in item_types[:n]]
+        # Normalize item_types and item_consumable to editor task count
+        if len(item_types_raw) < n_editor_tasks:
+            item_types_raw += ["junk"] * (n_editor_tasks - len(item_types_raw))
+        item_types_editor = [rt if rt in allowed_types else "junk" for rt in item_types_raw[:n_editor_tasks]]
 
-        self._tasks = tasks
-        self._rewards = rewards
-        self._reward_types = item_types
+        if len(item_consumable_raw) < n_editor_tasks:
+            item_consumable_raw += ["false"] * (n_editor_tasks - len(item_consumable_raw))
+        item_consumable_editor = [s == "true" for s in item_consumable_raw[:n_editor_tasks]]
 
-        # --- DeathLink validation ---
+        item_counts_editor = [
+            _parse_count(item_count_raw[i] if i < len(item_count_raw) else "")
+            for i in range(n_editor_tasks)
+        ]
+
+        # ------------------------------------------------------------------ #
+        # 2. Build editor -> YAML index mappings                              #
+        # ------------------------------------------------------------------ #
+        # editor_to_yaml_task[i] = list of 0-based YAML indices for editor task i
+        editor_to_yaml_task: List[List[int]] = []
+        for i, count in enumerate(task_counts_editor):
+            start = sum(task_counts_editor[:i])
+            editor_to_yaml_task.append(list(range(start, start + count)))
+
+        # editor_to_yaml_item[i] = list of 0-based YAML indices for editor item i
+        editor_to_yaml_item: List[List[int]] = []
+        for i, count in enumerate(item_counts_editor):
+            start = sum(item_counts_editor[:i])
+            editor_to_yaml_item.append(list(range(start, start + count)))
+
+        n_yaml_tasks = sum(task_counts_editor)
+        n_yaml_items = sum(item_counts_editor)
+
+        if n_yaml_tasks > MAX_TASKS:
+            raise Exception(
+                f"Taskipelago: expanded task count ({n_yaml_tasks}) exceeds maximum ({MAX_TASKS}). "
+                f"Reduce task counts."
+            )
+
+        # ------------------------------------------------------------------ #
+        # 3. Expand all parallel lists to YAML size                          #
+        # ------------------------------------------------------------------ #
+        tasks: List[str] = []
+        items_raw: List[str] = []
+        item_types: List[str] = []
+        item_consumable: List[bool] = []
+
+        for i in range(n_editor_tasks):
+            for _ in range(task_counts_editor[i]):
+                tasks.append(tasks_raw[i])
+            for _ in range(item_counts_editor[i]):
+                items_raw.append(items_raw_editor[i])
+                item_types.append(item_types_editor[i])
+                item_consumable.append(item_consumable_editor[i])
+
+        # Pad/trim items to n_yaml_tasks
+        if len(items_raw) < n_yaml_tasks:
+            items_raw += [_random.choice(_FILLER_ITEMS) for _ in range(n_yaml_tasks - len(items_raw))]
+            item_types += ["junk"] * (n_yaml_tasks - len(item_types))
+            item_consumable += [False] * (n_yaml_tasks - len(item_consumable))
+        items_raw = items_raw[:n_yaml_tasks]
+        item_types = item_types[:n_yaml_tasks]
+        item_consumable = item_consumable[:n_yaml_tasks]
+        rewards = list(items_raw)
+
+        n = n_yaml_tasks
+
+        # ------------------------------------------------------------------ #
+        # 4. Translate editor-indexed prereq/cost strings to YAML indices    #
+        # ------------------------------------------------------------------ #
+        raw_task_prereqs_editor = [
+            str(x).strip() for x in list(self.options.task_prereqs.value or [])
+        ]
+        if len(raw_task_prereqs_editor) < n_editor_tasks:
+            raw_task_prereqs_editor += [""] * (n_editor_tasks - len(raw_task_prereqs_editor))
+        raw_task_prereqs_editor = raw_task_prereqs_editor[:n_editor_tasks]
+
+        raw_item_prereqs_editor = [
+            str(x).strip() for x in list(self.options.item_prereqs.value or [])
+        ]
+        if len(raw_item_prereqs_editor) < n_editor_tasks:
+            raw_item_prereqs_editor += [""] * (n_editor_tasks - len(raw_item_prereqs_editor))
+        raw_item_prereqs_editor = raw_item_prereqs_editor[:n_editor_tasks]
+
+        task_region_editor = [
+            str(x).strip() for x in (self.options.task_region.value or [])
+        ]
+        if len(task_region_editor) < n_editor_tasks:
+            task_region_editor += [""] * (n_editor_tasks - len(task_region_editor))
+        task_region_editor = task_region_editor[:n_editor_tasks]
+
+        task_cost_editor = [
+            str(x).strip() for x in task_cost_raw
+        ]
+        if len(task_cost_editor) < n_editor_tasks:
+            task_cost_editor += [""] * (n_editor_tasks - len(task_cost_editor))
+        task_cost_editor = task_cost_editor[:n_editor_tasks]
+
+        # Expand parallel task lists by count, translating indices in prereq strings
+        raw_prereqs_input: List[str] = []
+        raw_reward_prereqs_input: List[str] = []
+        raw_task_region: List[str] = []
+        raw_costs_input: List[str] = []
+
+        for i in range(n_editor_tasks):
+            count = task_counts_editor[i]
+            # Translate prereq indices from editor space to YAML space
+            translated_tp = _translate_prereq_indices(
+                raw_task_prereqs_editor[i], editor_to_yaml_task, and_multi=True
+            )
+            translated_ip = _translate_prereq_indices(
+                raw_item_prereqs_editor[i], editor_to_yaml_item, and_multi=False
+            )
+            for _ in range(count):
+                raw_prereqs_input.append(translated_tp)
+                raw_reward_prereqs_input.append(translated_ip)
+                raw_task_region.append(task_region_editor[i])
+                raw_costs_input.append(task_cost_editor[i])
+
+        # ------------------------------------------------------------------ #
+        # 5. Resolve quoted names in task/item prereqs                       #
+        # ------------------------------------------------------------------ #
+        # Quoted task name references in task prereqs
+        for _j, _txt in enumerate(raw_prereqs_input):
+            _resolved, _errs = _resolve_quoted_names(_txt, tasks)
+            if _errs:
+                raise Exception(
+                    f"Taskipelago: task prereq for task {_j + 1} references unknown task name(s): "
+                    + "; ".join(_errs)
+                )
+            raw_prereqs_input[_j] = _resolved
+
+        # Quoted item name references in item prereqs
+        for _j, _txt in enumerate(raw_reward_prereqs_input):
+            _resolved, _errs = _resolve_quoted_names(_txt, items_raw)
+            if _errs:
+                raise Exception(
+                    f"Taskipelago: item prereq for task {_j + 1} references unknown item name(s): "
+                    + "; ".join(_errs)
+                )
+            raw_reward_prereqs_input[_j] = _resolved
+
+        # ------------------------------------------------------------------ #
+        # 6. DeathLink validation                                             #
+        # ------------------------------------------------------------------ #
         if bool(self.options.death_link):
             dl_pool = [str(x).strip() for x in self.options.death_link_pool.value if str(x).strip()]
             if not dl_pool:
@@ -164,8 +326,10 @@ class TaskipelagoWorld(World):
 
         # --- set hiding of unreachable tasks ---
         self._hide_unreachable_tasks = bool(self.options.hide_unreachable_tasks.value)
-        
-        # --- Parse regions ---
+
+        # ------------------------------------------------------------------ #
+        # 7. Parse regions                                                    #
+        # ------------------------------------------------------------------ #
         raw_regions = [
             str(g).strip() for g in (self.options.regions.value or [])
             if str(g).strip()
@@ -197,10 +361,6 @@ class TaskipelagoWorld(World):
                 )
             region_default_pcts[rname] = pct
 
-        raw_task_region = [str(x).strip() for x in (self.options.task_region.value or [])]
-        if len(raw_task_region) < n:
-            raw_task_region += [""] * (n - len(raw_task_region))
-        raw_task_region = raw_task_region[:n]
         for i, rname in enumerate(raw_task_region):
             if rname and rname not in region_set:
                 raise Exception(
@@ -213,7 +373,9 @@ class TaskipelagoWorld(World):
             if rname:
                 region_to_task_indices[rname].append(i)
 
-        # --- Parse progressive groups ---
+        # ------------------------------------------------------------------ #
+        # 8. Parse progressive groups                                         #
+        # ------------------------------------------------------------------ #
         raw_prog_groups = [
             str(g).strip() for g in (self.options.progressive_groups.value or [])
             if str(g).strip()
@@ -227,8 +389,16 @@ class TaskipelagoWorld(World):
             raise Exception("Taskipelago: duplicate progressive group names.")
         prog_group_set = set(raw_prog_groups)
 
-        # --- Map each item to its group ---
-        raw_rpg = [str(x).strip() for x in (self.options.item_progressive_group.value or [])]
+        # Expand item progressive groups in parallel with items
+        raw_ipg_editor = [str(x).strip() for x in (self.options.item_progressive_group.value or [])]
+        if len(raw_ipg_editor) < n_editor_tasks:
+            raw_ipg_editor += [""] * (n_editor_tasks - len(raw_ipg_editor))
+        raw_ipg_editor = raw_ipg_editor[:n_editor_tasks]
+
+        raw_rpg: List[str] = []
+        for i in range(n_editor_tasks):
+            for _ in range(item_counts_editor[i]):
+                raw_rpg.append(raw_ipg_editor[i])
         if len(raw_rpg) < n:
             raw_rpg += [""] * (n - len(raw_rpg))
         raw_rpg = raw_rpg[:n]
@@ -244,35 +414,19 @@ class TaskipelagoWorld(World):
                 group_to_reward_indices[gname].append(i)
             reward_to_group.append(gname)
 
-        # --- Parse item prereqs ---
-        raw_reward_prereqs_input = [str(x).strip() for x in list(self.options.item_prereqs.value or [])]
-        if len(raw_reward_prereqs_input) < n:
-            raw_reward_prereqs_input += [""] * (n - len(raw_reward_prereqs_input))
-        raw_reward_prereqs_input = raw_reward_prereqs_input[:n]
-
-        # Resolve quoted item names to 1-based indices.
-        for _j, _txt in enumerate(raw_reward_prereqs_input):
-            _resolved, _errs = _resolve_quoted_names(_txt, items_raw)
-            if _errs:
-                raise Exception(
-                    f"Taskipelago: item prereq for task {_j + 1} references unknown item name(s): "
-                    + "; ".join(_errs)
-                )
-            raw_reward_prereqs_input[_j] = _resolved
-
-        # Parse reward prereqs; group refs become group_ref AST nodes.
+        # ------------------------------------------------------------------ #
+        # 9. Parse item prereqs (reward prereqs)                             #
+        # ------------------------------------------------------------------ #
         parsed_reward_prereqs_unresolved = []
         for i, txt in enumerate(raw_reward_prereqs_input):
             parsed_reward_prereqs_unresolved.append(
                 parse_prereq(txt, n, i, "reward prereq", known_groups=prog_group_set)
             )
 
-        # Collect group refs from ASTs.
         task_group_refs: List[List[Tuple[str, int | None]]] = [
             collect_group_refs(ast) for ast in parsed_reward_prereqs_unresolved
         ]
 
-        # Validate group refs.
         for i, refs in enumerate(task_group_refs):
             for gname, n_val in refs:
                 group_size = len(group_to_reward_indices.get(gname, []))
@@ -285,13 +439,9 @@ class TaskipelagoWorld(World):
                     if n_val < 1 or n_val > group_size:
                         raise Exception(
                             f"Taskipelago: task {i + 1} uses '{gname}-{n_val}' but group "
-                            f"'{gname}' only has {group_size} reward(s). "
-                            f"Required count must be between 1 and {group_size}."
+                            f"'{gname}' only has {group_size} reward(s)."
                         )
 
-        # Resolve progressive unlock thresholds per group.
-        # prog-N means "require at least N items from the group"; multiple tasks may share N.
-        # Tasks referencing the group without a number are assigned the lowest unused thresholds.
         task_progressive_reqs: List[List[Tuple[str, int]]] = [[] for _ in range(n)]
         for gname in raw_prog_groups:
             task_refs: List[Tuple[int, int | None]] = []
@@ -304,67 +454,43 @@ class TaskipelagoWorld(World):
                 continue
 
             group_size = len(group_to_reward_indices[gname])
-
-            # Split into explicit-threshold tasks and implicit tasks.
-            explicit_threshold_tasks: Dict[int, List[int]] = {}  # threshold -> [task indices]
+            explicit_threshold_tasks: Dict[int, List[int]] = {}
             implicit_tasks: List[int] = []
             for ti, n_val in task_refs:
                 if n_val is not None:
                     explicit_threshold_tasks.setdefault(n_val, []).append(ti)
                 else:
                     implicit_tasks.append(ti)
-            implicit_tasks.sort()  # lower task index = lower threshold
+            implicit_tasks.sort()
 
-            # Each unique explicit threshold plus each implicit task occupies one unlock step.
             num_steps = len(explicit_threshold_tasks) + len(implicit_tasks)
             if num_steps > group_size:
                 raise Exception(
                     f"Taskipelago: progressive group '{gname}' has {group_size} reward(s) but "
-                    f"requires {num_steps} distinct unlock steps "
-                    f"({len(explicit_threshold_tasks)} unique explicit threshold(s) + "
-                    f"{len(implicit_tasks)} implicit task(s)). "
-                    f"Add more rewards to the group or reduce the number of tasks depending on it."
+                    f"requires {num_steps} distinct unlock steps."
                 )
 
-            # Free thresholds are positions 1..group_size not taken by any explicit ref.
             free_thresholds = [p for p in range(1, group_size + 1) if p not in explicit_threshold_tasks]
-
             for threshold, task_list in explicit_threshold_tasks.items():
                 for ti in task_list:
                     task_progressive_reqs[ti].append((gname, threshold))
             for ti, threshold in zip(implicit_tasks, free_thresholds):
                 task_progressive_reqs[ti].append((gname, threshold))
 
-        # Resolve group_ref nodes to group nodes using computed thresholds.
         parsed_reward_prereqs = []
         for i, ast in enumerate(parsed_reward_prereqs_unresolved):
             group_thresh = {gname: count for gname, count in task_progressive_reqs[i]}
             parsed_reward_prereqs.append(resolve_ast_refs(ast, group_thresh, {}))
 
-        # --- Parse task prereqs ---
-        raw_prereqs_input = [str(x).strip() for x in list(self.options.task_prereqs.value or [])]
-        if len(raw_prereqs_input) < n:
-            raw_prereqs_input += [""] * (n - len(raw_prereqs_input))
-        raw_prereqs_input = raw_prereqs_input[:n]
-
-        # Resolve quoted task names to 1-based indices.
-        for _j, _txt in enumerate(raw_prereqs_input):
-            _resolved, _errs = _resolve_quoted_names(_txt, tasks)
-            if _errs:
-                raise Exception(
-                    f"Taskipelago: task prereq for task {_j + 1} references unknown task name(s): "
-                    + "; ".join(_errs)
-                )
-            raw_prereqs_input[_j] = _resolved
-
-        # Parse task prereqs; region refs become region_ref AST nodes.
+        # ------------------------------------------------------------------ #
+        # 10. Parse task prereqs                                              #
+        # ------------------------------------------------------------------ #
         parsed_prereqs_unresolved = []
         for i, txt in enumerate(raw_prereqs_input):
             parsed_prereqs_unresolved.append(
                 parse_prereq(txt, n, i, "task prereq", known_regions=region_set)
             )
 
-        # Collect region refs from ASTs and resolve percentages.
         task_region_reqs: List[List[Tuple[str, int]]] = []
         for i, ast in enumerate(parsed_prereqs_unresolved):
             refs = collect_region_refs(ast)
@@ -386,7 +512,6 @@ class TaskipelagoWorld(World):
                 reqs.append((rname, pct))
             task_region_reqs.append(reqs)
 
-        # Resolve region_ref nodes to region nodes using computed percentages.
         parsed_prereqs = []
         for i, ast in enumerate(parsed_prereqs_unresolved):
             region_pct = {rname: pct for rname, pct in task_region_reqs[i]}
@@ -396,30 +521,157 @@ class TaskipelagoWorld(World):
             parsed_prereqs.append(ast)
         _assert_no_cycles(parsed_prereqs, n)
 
-        # --- Parse goal tasks ---
+        # ------------------------------------------------------------------ #
+        # 11. Parse and validate cost expressions                             #
+        # ------------------------------------------------------------------ #
+        # Build consumable groups: name -> list of 0-based item indices
+        consumable_groups: Dict[str, List[int]] = {}
+        for idx, (name, is_consumable) in enumerate(zip(rewards, item_consumable)):
+            if is_consumable:
+                consumable_groups.setdefault(name, []).append(idx)
+
+        consumable_names: set = set(consumable_groups.keys())
+
+        parsed_costs: List[Node | None] = []
+        for i, cost_text in enumerate(raw_costs_input):
+            if not cost_text:
+                parsed_costs.append(None)
+                continue
+            try:
+                ast = parse_cost_expr(
+                    cost_text,
+                    consumable_names,
+                    item_names_ordered=rewards,
+                )
+                parsed_costs.append(ast)
+            except Exception as e:
+                raise Exception(
+                    f"Taskipelago: cost expression for task {i + 1} is invalid: {e}"
+                )
+
+        # Validate total consumable supply covers all task costs.
+        # For AND costs: all items are mandatory.
+        # For OR costs: at least one branch must be fully coverable.
+        # Conservative check: for each consumable, sum up the minimum demand
+        # (assuming OR branches allow the cheapest choice per currency).
+        consumable_supply: Dict[str, int] = {name: len(idxs) for name, idxs in consumable_groups.items()}
+        consumable_demand: Dict[str, int] = {}
+        for cost_ast in parsed_costs:
+            if cost_ast is None:
+                continue
+            branches = collect_cost_groups_per_branch(cost_ast)
+            # For each currency, credit the branch that uses the least of it
+            # (player will pick the cheapest branch per-currency)
+            # Build per-currency minimum contribution from this task
+            currencies_in_any_branch: set = set()
+            for branch in branches:
+                for name, _ in branch:
+                    currencies_in_any_branch.add(name)
+            for cname in currencies_in_any_branch:
+                # Find minimum cost for this currency across all branches that contain it
+                # (branches that DON'T contain it count as 0 for this currency)
+                min_cost = min(
+                    (sum(cnt for n, cnt in branch if n == cname) for branch in branches),
+                    default=0,
+                )
+                consumable_demand[cname] = consumable_demand.get(cname, 0) + min_cost
+
+        for cname, demand in consumable_demand.items():
+            supply = consumable_supply.get(cname, 0)
+            if demand > supply:
+                raise Exception(
+                    f"Taskipelago: not enough consumable '{cname}' items to cover all task costs. "
+                    f"Required: {demand}, available: {supply}."
+                )
+
+        # ------------------------------------------------------------------ #
+        # 12. Compute cumulative cost thresholds for AP logic                #
+        # ------------------------------------------------------------------ #
+        # For each consumable group, tasks that cost from it get cumulative
+        # thresholds based on topological ordering (earlier tasks get lower thresholds).
+        # This ensures AP places enough currency items before tasks that need them.
+        # Only pure AND cost contributions are accumulated; OR branches use simple thresholds.
+
+        # task_cost_reqs[i] = list of (consumable_name, threshold) tuples for AP logic.
+        # These are resolved cumulative requirements (like task_progressive_reqs).
+        task_cost_reqs: List[List[Tuple[str, int]]] = [[] for _ in range(n)]
+
+        for cname in consumable_names:
+            # Collect tasks that have an AND cost involving this consumable
+            # (tasks with OR costs for this consumable get simple thresholds)
+            and_tasks: List[Tuple[int, int]] = []  # (task_idx, simple_cost)
+            or_tasks: List[Tuple[int, int]] = []   # (task_idx, simple_min_cost)
+
+            for i, cost_ast in enumerate(parsed_costs):
+                if cost_ast is None:
+                    continue
+                branches = collect_cost_groups_per_branch(cost_ast)
+                cost_here = sum(cnt for n, cnt in branches[0] if n == cname) if len(branches) == 1 else 0
+                if len(branches) == 1 and cost_here > 0:
+                    and_tasks.append((i, cost_here))
+                elif len(branches) > 1:
+                    min_cost = min(
+                        (sum(cnt for n, cnt in b if n == cname) for b in branches),
+                        default=0,
+                    )
+                    if min_cost > 0:
+                        or_tasks.append((i, min_cost))
+
+            if not and_tasks and not or_tasks:
+                continue
+
+            # Sort AND tasks by topological depth, then by index
+            topo_depth = _compute_topo_depths(parsed_prereqs, n)
+            and_tasks.sort(key=lambda x: (topo_depth[x[0]], x[0]))
+
+            # Assign cumulative thresholds for AND tasks
+            cumulative = 0
+            for task_idx, cost_amount in and_tasks:
+                cumulative += cost_amount
+                task_cost_reqs[task_idx].append((cname, cumulative))
+
+            # OR tasks get simple (non-cumulative) thresholds
+            for task_idx, min_cost in or_tasks:
+                task_cost_reqs[task_idx].append((cname, min_cost))
+
+        # ------------------------------------------------------------------ #
+        # 13. Parse goal tasks                                                #
+        # ------------------------------------------------------------------ #
         raw_goal_parts = [str(x).strip() for x in list(self.options.goal_tasks.value or []) if str(x).strip()]
-        raw_goal = ", ".join(raw_goal_parts)  # rejoin into single expression
+        raw_goal = ", ".join(raw_goal_parts)
         goal_ast = parse_prereq(raw_goal, n, 0, "goal_tasks") if raw_goal else None
         self._raw_goal = raw_goal
         self._goal_ast = goal_ast
-
-        # 0-based indices of all tasks referenced in goal (for slot data)
         self._goal_indices = sorted(set(collect_leaves(goal_ast))) if goal_ast else []
 
-        # Rewards that other tasks require to be *received* must be progression so AP
-        # places them early enough. Task-completion prereqs gate via completion tokens
-        # (always progression themselves), so they do NOT force reward items to progression.
-        # Progressive group members are also always forced to progression.
+        # ------------------------------------------------------------------ #
+        # 14. Determine forced-progression rewards                           #
+        # ------------------------------------------------------------------ #
         forced_prog: set = set()
         for ast in parsed_reward_prereqs:
             forced_prog.update(collect_leaves(ast))
         for indices in group_to_reward_indices.values():
             forced_prog.update(indices)
+        # Consumable items used in costs must be progression so AP places them accessibly
+        for cname, idxs in consumable_groups.items():
+            if consumable_demand.get(cname, 0) > 0:
+                forced_prog.update(idxs)
+
+        # ------------------------------------------------------------------ #
+        # 15. Store all world state                                           #
+        # ------------------------------------------------------------------ #
+        self._tasks = tasks
+        self._rewards = rewards
+        self._reward_types = item_types
+        self._item_consumable = item_consumable
 
         self._raw_prereqs = raw_prereqs_input
-        self._parsed_prereqs = parsed_prereqs       # List[Node | None]
+        self._parsed_prereqs = parsed_prereqs
         self._raw_reward_prereqs = raw_reward_prereqs_input
-        self._parsed_reward_prereqs = parsed_reward_prereqs  # List[Node | None]
+        self._parsed_reward_prereqs = parsed_reward_prereqs
+        self._raw_costs = raw_costs_input
+        self._parsed_costs = parsed_costs
+        self._task_cost_reqs = task_cost_reqs
         self._forced_progression_rewards = forced_prog
         self._lock_prereqs = bool(self.options.lock_prereqs)
 
@@ -432,10 +684,9 @@ class TaskipelagoWorld(World):
         self._task_region = task_region
         self._task_region_reqs = task_region_reqs
         self._region_to_task_indices = region_to_task_indices
+        self._consumable_groups = consumable_groups
 
-        # Stable names for this generation.
-        # stage_generate_early runs before this and sets the class-level dicts;
-        # we reproduce the same naming formula here so instance methods use matching names.
+        # Stable per-generation names
         multi_slot = len(list(self.multiworld.get_game_worlds(self.game))) > 1
         _pname = self.multiworld.player_name[self.player]
         prefix = f"[{_pname}] " if multi_slot else ""
@@ -456,6 +707,11 @@ class TaskipelagoWorld(World):
             rname: [self._token_item_names[idx] for idx in indices]
             for rname, indices in region_to_task_indices.items()
         }
+        # Consumable group display names for logic (name -> [reward_item_names])
+        self._consumable_group_display_names: Dict[str, List[str]] = {
+            cname: [self._reward_item_names[idx] for idx in idxs]
+            for cname, idxs in consumable_groups.items()
+        }
 
     @classmethod
     def stage_generate_early(cls, multiworld) -> None:
@@ -474,10 +730,30 @@ class TaskipelagoWorld(World):
 
             tasks = [str(t).strip() for t in world.options.tasks.value if str(t).strip()]
             items_raw = [str(r).strip() for r in world.options.items.value]
-            n = min(len(tasks), MAX_TASKS)
 
-            for i in range(n):
+            # Compute expanded count to size the ID allocation correctly
+            task_count_raw = [str(x).strip() for x in (world.options.task_count.value or [])]
+            item_count_raw = [str(x).strip() for x in (world.options.item_count.value or [])]
+
+            def _pc(s):
+                try: return max(1, int(s)) if s else 1
+                except ValueError: return 1
+
+            task_counts = [_pc(task_count_raw[i] if i < len(task_count_raw) else "") for i in range(len(tasks))]
+            item_counts = [_pc(item_count_raw[i] if i < len(item_count_raw) else "") for i in range(len(tasks))]
+            n_tasks = min(sum(task_counts), MAX_TASKS)
+
+            # Expand items_raw to match the expanded task count
+            expanded_items: List[str] = []
+            for i in range(len(tasks)):
                 reward_text = items_raw[i] if i < len(items_raw) else ""
+                for _ in range(item_counts[i]):
+                    expanded_items.append(reward_text)
+            if len(expanded_items) < n_tasks:
+                expanded_items += [""] * (n_tasks - len(expanded_items))
+
+            for i in range(n_tasks):
+                reward_text = expanded_items[i] if i < len(expanded_items) else ""
                 item_name = (
                     f"{prefix}Item {i + 1}: {reward_text}"
                     if reward_text
@@ -522,11 +798,6 @@ class TaskipelagoWorld(World):
             menu.connect(region)
 
     def create_items(self) -> None:
-        """
-        Add N reward items to the item pool.
-        Complete locations hold N locked event tokens (not in the pool).
-        Total locations: 2N. Pool items from this world: N. Balance maintained.
-        """
         for i, name in enumerate(self._reward_item_names):
             rt = self._reward_types[i] if i < len(self._reward_types) else "junk"
             forced = i in self._forced_progression_rewards
@@ -545,7 +816,6 @@ class TaskipelagoWorld(World):
         _set_rules(self)
 
     def generate_basic(self) -> None:
-        # Place locked completion tokens on Complete locations.
         for i, cname in enumerate(self._complete_location_names):
             token_name = self._token_item_names[i]
             complete_loc = self.multiworld.get_location(cname, self.player)
@@ -558,16 +828,13 @@ class TaskipelagoWorld(World):
                 )
             )
 
-        # Goal condition: either specific goal tasks, or all tasks by default.
         if self._goal_ast is not None:
             complete_names = self._complete_location_names
-            # Goal: the boolean expression over complete locations
             complete_locs = {
                 i: self.multiworld.get_location(complete_names[i], self.player)
                 for i in collect_leaves(self._goal_ast)
             }
             def goal_condition(state, ast=self._goal_ast, locs=complete_locs):
-                # Reuse eval_node but over locations_checked instead of items
                 def loc_checked(node):
                     if isinstance(node, int):
                         return locs[node] in state.locations_checked
@@ -613,6 +880,8 @@ class TaskipelagoWorld(World):
             "tasks": list(self._tasks),
             "items": list(self._rewards),
             "item_types": list(self._reward_types),
+            "item_consumable": list(self._item_consumable),
+            "task_costs": list(self._raw_costs),
             "task_prereqs": list(self._raw_prereqs),
             "item_prereqs": list(self._raw_reward_prereqs),
             "lock_prereqs": bool(self._lock_prereqs),
@@ -639,6 +908,20 @@ class TaskipelagoWorld(World):
                 [{"group": g, "count": c} for g, c in reqs]
                 for reqs in self._task_progressive_reqs
             ],
+            "task_cost_reqs": [
+                [{"consumable": cname, "threshold": thr} for cname, thr in reqs]
+                for reqs in self._task_cost_reqs
+            ],
+            "task_cost_amounts": [
+                [
+                    [[name, amt] for name, amt in branch]
+                    for branch in collect_cost_groups_per_branch(cost_ast)
+                ] if cost_ast is not None else []
+                for cost_ast in self._parsed_costs
+            ],
+            "consumable_groups": {
+                cname: list(idxs) for cname, idxs in self._consumable_groups.items()
+            },
             "regions": list(self._regions),
             "region_default_pcts": dict(self._region_default_pcts),
             "task_region": list(self._task_region),
@@ -653,7 +936,9 @@ class TaskipelagoWorld(World):
         }
 
 
-# --- Helpers ---
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _resolve_quoted_names(text: str, names: list) -> Tuple[str, List[str]]:
     """Replace "Quoted Name" tokens with the 1-based index of the first matching entry."""
@@ -669,6 +954,103 @@ def _resolve_quoted_names(text: str, names: list) -> Tuple[str, List[str]]:
     return result, errors
 
 
+def _translate_prereq_indices(
+    text: str,
+    editor_to_yaml: List[List[int]],
+    and_multi: bool,
+) -> str:
+    """
+    Translate integer indices in a prereq string from editor-space to YAML-space.
+    editor_to_yaml[i] = list of 0-based YAML indices for editor row i.
+    If and_multi=True, multi-copy tasks become an AND expression (all copies required).
+    If and_multi=False, multi-copy items become an OR expression (any copy sufficient).
+    Integers in name tokens (e.g. "group-50") are left untouched.
+    """
+    if not text:
+        return text
+
+    result = []
+    i = 0
+    while i < len(text):
+        c = text[i]
+
+        if c.isspace():
+            result.append(c)
+            i += 1
+            continue
+
+        if text[i:i+2] in ("&&", "||"):
+            result.append(text[i:i+2])
+            i += 2
+            continue
+
+        if c in ("(", ")", ","):
+            result.append(c)
+            i += 1
+            continue
+
+        # Name token: consume until whitespace/operator/paren - leave as-is
+        if c.isalpha() or c == '_':
+            j = i
+            while j < len(text):
+                ch = text[j]
+                if ch.isspace() or ch in ("(", ")", ","):
+                    break
+                if text[j:j+2] in ("&&", "||"):
+                    break
+                j += 1
+            result.append(text[i:j])
+            i = j
+            continue
+
+        # Integer: translate to YAML indices
+        if c.isdigit():
+            j = i
+            while j < len(text) and text[j].isdigit():
+                j += 1
+            editor_idx_1 = int(text[i:j])
+            editor_idx_0 = editor_idx_1 - 1
+            if 0 <= editor_idx_0 < len(editor_to_yaml):
+                yaml_idxs_0 = editor_to_yaml[editor_idx_0]
+                yaml_idxs_1 = [k + 1 for k in yaml_idxs_0]
+                if len(yaml_idxs_1) == 1:
+                    result.append(str(yaml_idxs_1[0]))
+                elif and_multi:
+                    result.append("(" + " && ".join(str(k) for k in yaml_idxs_1) + ")")
+                else:
+                    result.append("(" + " || ".join(str(k) for k in yaml_idxs_1) + ")")
+            else:
+                result.append(text[i:j])
+            i = j
+            continue
+
+        result.append(c)
+        i += 1
+
+    return "".join(result)
+
+
+def _compute_topo_depths(parsed_prereqs: list, n: int) -> List[int]:
+    """Return a list of topological depths for each task (0 = no prereqs)."""
+    depths = [-1] * n
+    computing = [False] * n
+
+    def depth(v: int) -> int:
+        if depths[v] >= 0:
+            return depths[v]
+        if computing[v]:
+            return 0  # cycle; handled elsewhere
+        computing[v] = True
+        prereq_ast = parsed_prereqs[v] if v < len(parsed_prereqs) else None
+        deps = collect_leaves(prereq_ast)
+        d = (max(depth(u) for u in deps) + 1) if deps else 0
+        computing[v] = False
+        depths[v] = d
+        return d
+
+    for i in range(n):
+        depth(i)
+    return depths
 
 
 def _parse_prereq_list(txt: str, task_index: int, n: int, label: str) -> List[int]:
@@ -698,7 +1080,7 @@ def _parse_prereq_list(txt: str, task_index: int, n: int, label: str) -> List[in
 
 
 def _assert_no_cycles(parsed_prereqs: list, n: int) -> None:
-    """DFS Cycle detection on the prereq graph. Raises if a cycle is found, otherwise does nothing."""
+    """DFS cycle detection on the prereq graph."""
     visiting: set = set()
     visited: set = set()
 
