@@ -639,6 +639,8 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.bingo_dimension_y = 5
         self.bingoal = 3
 
+        self.on_print_json_callback = None  # type: callable | None
+
         # persist received notification state
         self._notify_state_path = Path.cwd() / "taskipelago_notify_state.json"
         self._notify_key = None
@@ -841,6 +843,13 @@ class TaskipelagoContext(CommonClient.CommonContext):
         data[self._notify_key] = int(idx)
         self._save_notify_state(data)
 
+    def on_print_json(self, args: dict):
+        super().on_print_json(args)
+        parts = args.get("data", [])
+        text = "".join(p.get("text", "") for p in parts if isinstance(p, dict))
+        if text and callable(self.on_print_json_callback):
+            self.on_print_json_callback(text)
+
     async def disconnect(self):
         # Snapshot current endpoint so it can't be nulled out under us
         endpoint = getattr(self, "server", None)
@@ -976,6 +985,9 @@ class TaskipelagoApp(tk.Tk):
         self.play_tab = ttk.Frame(notebook)
         notebook.add(self.play_tab, text="Connect and Play")
 
+        self.console_tab = ttk.Frame(notebook)
+        notebook.add(self.console_tab, text="Text Console")
+
         self.editor_tab = ttk.Frame(notebook)
         notebook.add(self.editor_tab, text="YAML Generator")
 
@@ -995,6 +1007,7 @@ class TaskipelagoApp(tk.Tk):
             self.ctx.on_disconnected = self.on_server_disconnected
             self.ctx.on_deathlink = self.on_deathlink_received
             self.ctx.on_item_received = self.on_items_received
+            self.ctx.on_print_json_callback = self._on_console_message
 
         self.loop.call_soon_threadsafe(_init_ctx)
 
@@ -1401,20 +1414,39 @@ class TaskipelagoApp(tk.Tk):
         self._bingo_buttons = []
         # play_bingo_frame intentionally not packed here; toggled in refresh_play_tab
 
-        # ---- Notifications panel ----
-        notif_frame = ttk.LabelFrame(play_root, text="Notifications")
-        notif_frame.grid(row=0, column=1, rowspan=3, sticky="nsew")
-        notif_frame.grid_rowconfigure(1, weight=1)
-        notif_frame.grid_columnconfigure(0, weight=1)
+        # ---- Notifications panel (right column, tabbed) ----
+        notif_outer = ttk.Frame(play_root)
+        notif_outer.grid(row=0, column=1, rowspan=3, sticky="nsew")
+        notif_outer.grid_rowconfigure(0, weight=1)
+        notif_outer.grid_columnconfigure(0, weight=1)
 
-        notif_btns = ttk.Frame(notif_frame)
-        notif_btns.grid(row=0, column=0, sticky="ew", padx=10, pady=(0, 0))
+        notif_notebook = ttk.Notebook(notif_outer)
+        notif_notebook.grid(row=0, column=0, sticky="nsew")
+
+        # -- Notifications tab --
+        notif_tab_frame = ttk.Frame(notif_notebook)
+        notif_notebook.add(notif_tab_frame, text="Notifications")
+        notif_tab_frame.grid_rowconfigure(1, weight=1)
+        notif_tab_frame.grid_columnconfigure(0, weight=1)
+
+        notif_btns = ttk.Frame(notif_tab_frame)
+        notif_btns.grid(row=0, column=0, sticky="ew", padx=10, pady=(4, 0))
         ttk.Button(notif_btns, text="Clear", command=self._clear_notifications).pack(side="left")
 
-        self.notif_scroll = ScrollableFrame(notif_frame, colors=self.colors)
+        self.notif_scroll = ScrollableFrame(notif_tab_frame, colors=self.colors)
         self.notif_scroll.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
 
+        # -- Items tab --
+        items_tab_frame = ttk.Frame(notif_notebook)
+        notif_notebook.add(items_tab_frame, text="Items")
+        items_tab_frame.grid_rowconfigure(0, weight=1)
+        items_tab_frame.grid_columnconfigure(0, weight=1)
+
+        self.items_received_scroll = ScrollableFrame(items_tab_frame, colors=self.colors)
+        self.items_received_scroll.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+
         self._build_bingo_tab()
+        self._build_console_tab()
 
     # ---------------- YAML generator actions ----------------
     def add_task_row(self):
@@ -2266,6 +2298,9 @@ class TaskipelagoApp(tk.Tk):
 
         self._maybe_send_goal_complete()
         self.after(0, self.refresh_play_tab)
+        self.after(0, self._render_items_tab)
+        if self.connection_state == "connected":
+            self._update_console_connection_state(True)
 
     def refresh_play_tab(self):
         for child in self.play_tasks_scroll.inner.winfo_children():
@@ -2619,6 +2654,145 @@ class TaskipelagoApp(tk.Tk):
                     self.loop.call_soon_threadsafe(
                         lambda s=_send_line: asyncio.create_task(s())
                     )
+
+    # ---------------- Text Console tab ----------------
+    def _build_console_tab(self):
+        bg = self.colors.get("bg", "#1e1e1e")
+        fg = self.colors.get("fg", "#e6e6e6")
+
+        tab = self.console_tab
+        tab.grid_rowconfigure(0, weight=1)
+        tab.grid_rowconfigure(1, weight=0)
+        tab.grid_columnconfigure(0, weight=1)
+
+        # Message history - tk.Text in readonly mode
+        text_frame = tk.Frame(tab, bg=bg)
+        text_frame.grid(row=0, column=0, sticky="nsew", padx=6, pady=(6, 0))
+        text_frame.grid_rowconfigure(0, weight=1)
+        text_frame.grid_columnconfigure(0, weight=1)
+
+        self.console_text = tk.Text(
+            text_frame,
+            bg=bg, fg=fg, insertbackground=fg,
+            relief="flat", wrap="word",
+            font=("Consolas", 10),
+            state="disabled",
+        )
+        self.console_text.grid(row=0, column=0, sticky="nsew")
+
+        sb = ttk.Scrollbar(text_frame, orient="vertical", command=self.console_text.yview)
+        sb.grid(row=0, column=1, sticky="ns")
+        self.console_text.configure(yscrollcommand=sb.set)
+
+        # Input bar
+        input_frame = tk.Frame(tab, bg=bg)
+        input_frame.grid(row=1, column=0, sticky="ew", padx=6, pady=6)
+        input_frame.grid_columnconfigure(0, weight=1)
+
+        self.console_input_var = tk.StringVar()
+        self.console_input_entry = ttk.Entry(input_frame, textvariable=self.console_input_var)
+        self.console_input_entry.grid(row=0, column=0, sticky="ew", padx=(0, 6))
+        self.console_input_entry.bind("<Return>", self._send_console_message)
+
+        ttk.Button(input_frame, text="Send", command=self._send_console_message).grid(row=0, column=1)
+
+        self._update_console_connection_state(False)
+
+    def _update_console_connection_state(self, connected: bool):
+        if not hasattr(self, "console_input_entry"):
+            return
+        if connected:
+            self.console_input_var.set("")
+            self.console_input_entry.state(["!disabled"])
+            self.console_input_entry.configure(foreground=self.colors.get("fg", "#e6e6e6"))
+        else:
+            self.console_input_var.set("Must be connected to a multiworld")
+            self.console_input_entry.state(["disabled"])
+
+    def _on_console_message(self, text: str):
+        self.after(0, lambda t=text: self._append_console_text(t))
+
+    def _append_console_text(self, text: str):
+        if not hasattr(self, "console_text"):
+            return
+        self.console_text.configure(state="normal")
+        self.console_text.insert("end", text + "\n")
+        self.console_text.configure(state="disabled")
+        self.console_text.see("end")
+
+    def _send_console_message(self, _event=None):
+        if not hasattr(self, "console_input_entry"):
+            return
+        if self.connection_state != "connected":
+            return
+        msg = self.console_input_var.get().strip()
+        if not msg:
+            return
+        self.console_input_var.set("")
+        self.loop.call_soon_threadsafe(
+            lambda: asyncio.create_task(self.ctx.send_msgs([{"cmd": "Say", "text": msg}]))
+        )
+
+    # ---------------- Items received tab ----------------
+    def _render_items_tab(self):
+        if not hasattr(self, "items_received_scroll"):
+            return
+        inner = self.items_received_scroll.inner
+        for w in inner.winfo_children():
+            w.destroy()
+
+        ctx = getattr(self, "ctx", None)
+        if not ctx:
+            return
+
+        items_received = list(getattr(ctx, "items_received", []) or [])
+        base_token = getattr(ctx, "base_token_id", None)
+        base_item = getattr(ctx, "base_item_id", None)
+        n_tasks = len(getattr(ctx, "tasks", []) or [])
+        items_text = list(getattr(ctx, "items", getattr(ctx, "rewards", [])) or [])
+
+        if not items_received:
+            ttk.Label(inner, text="No items received yet.", style="Muted.TLabel").pack(anchor="w", padx=6, pady=4)
+            return
+
+        for it in items_received:
+            item_id = getattr(it, "item", None)
+            sender = getattr(it, "player", None)
+            if item_id is None:
+                continue
+            # Skip completion tokens
+            if isinstance(base_token, int) and isinstance(item_id, int) and n_tasks:
+                if 0 <= (item_id - base_token) < n_tasks:
+                    continue
+
+            # Resolve name
+            name = None
+            try:
+                item_names = getattr(ctx, "item_names", None)
+                if isinstance(item_names, dict):
+                    name = item_names.get(item_id)
+                elif hasattr(item_names, "get"):
+                    name = item_names.get(item_id)
+            except Exception:
+                pass
+            if isinstance(base_item, int) and isinstance(item_id, int) and items_text:
+                idx = item_id - base_item
+                if 0 <= idx < len(items_text) and items_text[idx]:
+                    name = items_text[idx]
+            if not name:
+                name = f"Item #{item_id}"
+
+            sender_label = ""
+            if sender is not None:
+                try:
+                    player_names = getattr(ctx, "player_names", None)
+                    pname = player_names.get(sender) if isinstance(player_names, dict) else None
+                    if pname:
+                        sender_label = f"  (from {pname})"
+                except Exception:
+                    pass
+
+            ttk.Label(inner, text=f"{name}{sender_label}").pack(anchor="w", padx=6, pady=1)
 
     # ---------------- Bingo generator tab ----------------
     def _build_bingo_tab(self):
@@ -3601,7 +3775,9 @@ class TaskipelagoApp(tk.Tk):
         self.connect_status.set("Disconnected (server closed connection).")
         self.connect_button.config(text="Connect")
         self.sent_goal = False
+        self._clear_notifications()
         self._clear_play_state()
+        self._update_console_connection_state(False)
 
     # ---------------- DeathLink popup ----------------
     def on_deathlink_received(self, data: dict):
