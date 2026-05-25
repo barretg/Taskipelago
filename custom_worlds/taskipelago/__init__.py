@@ -22,7 +22,10 @@ from .locations import (
     TaskipelagoLocation,
 )
 from .options import TaskipelagoOptions
-from .prereq_parser import collect_leaves, eval_node, parse_prereq, Node
+from .prereq_parser import (
+    collect_leaves, collect_group_refs, collect_region_refs,
+    eval_node, parse_prereq, resolve_ast_refs, Node,
+)
 from .rules import set_rules as _set_rules
 
 
@@ -241,7 +244,7 @@ class TaskipelagoWorld(World):
                 group_to_reward_indices[gname].append(i)
             reward_to_group.append(gname)
 
-        # --- Parse item prereqs (extracting group refs first) ---
+        # --- Parse item prereqs ---
         raw_reward_prereqs_input = [str(x).strip() for x in list(self.options.item_prereqs.value or [])]
         if len(raw_reward_prereqs_input) < n:
             raw_reward_prereqs_input += [""] * (n - len(raw_reward_prereqs_input))
@@ -257,15 +260,19 @@ class TaskipelagoWorld(World):
                 )
             raw_reward_prereqs_input[_j] = _resolved
 
-        # Extract group refs from each task's reward prereq string, keeping only integers for the parser.
-        task_group_refs: List[List[Tuple[str, int | None]]] = []
-        raw_reward_prereqs: List[str] = []
-        for txt in raw_reward_prereqs_input:
-            refs, cleaned = _extract_group_refs(txt, prog_group_set)
-            task_group_refs.append(refs)
-            raw_reward_prereqs.append(cleaned)
+        # Parse reward prereqs; group refs become group_ref AST nodes.
+        parsed_reward_prereqs_unresolved = []
+        for i, txt in enumerate(raw_reward_prereqs_input):
+            parsed_reward_prereqs_unresolved.append(
+                parse_prereq(txt, n, i, "reward prereq", known_groups=prog_group_set)
+            )
 
-        # Validate group refs found in reward prereqs.
+        # Collect group refs from ASTs.
+        task_group_refs: List[List[Tuple[str, int | None]]] = [
+            collect_group_refs(ast) for ast in parsed_reward_prereqs_unresolved
+        ]
+
+        # Validate group refs.
         for i, refs in enumerate(task_group_refs):
             for gname, n_val in refs:
                 group_size = len(group_to_reward_indices.get(gname, []))
@@ -328,11 +335,13 @@ class TaskipelagoWorld(World):
             for ti, threshold in zip(implicit_tasks, free_thresholds):
                 task_progressive_reqs[ti].append((gname, threshold))
 
+        # Resolve group_ref nodes to group nodes using computed thresholds.
         parsed_reward_prereqs = []
-        for i, txt in enumerate(raw_reward_prereqs):
-            parsed_reward_prereqs.append(parse_prereq(txt, n, i, "reward prereq"))
+        for i, ast in enumerate(parsed_reward_prereqs_unresolved):
+            group_thresh = {gname: count for gname, count in task_progressive_reqs[i]}
+            parsed_reward_prereqs.append(resolve_ast_refs(ast, group_thresh, {}))
 
-        # --- Parse task prereqs (extract region refs first) ---
+        # --- Parse task prereqs ---
         raw_prereqs_input = [str(x).strip() for x in list(self.options.task_prereqs.value or [])]
         if len(raw_prereqs_input) < n:
             raw_prereqs_input += [""] * (n - len(raw_prereqs_input))
@@ -348,15 +357,17 @@ class TaskipelagoWorld(World):
                 )
             raw_prereqs_input[_j] = _resolved
 
-        task_region_refs_extracted: List[List[Tuple[str, int | None]]] = []
-        raw_prereqs: List[str] = []
-        for txt in raw_prereqs_input:
-            refs, cleaned = _extract_region_refs(txt, region_set)
-            task_region_refs_extracted.append(refs)
-            raw_prereqs.append(cleaned)
+        # Parse task prereqs; region refs become region_ref AST nodes.
+        parsed_prereqs_unresolved = []
+        for i, txt in enumerate(raw_prereqs_input):
+            parsed_prereqs_unresolved.append(
+                parse_prereq(txt, n, i, "task prereq", known_regions=region_set)
+            )
 
+        # Collect region refs from ASTs and resolve percentages.
         task_region_reqs: List[List[Tuple[str, int]]] = []
-        for i, refs in enumerate(task_region_refs_extracted):
+        for i, ast in enumerate(parsed_prereqs_unresolved):
+            refs = collect_region_refs(ast)
             reqs: List[Tuple[str, int]] = []
             for rname, pct_val in refs:
                 if task_region[i] == rname:
@@ -375,9 +386,11 @@ class TaskipelagoWorld(World):
                 reqs.append((rname, pct))
             task_region_reqs.append(reqs)
 
+        # Resolve region_ref nodes to region nodes using computed percentages.
         parsed_prereqs = []
-        for i, txt in enumerate(raw_prereqs):
-            ast = parse_prereq(txt, n, i, "task prereq")
+        for i, ast in enumerate(parsed_prereqs_unresolved):
+            region_pct = {rname: pct for rname, pct in task_region_reqs[i]}
+            ast = resolve_ast_refs(ast, {}, region_pct)
             if ast is not None and i in collect_leaves(ast):
                 raise Exception(f"Taskipelago: task {i + 1} cannot require itself.")
             parsed_prereqs.append(ast)
@@ -403,9 +416,9 @@ class TaskipelagoWorld(World):
         for indices in group_to_reward_indices.values():
             forced_prog.update(indices)
 
-        self._raw_prereqs = raw_prereqs
+        self._raw_prereqs = raw_prereqs_input
         self._parsed_prereqs = parsed_prereqs       # List[Node | None]
-        self._raw_reward_prereqs = raw_reward_prereqs   # integer-only (group refs stripped)
+        self._raw_reward_prereqs = raw_reward_prereqs_input
         self._parsed_reward_prereqs = parsed_reward_prereqs  # List[Node | None]
         self._forced_progression_rewards = forced_prog
         self._lock_prereqs = bool(self.options.lock_prereqs)
@@ -656,152 +669,6 @@ def _resolve_quoted_names(text: str, names: list) -> Tuple[str, List[str]]:
     return result, errors
 
 
-def _extract_group_refs(
-    text: str, known_groups: set
-) -> Tuple[List[Tuple[str, int | None]], str]:
-    """
-    Scan a reward prereq expression string and pull out any progressive group references.
-    A group ref is a token whose base name (letters/underscores/hyphens, no digits) matches
-    a known group name, optionally followed by -<N> (minimum item count required from the group).
-
-    Returns:
-        (group_refs, cleaned_text)
-        group_refs  : list of (group_name, explicit_n_or_None)
-        cleaned_text: original text with group tokens removed and dangling operators cleaned up
-    """
-    group_refs: List[Tuple[str, int | None]] = []
-    parts: List[str] = []
-    i = 0
-    length = len(text)
-
-    while i < length:
-        c = text[i]
-
-        if c.isspace():
-            parts.append(c)
-            i += 1
-
-        elif text[i:i+2] in ('&&', '||'):
-            parts.append(text[i:i+2])
-            i += 2
-
-        elif c in ('(', ')', ','):
-            parts.append(c)
-            i += 1
-
-        elif c.isdigit():
-            j = i
-            while j < length and text[j].isdigit():
-                j += 1
-            parts.append(text[i:j])
-            i = j
-
-        elif c.isalpha() or c == '_':
-            # Read until a separator (space, paren, comma, or start of && / ||)
-            j = i
-            while j < length:
-                ch = text[j]
-                if ch.isspace() or ch in ('(', ')', ','):
-                    break
-                if text[j:j+2] in ('&&', '||'):
-                    break
-                j += 1
-            token = text[i:j]
-
-            # Try to split off a trailing -<digits> suffix.
-            # The base must end in a letter or underscore (guaranteeing no digits in group name).
-            suffix_m = _re.match(r'^(.+[a-zA-Z_])-(\d+)$', token)
-            if suffix_m:
-                base, n_val = suffix_m.group(1), int(suffix_m.group(2))
-            else:
-                base, n_val = token, None
-
-            if base in known_groups:
-                group_refs.append((base, n_val))
-                # Remove token from output
-            else:
-                parts.append(token)
-            i = j
-
-        else:
-            parts.append(c)
-            i += 1
-
-    cleaned = ''.join(parts)
-    # Clean up operator residue left by removed tokens.
-    cleaned = _re.sub(r'(?:&&|,)\s*(?:&&|,)', '&&', cleaned)
-    cleaned = _re.sub(r'^\s*(?:&&|,|\|\|)\s*', '', cleaned)
-    cleaned = _re.sub(r'\s*(?:&&|,|\|\|)\s*$', '', cleaned)
-    return group_refs, cleaned.strip()
-
-
-def _extract_region_refs(
-    text: str, known_regions: set
-) -> Tuple[List[Tuple[str, int | None]], str]:
-    """
-    Identical in structure to _extract_group_refs but for task-region prereqs.
-    A region ref token matches a known region name, optionally followed by -<pct> (0-100 percentage).
-    Returns (region_refs, cleaned_text) where region tokens are removed from the expression.
-    """
-    region_refs: List[Tuple[str, int | None]] = []
-    parts: List[str] = []
-    i = 0
-    length = len(text)
-
-    while i < length:
-        c = text[i]
-
-        if c.isspace():
-            parts.append(c)
-            i += 1
-
-        elif text[i:i+2] in ('&&', '||'):
-            parts.append(text[i:i+2])
-            i += 2
-
-        elif c in ('(', ')', ','):
-            parts.append(c)
-            i += 1
-
-        elif c.isdigit():
-            j = i
-            while j < length and text[j].isdigit():
-                j += 1
-            parts.append(text[i:j])
-            i = j
-
-        elif c.isalpha() or c == '_':
-            j = i
-            while j < length:
-                ch = text[j]
-                if ch.isspace() or ch in ('(', ')', ','):
-                    break
-                if text[j:j+2] in ('&&', '||'):
-                    break
-                j += 1
-            token = text[i:j]
-
-            suffix_m = _re.match(r'^(.+[a-zA-Z_])-(\d+)$', token)
-            if suffix_m:
-                base, pct_val = suffix_m.group(1), int(suffix_m.group(2))
-            else:
-                base, pct_val = token, None
-
-            if base in known_regions:
-                region_refs.append((base, pct_val))
-            else:
-                parts.append(token)
-            i = j
-
-        else:
-            parts.append(c)
-            i += 1
-
-    cleaned = ''.join(parts)
-    cleaned = _re.sub(r'(?:&&|,)\s*(?:&&|,)', '&&', cleaned)
-    cleaned = _re.sub(r'^\s*(?:&&|,|\|\|)\s*', '', cleaned)
-    cleaned = _re.sub(r'\s*(?:&&|,|\|\|)\s*$', '', cleaned)
-    return region_refs, cleaned.strip()
 
 
 def _parse_prereq_list(txt: str, task_index: int, n: int, label: str) -> List[int]:

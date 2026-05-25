@@ -19,6 +19,7 @@ import ssl
 import traceback
 import websockets
 
+import copy
 import CommonClient
 from NetUtils import Endpoint, decode
 
@@ -583,7 +584,18 @@ class DeathLinkRow:
 # ----------------------------
 # Networking
 # ----------------------------
+class _TaskipelagoCommandProcessor(CommonClient.ClientCommandProcessor):
+    console_output_callback = None
+
+    def output(self, text: str):
+        if callable(self.console_output_callback):
+            self.console_output_callback(text)
+        else:
+            super().output(text)
+
+
 class TaskipelagoContext(CommonClient.CommonContext):
+    command_processor = _TaskipelagoCommandProcessor
     game = "Taskipelago"
     items_handling = 0b111
 
@@ -603,6 +615,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.base_reward_location_id = None
         self.base_complete_location_id = None
         self.base_item_id = None
+        self.base_token_id = None
 
         self.death_link_pool = []
         self.death_link_enabled = False
@@ -663,6 +676,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.base_reward_location_id = self.slot_data.get("base_reward_location_id")
         self.base_complete_location_id = self.slot_data.get("base_complete_location_id")
         self.base_item_id = self.slot_data.get("base_item_id")
+        self.base_token_id = self.slot_data.get("base_token_id")
 
         self.death_link_pool = list(self.slot_data.get("death_link_pool", []))
         self.death_link_weights = list(self.slot_data.get("death_link_weights", []))
@@ -846,7 +860,12 @@ class TaskipelagoContext(CommonClient.CommonContext):
     def on_print_json(self, args: dict):
         super().on_print_json(args)
         parts = args.get("data", [])
-        text = "".join(p.get("text", "") for p in parts if isinstance(p, dict))
+        if not parts:
+            return
+        try:
+            text = self.jsontotextparser(copy.deepcopy(parts))
+        except Exception:
+            text = "".join(p.get("text", "") for p in parts if isinstance(p, dict))
         if text and callable(self.on_print_json_callback):
             self.on_print_json_callback(text)
 
@@ -948,8 +967,7 @@ class TaskipelagoApp(tk.Tk):
         super().__init__()
 
         self.title("Taskipelago")
-        self.geometry("1080x740")
-        self.minsize(950, 640)
+        self.geometry("1080x840")
 
         self.colors = apply_dark_theme(self)
         ScrollableFrame.bind_mousewheel_to_root(self)
@@ -1008,6 +1026,8 @@ class TaskipelagoApp(tk.Tk):
             self.ctx.on_deathlink = self.on_deathlink_received
             self.ctx.on_item_received = self.on_items_received
             self.ctx.on_print_json_callback = self._on_console_message
+            self.ctx._cmd_processor = self.ctx.command_processor(self.ctx)
+            self.ctx._cmd_processor.console_output_callback = self._append_console_text
 
         self.loop.call_soon_threadsafe(_init_ctx)
 
@@ -2158,6 +2178,8 @@ class TaskipelagoApp(tk.Tk):
         if getattr(self, "ctx", None):
             self.ctx._deathlink_tag_enabled = False
 
+        self._clear_notifications()
+        self._update_console_connection_state(False)
         self.after(0, self._clear_play_state)
 
     def _clear_play_state(self):
@@ -2712,13 +2734,68 @@ class TaskipelagoApp(tk.Tk):
     def _on_console_message(self, text: str):
         self.after(0, lambda t=text: self._append_console_text(t))
 
+    _ANSI_RE = re.compile(r"\x1b\[([0-9;]*)m")
+    _ANSI_FG = {
+        30: "#555555", 31: "#cc4444", 32: "#55aa55", 33: "#aaaa44",
+        34: "#5588cc", 35: "#aa55aa", 36: "#44aaaa", 37: "#cccccc",
+        90: "#888888", 91: "#ff6666", 92: "#66cc66", 93: "#cccc66",
+        94: "#6699ff", 95: "#cc66cc", 96: "#66cccc", 97: "#ffffff",
+    }
+    _ANSI_BG = {
+        40: "#000000", 41: "#660000", 42: "#006600", 43: "#666600",
+        44: "#000066", 45: "#660066", 46: "#006666", 47: "#666666",
+        100: "#333333", 101: "#993333", 102: "#339933", 103: "#999933",
+        104: "#333399", 105: "#993399", 106: "#339999", 107: "#999999",
+    }
+
+    def _get_ansi_tag(self, fg, bg, bold):
+        tag = f"ansi_{fg}_{bg}_{bold}"
+        if tag not in self.console_text.tag_names():
+            kw = {}
+            if fg is not None:
+                kw["foreground"] = self._ANSI_FG.get(fg, "#cccccc")
+            if bg is not None:
+                kw["background"] = self._ANSI_BG.get(bg, "#000000")
+            if bold:
+                kw["font"] = ("Consolas", 10, "bold")
+            self.console_text.tag_configure(tag, **kw)
+        return tag
+
     def _append_console_text(self, text: str):
         if not hasattr(self, "console_text"):
             return
-        self.console_text.configure(state="normal")
-        self.console_text.insert("end", text + "\n")
-        self.console_text.configure(state="disabled")
-        self.console_text.see("end")
+        widget = self.console_text
+        widget.configure(state="normal")
+        fg = None
+        bg = None
+        bold = False
+        pos = 0
+        for m in self._ANSI_RE.finditer(text):
+            plain = text[pos:m.start()]
+            if plain:
+                tag = self._get_ansi_tag(fg, bg, bold)
+                widget.insert("end", plain, tag)
+            pos = m.end()
+            codes_str = m.group(1)
+            codes = [int(c) for c in codes_str.split(";") if c] if codes_str else [0]
+            for code in codes:
+                if code == 0:
+                    fg = bg = None
+                    bold = False
+                elif code == 1:
+                    bold = True
+                elif code == 22:
+                    bold = False
+                elif 30 <= code <= 37 or 90 <= code <= 97:
+                    fg = code
+                elif 40 <= code <= 47 or 100 <= code <= 107:
+                    bg = code
+        plain = text[pos:]
+        if plain:
+            widget.insert("end", plain, self._get_ansi_tag(fg, bg, bold))
+        widget.insert("end", "\n")
+        widget.see("end")
+        widget.configure(state="disabled")
 
     def _send_console_message(self, _event=None):
         if not hasattr(self, "console_input_entry"):
@@ -2729,6 +2806,12 @@ class TaskipelagoApp(tk.Tk):
         if not msg:
             return
         self.console_input_var.set("")
+        self._append_console_text(f"> {msg}")
+        if msg.startswith("/"):
+            proc = getattr(self.ctx, "_cmd_processor", None)
+            if proc is not None:
+                self.loop.call_soon_threadsafe(lambda m=msg: proc(m))
+            return
         self.loop.call_soon_threadsafe(
             lambda: asyncio.create_task(self.ctx.send_msgs([{"cmd": "Say", "text": msg}]))
         )
