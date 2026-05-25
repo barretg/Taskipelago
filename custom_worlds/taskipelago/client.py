@@ -1757,20 +1757,14 @@ class TaskipelagoApp(tk.Tk):
             messagebox.showerror("Invalid Names", "\n".join(quote_errors))
             return
 
-        # Resolve quoted name references to indices
+        # Validate quoted name references exist (resolution happens at generation time)
         name_errors = []
-        resolved_task_prereqs = []
         for i, tpr in enumerate(task_prereqs):
-            resolved, errs = self._resolve_name_refs(tpr, tasks)
-            resolved_task_prereqs.append(resolved)
+            _, errs = self._resolve_name_refs(tpr, tasks)
             name_errors.extend([f'Task {i + 1} task prereqs: {e}' for e in errs])
-
-        resolved_item_prereqs = []
         for i, ipr in enumerate(item_prereqs_raw):
-            resolved, errs = self._resolve_name_refs(ipr, raw_item_names)
-            resolved_item_prereqs.append(resolved)
+            _, errs = self._resolve_name_refs(ipr, raw_item_names)
             name_errors.extend([f'Task {i + 1} item prereqs: {e}' for e in errs])
-
         if name_errors:
             messagebox.showerror("Unresolved Names", "Unresolved name references:\n\n" + "\n".join(name_errors))
             return
@@ -1778,7 +1772,7 @@ class TaskipelagoApp(tk.Tk):
         # Pad items with filler if fewer than tasks (unbalanced-mode export only)
         while len(items) < n_tasks:
             items.append(_random_filler())
-            resolved_item_prereqs.append("")
+            item_prereqs_raw.append("")
             item_types.append("junk")
             item_fillers.append(True)
             item_prog_groups.append("")
@@ -1827,8 +1821,8 @@ class TaskipelagoApp(tk.Tk):
                 "items": items,
                 "item_types": item_types,
                 "item_fillers": item_fillers,
-                "task_prereqs": resolved_task_prereqs,
-                "item_prereqs": resolved_item_prereqs,
+                "task_prereqs": task_prereqs,
+                "item_prereqs": item_prereqs_raw,
                 "lock_prereqs": bool(self.lock_prereqs_var.get()),
                 "hide_unreachable_tasks": bool(self.hide_unreachable_tasks.get()),
                 "goal_tasks": [goal_tasks_raw] if goal_tasks_raw else [],

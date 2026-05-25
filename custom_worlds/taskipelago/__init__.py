@@ -247,6 +247,16 @@ class TaskipelagoWorld(World):
             raw_reward_prereqs_input += [""] * (n - len(raw_reward_prereqs_input))
         raw_reward_prereqs_input = raw_reward_prereqs_input[:n]
 
+        # Resolve quoted item names to 1-based indices.
+        for _j, _txt in enumerate(raw_reward_prereqs_input):
+            _resolved, _errs = _resolve_quoted_names(_txt, items_raw)
+            if _errs:
+                raise Exception(
+                    f"Taskipelago: item prereq for task {_j + 1} references unknown item name(s): "
+                    + "; ".join(_errs)
+                )
+            raw_reward_prereqs_input[_j] = _resolved
+
         # Extract group refs from each task's reward prereq string, keeping only integers for the parser.
         task_group_refs: List[List[Tuple[str, int | None]]] = []
         raw_reward_prereqs: List[str] = []
@@ -327,6 +337,16 @@ class TaskipelagoWorld(World):
         if len(raw_prereqs_input) < n:
             raw_prereqs_input += [""] * (n - len(raw_prereqs_input))
         raw_prereqs_input = raw_prereqs_input[:n]
+
+        # Resolve quoted task names to 1-based indices.
+        for _j, _txt in enumerate(raw_prereqs_input):
+            _resolved, _errs = _resolve_quoted_names(_txt, tasks)
+            if _errs:
+                raise Exception(
+                    f"Taskipelago: task prereq for task {_j + 1} references unknown task name(s): "
+                    + "; ".join(_errs)
+                )
+            raw_prereqs_input[_j] = _resolved
 
         task_region_refs_extracted: List[List[Tuple[str, int | None]]] = []
         raw_prereqs: List[str] = []
@@ -621,6 +641,20 @@ class TaskipelagoWorld(World):
 
 
 # --- Helpers ---
+
+def _resolve_quoted_names(text: str, names: list) -> Tuple[str, List[str]]:
+    """Replace "Quoted Name" tokens with the 1-based index of the first matching entry."""
+    errors: List[str] = []
+    def _replacer(m: "_re.Match") -> str:
+        name = m.group(1)
+        for i, n in enumerate(names):
+            if n == name:
+                return str(i + 1)
+        errors.append(f'No entry found named "{name}"')
+        return m.group(0)
+    result = _re.sub(r'"([^"]*)"', _replacer, text)
+    return result, errors
+
 
 def _extract_group_refs(
     text: str, known_groups: set
