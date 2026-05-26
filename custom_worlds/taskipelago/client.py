@@ -1562,6 +1562,9 @@ class TaskipelagoApp(tk.Tk):
         self.connect_button = ttk.Button(btns, text="Connect", command=self.on_connect_toggle)
         self.connect_button.pack(side="left")
 
+        self.send_deathlink_btn = ttk.Button(btns, text="Send Deathlink", command=self._send_deathlink)
+        # shown only when connected with deathlink enabled
+
         self.connect_status = tk.StringVar(value="Not connected.")
         # ttk.Label(play_root, textvariable=self.connect_status).pack(anchor="w")
         ttk.Label(play_root, textvariable=self.connect_status).grid(row=1, column=0, sticky="w", padx=(0, 10))
@@ -2754,6 +2757,7 @@ class TaskipelagoApp(tk.Tk):
         self.connection_state = "disconnected"
         self.connect_status.set("Disconnected.")
         self.connect_button.config(text="Connect")
+        self.send_deathlink_btn.pack_forget()
         self.sent_goal = False
 
         if getattr(self, "ctx", None) and self.ctx.server:
@@ -2913,6 +2917,12 @@ class TaskipelagoApp(tk.Tk):
         self.after(0, self._render_consumable_tab)
         if self.connection_state == "connected":
             self._update_console_connection_state(True)
+
+        dl_enabled = getattr(self.ctx, "death_link_enabled", False) if getattr(self, "ctx", None) else False
+        if self.connection_state == "connected" and dl_enabled:
+            self.send_deathlink_btn.pack(side="left", padx=(8, 0))
+        else:
+            self.send_deathlink_btn.pack_forget()
 
     def refresh_play_tab(self):
         for child in self.play_tasks_scroll.inner.winfo_children():
@@ -4782,12 +4792,30 @@ class TaskipelagoApp(tk.Tk):
         self.connection_state = "disconnected"
         self.connect_status.set("Disconnected (server closed connection).")
         self.connect_button.config(text="Connect")
+        self.send_deathlink_btn.pack_forget()
         self.sent_goal = False
         self._clear_notifications()
         self._clear_play_state()
         self._update_console_connection_state(False)
 
-    # ---------------- DeathLink popup ----------------
+    # ---------------- DeathLink ----------------
+    def _send_deathlink(self):
+        ctx = getattr(self, "ctx", None)
+        if not ctx or self.connection_state != "connected":
+            return
+
+        async def _do_send():
+            await ctx.send_msgs([{
+                "cmd": "Bounce",
+                "tags": ["DeathLink"],
+                "data": {
+                    "time": time.time(),
+                    "source": ctx.auth or "Taskipelago",
+                },
+            }])
+
+        self.loop.call_soon_threadsafe(lambda: asyncio.create_task(_do_send()))
+
     def on_deathlink_received(self, data: dict):
         self.after(0, lambda: self._show_deathlink_popup(data))
 
