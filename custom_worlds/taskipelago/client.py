@@ -1110,6 +1110,7 @@ class TaskipelagoApp(tk.Tk):
         # --- Player name strip (row 0) ---
         name_strip = ttk.Frame(self.editor_tab)
         name_strip.grid(row=0, column=0, sticky="ew", padx=10, pady=(8, 4))
+        ttk.Button(name_strip, text="Tutorial", command=self._open_tutorial).pack(side="right")
         ttk.Label(name_strip, text="Player Name:").pack(side="left", padx=(0, 6))
         self.player_name_var = tk.StringVar()
         ttk.Entry(name_strip, textvariable=self.player_name_var, width=28).pack(side="left")
@@ -2288,6 +2289,344 @@ class TaskipelagoApp(tk.Tk):
         self._clear_item_rows()
         self._clear_deathlink_rows()
         self.add_task_row()
+
+    # ---------------- Tutorial ----------------
+    def _open_tutorial(self):
+        if hasattr(self, "_tutorial_win") and self._tutorial_win.winfo_exists():
+            self._tutorial_win.lift()
+            return
+
+        STEPS = [
+            (
+                "Welcome to the YAML Generator",
+                "This tutorial walks you through every feature of the YAML Generator.\n\n"
+                "Taskipelago turns your real-life to-do list into a multiworld game. Each task you "
+                "complete becomes a \"location\" that hides an item for one of your teammates. When "
+                "they complete their tasks, they find items for you.\n\n"
+                "The YAML Generator is where you design your game: what your tasks are, what items "
+                "they reward, how tasks depend on each other, and more.\n\n"
+                "Click Next to begin. You can reopen this tutorial at any time with the Tutorial button."
+            ),
+            (
+                "Your Player Name",
+                "At the very top of the generator is the Player Name field.\n\n"
+                "This name identifies you in the multiworld. Your teammates see it when they receive "
+                "items that came from your tasks. Choose something recognizable -- your username, "
+                "nickname, or real name.\n\n"
+                "You can change it any time before exporting your YAML file."
+            ),
+            (
+                "Tasks -- What They Are",
+                "The Tasks section (top portion of the generator) is the heart of your game.\n\n"
+                "Each task you add becomes a location in the multiworld -- a place where an item can "
+                "be hidden. When you complete that task in real life and check it off in the app, you "
+                "\"find\" whatever item was placed there for one of your teammates.\n\n"
+                "Think of tasks as your personal to-do list: \"Exercise for 30 minutes\", "
+                "\"Read 10 pages\", \"Cook dinner\". Anything you want to track works.\n\n"
+                "Click \"Add Task\" at the bottom of the Tasks section to add your first task, then "
+                "type its name in the Task column."
+            ),
+            (
+                "Task Settings",
+                "Above the task table are three settings that apply to all tasks:\n\n"
+                "\"In logic only (lock task completion behind prereqs)\"\n"
+                "When checked, the app enforces your task dependencies. You cannot check off a task "
+                "until its prerequisites are done. Recommended to leave on.\n\n"
+                "\"Hide Unreachable Tasks\"\n"
+                "When checked, tasks whose prerequisites are not yet met are hidden from the play "
+                "screen, keeping it clean and focused on what is currently available.\n\n"
+                "\"Goal task(s)\"\n"
+                "The task or tasks that win the game for you when completed. Enter a task number "
+                "(e.g. 5), a quoted task name (e.g. \"Finish the project\"), or multiple separated "
+                "by commas. Leave blank to require ALL tasks to be completed."
+            ),
+            (
+                "Task Dependencies (Task Prereqs column)",
+                "The \"Task prereqs\" column defines which other tasks must be completed before this "
+                "one becomes available.\n\n"
+                "Examples:\n"
+                "  (blank)           task is always available from the start\n"
+                "  1                 Task 1 must be done first\n"
+                "  1, 2, 3           Tasks 1, 2, AND 3 must all be done first\n"
+                "  1 || 2            Either Task 1 OR Task 2 must be done first\n"
+                "  (1 || 2) && 3     (Task 1 or 2) AND Task 3 must all be done\n\n"
+                "You can also refer to tasks by name in quotes:\n"
+                "  \"Do the dishes\"   that specific task must be done first\n\n"
+                "Region references (covered later):\n"
+                "  chores            region's default percentage of tasks done\n"
+                "  chores-75         exactly 75% of that region's tasks done\n"
+                "  chores*5          exactly 5 tasks in that region done\n\n"
+                "Hover over the \"Task prereqs\" column header for a quick reference."
+            ),
+            (
+                "Item Requirements (Item Prereqs column)",
+                "The \"Item prereqs\" column defines which items you must have received from the "
+                "multiworld before this task becomes available.\n\n"
+                "Examples:\n"
+                "  (blank)           task doesn't require any items\n"
+                "  1                 Item #1 must be received first\n"
+                "  1, 2              Items #1 AND #2 must both be received\n"
+                "  1 || 2            Either item #1 OR item #2 must be received\n"
+                "  \"Magic Key\"      The item named \"Magic Key\" must be received\n\n"
+                "Progressive group references (covered in the Progressive Groups step):\n"
+                "  power-2           requires the 2nd item unlocked from group \"power\"\n"
+                "  power*2           requires any 2 items from group \"power\" received\n\n"
+                "Hover over the \"Item prereqs\" column header for a quick reference."
+            ),
+            (
+                "Task Cost (Spending Currency)",
+                "The \"Cost\" column lets you require players to spend consumable items to unlock "
+                "a task -- like paying in-game currency before being allowed to check it off.\n\n"
+                "Format:\n"
+                "  \"Gold\"*3                   spend 3 Gold\n"
+                "  \"Gold\"*3 && \"Silver\"*2     spend 3 Gold AND 2 Silver\n"
+                "  \"Gold\"*5 || \"Silver\"*10    player chooses which branch to spend\n"
+                "  \"Gold\"                     spend 1 Gold (bare name = 1)\n\n"
+                "For this to work, the item (Gold, Silver, etc.) must be marked Consumable in "
+                "the Items table (covered in the Consumable Items step).\n\n"
+                "When a task has a cost and all other prerequisites are met, a Purchase button "
+                "appears in the play screen. Clicking it deducts the cost from your balance.\n\n"
+                "If the cost has an OR branch (||), a Make Change button appears after purchasing. "
+                "This lets you swap which branch you paid, in case you need those items elsewhere."
+            ),
+            (
+                "Regions",
+                "Regions let you group related tasks together under a shared label.\n\n"
+                "Creating a region:\n"
+                "In the Regions panel (inside the Tasks section), type a name in \"New region "
+                "name\" and click \"Add Region\". Names can only use letters, underscores, and "
+                "hyphens -- no spaces or digits.\n\n"
+                "Default %:\n"
+                "When another task references this region without a specific number, this is the "
+                "percentage of the region's tasks that must be done. Default is 100%.\n\n"
+                "Assigning tasks to a region:\n"
+                "Use the \"Region\" column in the task table to assign each task to a region.\n\n"
+                "Referencing a region in Task Prereqs:\n"
+                "  chores            region's default percentage done\n"
+                "  chores-75         exactly 75% of chores tasks done\n"
+                "  chores*5          exactly 5 tasks in chores done\n\n"
+                "Regions also appear as separate Archipelago locations for the hint system."
+            ),
+            (
+                "Task Count (Duplicating Tasks)",
+                "The \"Count\" column in the task table lets you create multiple identical copies "
+                "of the same task.\n\n"
+                "Setting Count to 5 for \"Exercise session\" adds 5 separate exercise sessions "
+                "to the game -- each one is its own location with its own hidden item.\n\n"
+                "If another task has this task in its prerequisites, ALL copies must be completed "
+                "before that other task unlocks.\n\n"
+                "When you import a YAML file, consecutive duplicate task rows are automatically "
+                "collapsed back into a single row with the correct count."
+            ),
+            (
+                "Items -- What They Are",
+                "The Items section (bottom portion of the generator) defines what items exist in "
+                "the multiworld item pool.\n\n"
+                "Each item you add can be hidden at any location in any player's game -- including "
+                "yours. The multiworld distributes items randomly at the start.\n\n"
+                "Think of items as rewards and unlocks: keys that open new tasks, currency that "
+                "can be spent, collectibles, or anything meaningful to your group.\n\n"
+                "A player \"finds\" one of your items by completing a task in their own game. "
+                "That item is then delivered to whoever it was assigned to.\n\n"
+                "Click \"Add Item\" to add a new item, then give it a descriptive name."
+            ),
+            (
+                "Item Types",
+                "Each item has a classification that tells the multiworld how to prioritize "
+                "placing it:\n\n"
+                "Progression\n"
+                "Required to advance the game. The multiworld places these early so they're "
+                "accessible when needed. Any item referenced in a task's prerequisites should "
+                "be Progression.\n\n"
+                "Useful\n"
+                "Helpful but not strictly required. Placed with moderate priority.\n\n"
+                "Junk\n"
+                "Low priority filler. The game functions without it.\n\n"
+                "Trap\n"
+                "A negative item. Other players may receive these from your locations!\n\n"
+                "Items in a progressive group and consumable items are automatically forced "
+                "to Progression, regardless of what you set here.\n\n"
+                "Progression Balancing (0-99): Controls how aggressively the multiworld "
+                "places progression items early. 50 is a good default.\n\n"
+                "Accessibility: Controls which locations are guaranteed reachable.\n"
+                "  full     All locations guaranteed reachable (recommended)\n"
+                "  items    All items reachable, some locations may not be\n"
+                "  minimal  Only the goal is guaranteed reachable"
+            ),
+            (
+                "Filler Items",
+                "Checking the \"Filler\" checkbox marks an item as a generic placeholder.\n\n"
+                "Instead of sending the real item name, the multiworld delivers a randomly "
+                "selected humorous consolation message to whoever finds it.\n\n"
+                "Filler items are useful when you want locations (task completions) that don't "
+                "contribute meaningful rewards to the pool -- they just fill the slot count.\n\n"
+                "Tip: Leaving an item's name blank also produces a filler item at export time.\n\n"
+                "Filler items cannot be marked as Consumable."
+            ),
+            (
+                "Consumable Items (Currency)",
+                "Checking \"Consumable\" marks an item as spendable currency for task costs.\n\n"
+                "How the full system works:\n"
+                "1. Add an item named \"Gold\" and check Consumable.\n"
+                "2. Set Count to how many Gold items should be in the pool (e.g. 10).\n"
+                "3. In a task's Cost field, write \"Gold\"*3 to require spending 3 Gold.\n"
+                "4. When you receive enough Gold and all other prerequisites are met, a "
+                "   Purchase button appears in the play screen.\n"
+                "5. Clicking Purchase deducts the Gold and unlocks the task for completion.\n\n"
+                "All copies of a consumable item with the same name are pooled together. "
+                "If you have 10 Gold in the pool and receive 4 of them, your balance is 4.\n\n"
+                "Consumable items are always classified as Progression automatically.\n"
+                "Consumable items cannot be added to a Progressive Group."
+            ),
+            (
+                "Progressive Groups",
+                "Progressive groups link several items together as an ordered or counted "
+                "series, letting tasks unlock progressively as you receive more group items.\n\n"
+                "Setting up:\n"
+                "1. In the Progressive Groups panel, type a name and click \"Add Group\".\n"
+                "2. In the Items table, assign items to that group using the \"Prog. Group\" "
+                "   dropdown.\n\n"
+                "Ordering Mode (use - notation in Item Prereqs):\n"
+                "  power-1           requires the 1st item from the group received\n"
+                "  power-2           requires the 2nd item from the group received\n"
+                "  power             fills the lowest unused position automatically\n"
+                "One task per position. Good for gated progression.\n\n"
+                "Count Mode (use * notation in Item Prereqs):\n"
+                "  power*2           requires any 2 items from the group received\n"
+                "Multiple tasks can share the same threshold.\n\n"
+                "You cannot mix - and * notation for the same group.\n"
+                "All group items are automatically classified as Progression."
+            ),
+            (
+                "Item Count and Item Settings",
+                "Item Count:\n"
+                "The \"Count\" column in the item table puts multiple copies of an item into "
+                "the pool. Setting Count to 10 for \"Gold\" adds 10 separate Gold items to "
+                "the multiworld -- 10 locations that can each yield one Gold.\n\n"
+                "This is essential for consumable currency: more copies means a higher "
+                "possible balance and more locations that reward that currency.\n\n"
+                "When you import a YAML file, consecutive duplicate item rows are automatically "
+                "collapsed into a single row with the correct count.\n\n"
+                "Progression Balancing (0-99):\n"
+                "Controls how aggressively progression items are placed early. 50 is balanced.\n\n"
+                "Accessibility:\n"
+                "  full     All locations guaranteed reachable (recommended)\n"
+                "  items    All items reachable, some locations may not be\n"
+                "  minimal  Only the goal location is guaranteed reachable"
+            ),
+            (
+                "DeathLink (Optional Challenge)",
+                "DeathLink is an optional challenge mode for the Archipelago multiworld. "
+                "When enabled, \"deaths\" are shared between players.\n\n"
+                "In Taskipelago, a \"death\" means a DeathLink task gets triggered -- a task "
+                "that fires automatically when another player in the multiworld sends a "
+                "DeathLink event.\n\n"
+                "Enable DeathLink: Check the box in the DeathLink section to participate.\n\n"
+                "Amnesty:\n"
+                "A buffer before incoming events affect you. With amnesty set to 3, the "
+                "first 3 death events from other players are absorbed before your DeathLink "
+                "tasks fire.\n\n"
+                "Adding DeathLink Tasks:\n"
+                "Click \"Add DeathLink Task\" and type a task description. The Weight column "
+                "controls how likely each task is to be chosen when an event fires -- higher "
+                "weight means more likely.\n\n"
+                "If challenge modes are not for you, leave this section alone."
+            ),
+            (
+                "Export, Import, and Reset",
+                "Once your tasks and items are set up, use the buttons at the bottom:\n\n"
+                "Export YAML\n"
+                "Saves your game design as a YAML file. This is the file you give to your "
+                "Archipelago host or upload to the Archipelago website to generate the "
+                "multiworld. Share it once and you're ready to play.\n\n"
+                "Import YAML\n"
+                "Loads a previously exported YAML file back into the generator so you can "
+                "make changes and re-export.\n\n"
+                "Reset\n"
+                "Clears everything and starts fresh. Export first if you want to keep your "
+                "work -- reset cannot be undone.\n\n"
+                "------\n\n"
+                "You are all set! A good starting point for your first game:\n"
+                "  - Add 10 to 20 tasks from your real to-do list\n"
+                "  - Add 10 to 20 items with creative names\n"
+                "  - Set items referenced in prerequisites to Progression\n"
+                "  - Set extras to Useful or Junk\n"
+                "  - Export and share the YAML with your multiworld host\n\n"
+                "Have fun!"
+            ),
+        ]
+
+        win = tk.Toplevel(self)
+        self._tutorial_win = win
+        win.title("YAML Generator Tutorial")
+        win.resizable(True, True)
+        win.minsize(440, 360)
+
+        self.update_idletasks()
+        mx = self.winfo_rootx() + self.winfo_width() + 12
+        my = self.winfo_rooty()
+        sw = win.winfo_screenwidth()
+        if mx + 500 > sw:
+            mx = max(0, self.winfo_rootx() - 500 - 12)
+        win.geometry(f"500x500+{mx}+{my}")
+
+        step_idx = [0]
+
+        header_frame = ttk.Frame(win)
+        header_frame.pack(fill="x", padx=16, pady=(14, 0))
+        title_var = tk.StringVar()
+        counter_var = tk.StringVar()
+        ttk.Label(header_frame, textvariable=title_var, font=("TkDefaultFont", 11, "bold")).pack(anchor="w")
+        ttk.Label(header_frame, textvariable=counter_var, style="Muted.TLabel").pack(anchor="w", pady=(2, 0))
+
+        ttk.Separator(win, orient="horizontal").pack(fill="x", padx=16, pady=(8, 0))
+
+        txt_frame = ttk.Frame(win)
+        txt_frame.pack(fill="both", expand=True, padx=16, pady=(8, 0))
+        txt_frame.grid_rowconfigure(0, weight=1)
+        txt_frame.grid_columnconfigure(0, weight=1)
+
+        bg = self.colors.get("panel", "#252526")
+        fg = self.colors.get("fg", "#e6e6e6")
+        txt = tk.Text(
+            txt_frame, wrap="word", relief="flat", borderwidth=0,
+            background=bg, foreground=fg, font=("TkDefaultFont", 10),
+            padx=6, pady=6, state="disabled",
+        )
+        sb = ttk.Scrollbar(txt_frame, orient="vertical", command=txt.yview)
+        txt.configure(yscrollcommand=sb.set)
+        txt.grid(row=0, column=0, sticky="nsew")
+        sb.grid(row=0, column=1, sticky="ns")
+
+        ttk.Separator(win, orient="horizontal").pack(fill="x", padx=16, pady=(8, 0))
+
+        btn_row = ttk.Frame(win)
+        btn_row.pack(fill="x", padx=16, pady=(8, 14))
+        prev_btn = ttk.Button(btn_row, text="< Previous")
+        prev_btn.pack(side="left")
+        close_btn = ttk.Button(btn_row, text="Close", command=win.destroy)
+        close_btn.pack(side="right")
+        next_btn = ttk.Button(btn_row, text="Next >")
+        next_btn.pack(side="right", padx=(0, 8))
+
+        def show_step(i: int):
+            step_idx[0] = i
+            title, content = STEPS[i]
+            title_var.set(title)
+            counter_var.set(f"Step {i + 1} of {len(STEPS)}")
+            txt.configure(state="normal")
+            txt.delete("1.0", "end")
+            txt.insert("1.0", content)
+            txt.configure(state="disabled")
+            txt.yview_moveto(0.0)
+            prev_btn.state(["disabled"] if i == 0 else ["!disabled"])
+            if i == len(STEPS) - 1:
+                next_btn.configure(text="Finish", command=win.destroy)
+            else:
+                next_btn.configure(text="Next >", command=lambda: show_step(step_idx[0] + 1))
+
+        prev_btn.configure(command=lambda: show_step(step_idx[0] - 1))
+        show_step(0)
 
     # ---------------- Connection actions ----------------
     def on_connect_toggle(self):
