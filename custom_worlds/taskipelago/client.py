@@ -1221,8 +1221,8 @@ class TaskipelagoApp(tk.Tk):
             "Quoted names resolve to the first matching item number at export.\n"
             "Quotation marks are not allowed in item names.\n\n"
             "Progressive group refs:\n"
-            "  mygroup     ->  ordering mode: count inferred (fills lowest unused position)\n"
-            "  mygroup-2   ->  ordering mode: requires the 2nd item in the group ordering\n"
+            "  mygroup     ->  count inferred (fills lowest unused position)\n"
+            "  mygroup-2   ->  ordering mode: placed in order as the second unlocked task\n"
             "  mygroup*2   ->  count mode: any 2 items from the group\n\n"
             "Can't mix - and * notation for the same group.\n"
             "Ordering mode: each position can only be held by one task.\n"
@@ -1237,8 +1237,9 @@ class TaskipelagoApp(tk.Tk):
         )
         _cost_col_tip = (
             "Consumable items that must be spent to unlock (purchase) this task.\n\n"
-            'Format: "ItemName"*N or bare "ItemName" (bare = cost 1):\n'
+            'Format: "ItemName"*N, item index*N, or bare name/index (bare = cost 1):\n'
             '  "Gold"*3              ->  spend 3 Gold\n'
+            '  1*3                   ->  spend 3 of item #1 (index form)\n'
             '  "Gold"*3 && "Silver"*2  ->  spend 3 Gold AND 2 Silver\n'
             '  "Gold"*5 || "Silver"*10  ->  player chooses which to spend\n'
             '  "Gold"                ->  spend 1 Gold\n\n'
@@ -1326,17 +1327,7 @@ class TaskipelagoApp(tk.Tk):
         _pg_hint.pack(side="left", padx=(8, 0))
         Tooltip(_pg_hint, (
             "Group names may only contain letters, underscores, and hyphens - no digits.\n\n"
-            "Reference a group in 'Item prereqs' using the group name:\n\n"
-            "Ordering mode (- notation):\n"
-            "  mygroup    ->  count inferred (fills lowest unused position in ordering)\n"
-            "  mygroup-2  ->  requires the 2nd item unlocked in the group ordering\n"
-            "  Each position can only be held by one task. Can't mix with * notation.\n\n"
-            "Count mode (* notation):\n"
-            "  mygroup*2  ->  any 2 items from the group received\n"
-            "  Multiple tasks may share the same threshold.\n\n"
-            "Receiving any item assigned to a group counts toward that group's total.\n"
-            "All group items are forced to 'progression' classification.\n"
-            "Consumable items cannot be assigned to a progressive group."
+            "See the 'Prog. Group' column header tooltip for more details."
         ))
         self._refresh_prog_groups_panel()
 
@@ -1386,13 +1377,6 @@ class TaskipelagoApp(tk.Tk):
             "Assign this item to a progressive group.\n\n"
             "Group items are interchangeable - receiving any of them increments the group\n"
             "counter. Tasks reference a group in 'Item prereqs' using two modes:\n\n"
-            "Ordering mode (- notation):\n"
-            "  groupname    ->  count inferred (fills lowest unused position in ordering)\n"
-            "  groupname-2  ->  requires the 2nd item unlocked in the group ordering\n"
-            "  One task per position. Can't mix with * notation for the same group.\n\n"
-            "Count mode (* notation):\n"
-            "  groupname*2  ->  any 2 items from the group received\n"
-            "  Multiple tasks can share the same threshold.\n\n"
             "Items in a group are always forced to 'progression' classification.\n"
             "Consumable items cannot be assigned to a group.\n"
             "Groups are defined in the Progressive Groups panel above."
