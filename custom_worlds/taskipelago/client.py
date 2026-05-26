@@ -276,6 +276,9 @@ class ScrollableFrame(ttk.Frame):
     # ---------- Mousewheel plumbing ----------
     @classmethod
     def bind_mousewheel_to_root(cls, root: tk.Misc):
+        # Disable mousewheel on comboboxes entirely so scrolling never changes a selected value
+        for seq in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            root.bind_class("TCombobox", seq, lambda e: "break")
         # Windows/macOS
         root.bind_all("<MouseWheel>", lambda e, r=root: cls._dispatch_mousewheel(e, r), add=True)
         # Linux
@@ -293,16 +296,22 @@ class ScrollableFrame(ttk.Frame):
 
     @classmethod
     def _dispatch_mousewheel(cls, event, root: tk.Misc):
+        # Skip if cursor is over a combobox or its open dropdown listbox
+        w = root.winfo_containing(event.x_root, event.y_root)
+        if w is not None and w.winfo_class() in ("TCombobox", "Listbox"):
+            return
         owner = cls._find_scroll_owner_under_pointer(root, event.x_root, event.y_root)
         if owner is None:
             return
-
         delta = int(-1 * (event.delta / 120)) if getattr(event, "delta", 0) else 0
         if delta:
             owner.canvas.yview_scroll(delta, "units")
 
     @classmethod
     def _dispatch_mousewheel_linux(cls, event, root: tk.Misc, direction: int):
+        w = root.winfo_containing(event.x_root, event.y_root)
+        if w is not None and w.winfo_class() in ("TCombobox", "Listbox"):
+            return
         owner = cls._find_scroll_owner_under_pointer(root, event.x_root, event.y_root)
         if owner is None:
             return
@@ -367,6 +376,60 @@ def _make_tip_header(parent: tk.Widget, text: str, tip_text: str) -> ttk.Frame:
 
 
 # ----------------------------
+# ----------------------------
+# Collapsible section for the editor tab
+# ----------------------------
+class CollapsibleSection:
+    """A grid-managed panel with a clickable header that shows/hides its body."""
+    def __init__(self, parent, title: str, row: int, expanded: bool = True,
+                 min_height: int = 150, colors: dict = None):
+        self._parent = parent
+        self._row = row
+        self._expanded = expanded
+        self._min_height = min_height
+        colors = colors or {}
+        _bg = colors.get("panel", "#252526")
+        _fg = colors.get("fg", "#e6e6e6")
+
+        self.outer = ttk.Frame(parent)
+        self.outer.grid_columnconfigure(0, weight=1)
+        self.outer.grid_rowconfigure(0, weight=0)
+        self.outer.grid_rowconfigure(1, weight=1)
+
+        parent.grid_rowconfigure(row, weight=(1 if expanded else 0),
+                                 minsize=(min_height if expanded else 0))
+
+        hdr = tk.Frame(self.outer, bg=_bg, cursor="hand2")
+        hdr.grid(row=0, column=0, sticky="ew")
+
+        self._arrow = tk.StringVar(value="▼" if expanded else "▶")
+        arrow_lbl = tk.Label(hdr, textvariable=self._arrow, bg=_bg, fg=_fg,
+                             font=("TkDefaultFont", 9), cursor="hand2")
+        arrow_lbl.pack(side="left", padx=(6, 2), pady=3)
+        title_lbl = tk.Label(hdr, text=title, bg=_bg, fg=_fg,
+                             font=("TkDefaultFont", 9, "bold"), cursor="hand2")
+        title_lbl.pack(side="left", pady=3)
+
+        for w in (hdr, arrow_lbl, title_lbl):
+            w.bind("<Button-1>", self._toggle)
+
+        self.body = ttk.Frame(self.outer)
+        if expanded:
+            self.body.grid(row=1, column=0, sticky="nsew")
+
+    def _toggle(self, event=None):
+        if self._expanded:
+            self.body.grid_remove()
+            self._arrow.set("▶")
+            self._expanded = False
+            self._parent.grid_rowconfigure(self._row, weight=0, minsize=0)
+        else:
+            self.body.grid()
+            self._arrow.set("▼")
+            self._expanded = True
+            self._parent.grid_rowconfigure(self._row, weight=1, minsize=self._min_height)
+
+
 # Rows (YAML Generator)
 # ----------------------------
 class TaskRow:
@@ -1101,10 +1164,8 @@ class TaskipelagoApp(tk.Tk):
     def build_ui(self):
         # YAML tab layout
         self.editor_tab.grid_columnconfigure(0, weight=1)
-        self.editor_tab.grid_rowconfigure(0, weight=0)                # player name strip
-        self.editor_tab.grid_rowconfigure(1, weight=1, minsize=180)   # tasks section
-        self.editor_tab.grid_rowconfigure(2, weight=1, minsize=200)   # items section
-        self.editor_tab.grid_rowconfigure(3, weight=1, minsize=120)   # deathlink
+        self.editor_tab.grid_rowconfigure(0, weight=0)   # player name strip
+        # rows 1-3 managed dynamically by CollapsibleSection (tasks, items, deathlink)
         self.editor_tab.grid_rowconfigure(4, weight=0, minsize=52)    # buttons
 
         # --- Player name strip (row 0) ---
@@ -1115,9 +1176,11 @@ class TaskipelagoApp(tk.Tk):
         self.player_name_var = tk.StringVar()
         ttk.Entry(name_strip, textvariable=self.player_name_var, width=28).pack(side="left")
 
-        # ======== TASKS section (row 1) ========
-        tasks_lf = ttk.LabelFrame(self.editor_tab, text="Tasks")
-        tasks_lf.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 6))
+        # ======== TASKS section (collapsible, row 1, expanded by default) ========
+        _tasks_cs = CollapsibleSection(self.editor_tab, "Tasks", row=1,
+                                       expanded=True, min_height=180, colors=self.colors)
+        _tasks_cs.outer.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 2))
+        tasks_lf = _tasks_cs.body
         tasks_lf.grid_columnconfigure(0, weight=1)
         tasks_lf.grid_rowconfigure(0, weight=0)   # settings
         tasks_lf.grid_rowconfigure(1, weight=0)   # regions panel
@@ -1274,9 +1337,11 @@ class TaskipelagoApp(tk.Tk):
         tasks_btn_row.grid(row=3, column=0, sticky="ew", padx=10, pady=(4, 8))
         ttk.Button(tasks_btn_row, text="Add Task", command=self.add_task_row).pack(side="left")
 
-        # ======== ITEMS section (row 2) ========
-        items_lf = ttk.LabelFrame(self.editor_tab, text="Items")
-        items_lf.grid(row=2, column=0, sticky="nsew", padx=10, pady=(0, 6))
+        # ======== ITEMS section (collapsible, row 2, expanded by default) ========
+        _items_cs = CollapsibleSection(self.editor_tab, "Items", row=2,
+                                       expanded=True, min_height=200, colors=self.colors)
+        _items_cs.outer.grid(row=2, column=0, sticky="nsew", padx=10, pady=(0, 2))
+        items_lf = _items_cs.body
         items_lf.grid_columnconfigure(0, weight=1)
         items_lf.grid_rowconfigure(0, weight=0)   # settings
         items_lf.grid_rowconfigure(1, weight=0)   # prog groups
@@ -1410,9 +1475,11 @@ class TaskipelagoApp(tk.Tk):
         )
         self.add_item_btn.pack(side="left")
 
-        # ======== DEATHLINK section (row 3) ========
-        dl = ttk.LabelFrame(self.editor_tab, text="DeathLink")
-        dl.grid(row=3, column=0, sticky="nsew", padx=10)
+        # ======== DEATHLINK section (collapsible, row 3, collapsed by default) ========
+        _dl_cs = CollapsibleSection(self.editor_tab, "DeathLink", row=3,
+                                    expanded=False, min_height=120, colors=self.colors)
+        _dl_cs.outer.grid(row=3, column=0, sticky="nsew", padx=10, pady=(0, 2))
+        dl = _dl_cs.body
         dl.grid_columnconfigure(0, weight=1)
         dl.grid_rowconfigure(0, weight=0)   # settings
         dl.grid_rowconfigure(1, weight=1)   # pool table
@@ -1909,14 +1976,14 @@ class TaskipelagoApp(tk.Tk):
             )
             return
 
-        n_tasks = len(tasks)
-        n_items = len(items)
+        total_task_slots = sum(task_counts)
+        total_item_slots = sum(item_counts)
 
-        if n_items != n_tasks:
+        if total_task_slots != total_item_slots:
             proceed = messagebox.askyesno(
                 "Unbalanced Counts",
-                f"Warning: Unbalanced item and task counts can lead to generation failures.\n\n"
-                f"Tasks: {n_tasks}  |  Items: {n_items}\n\n"
+                f"Warning: Unbalanced item and task slot counts will cause generation failures.\n\n"
+                f"Task slots: {total_task_slots}  |  Item slots: {total_item_slots}\n\n"
                 "Export anyway?"
             )
             if not proceed:
@@ -2191,11 +2258,13 @@ class TaskipelagoApp(tk.Tk):
 
         n_items = len(items)
 
-        if n_tasks != n_items:
+        total_task_slots = sum(task_counts)
+        total_item_slots = sum(item_counts)
+        if total_task_slots != total_item_slots:
             messagebox.showwarning(
                 "Unbalanced Counts",
                 f"Unbalanced item and task counts can lead to generation failures.\n\n"
-                f"Tasks: {n_tasks}  |  Items: {n_items}"
+                f"Task slots: {total_task_slots}  |  Item slots: {total_item_slots}"
             )
 
         # Wipe existing UI rows
@@ -2208,6 +2277,7 @@ class TaskipelagoApp(tk.Tk):
                 self._remove_task_row, list(self.regions),
             )
             self.task_rows.append(task_row)
+            task_row.count_var.trace_add("write", lambda *_: self._update_item_counter())
             task_row.task_var.set(tasks[i])
             task_row.prereq_var.set(prereqs[i])
             task_row.item_prereq_var.set(item_prereqs[i])
@@ -2234,6 +2304,7 @@ class TaskipelagoApp(tk.Tk):
                 self._remove_item_row, list(self.prog_groups),
             )
             self.item_rows.append(item_row)
+            item_row.count_var.trace_add("write", lambda *_: self._update_item_counter())
             item_row.set_remove_visible(True)
 
             if rt not in ("trap", "junk", "useful", "progression"):
