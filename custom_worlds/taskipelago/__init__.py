@@ -23,7 +23,8 @@ from .locations import (
 )
 from .options import TaskipelagoOptions
 from .prereq_parser import (
-    collect_leaves, collect_group_refs, collect_region_refs,
+    collect_leaves, collect_group_refs, collect_group_count_refs,
+    collect_region_refs, collect_region_abs_refs,
     collect_cost_groups, collect_cost_groups_per_branch,
     eval_node, parse_prereq, parse_cost_expr, resolve_ast_refs, Node,
 )
@@ -78,7 +79,7 @@ class TaskipelagoWorld(World):
     _regions: List[str]
     _region_default_pcts: Dict[str, int]
     _task_region: List[str]
-    _task_region_reqs: List[List[Tuple[str, int]]]
+    _task_region_reqs: List[List[dict]]
     _region_to_task_indices: Dict[str, List[int]]
     _region_token_names: Dict[str, List[str]]
     _consumable_groups: Dict[str, List[int]]   # name -> [0-based item indices]
@@ -115,6 +116,32 @@ class TaskipelagoWorld(World):
 
         if not tasks_raw:
             raise Exception("Taskipelago: tasks list is empty.")
+
+        # Duplicate name validation
+        _task_name_seen: set = set()
+        _task_name_dups: set = set()
+        for _tn in tasks_raw:
+            if _tn in _task_name_seen:
+                _task_name_dups.add(_tn)
+            _task_name_seen.add(_tn)
+        if _task_name_dups:
+            raise Exception(
+                "Taskipelago: duplicate task names found (use the count field for multiple copies): "
+                + ", ".join(repr(n) for n in sorted(_task_name_dups))
+            )
+
+        _item_name_seen: set = set()
+        _item_name_dups: set = set()
+        for _in in items_raw_input:
+            if _in and _in in _item_name_seen:
+                _item_name_dups.add(_in)
+            elif _in:
+                _item_name_seen.add(_in)
+        if _item_name_dups:
+            raise Exception(
+                "Taskipelago: duplicate item names found (use the count field for multiple copies): "
+                + ", ".join(repr(n) for n in sorted(_item_name_dups))
+            )
 
         n_editor_tasks = len(tasks_raw)
         n_editor_items = len([x for x in items_raw_input if x])
@@ -423,10 +450,15 @@ class TaskipelagoWorld(World):
                 parse_prereq(txt, n, i, "reward prereq", known_groups=prog_group_set)
             )
 
+        # Collect ordering refs (group_ref: - notation or bare) and count refs (group_count: * notation)
         task_group_refs: List[List[Tuple[str, int | None]]] = [
             collect_group_refs(ast) for ast in parsed_reward_prereqs_unresolved
         ]
+        task_group_count_refs: List[List[Tuple[str, int]]] = [
+            collect_group_count_refs(ast) for ast in parsed_reward_prereqs_unresolved
+        ]
 
+        # Validate all referenced groups exist and have rewards
         for i, refs in enumerate(task_group_refs):
             for gname, n_val in refs:
                 group_size = len(group_to_reward_indices.get(gname, []))
@@ -435,50 +467,95 @@ class TaskipelagoWorld(World):
                         f"Taskipelago: task {i + 1} references progressive group '{gname}' "
                         f"which has no rewards assigned to it."
                     )
-                if n_val is not None:
-                    if n_val < 1 or n_val > group_size:
-                        raise Exception(
-                            f"Taskipelago: task {i + 1} uses '{gname}-{n_val}' but group "
-                            f"'{gname}' only has {group_size} reward(s)."
-                        )
+                if n_val is not None and (n_val < 1 or n_val > group_size):
+                    raise Exception(
+                        f"Taskipelago: task {i + 1} uses '{gname}-{n_val}' but group "
+                        f"'{gname}' only has {group_size} reward(s)."
+                    )
+        for i, refs in enumerate(task_group_count_refs):
+            for gname, cnt in refs:
+                group_size = len(group_to_reward_indices.get(gname, []))
+                if group_size == 0:
+                    raise Exception(
+                        f"Taskipelago: task {i + 1} references progressive group '{gname}' "
+                        f"which has no rewards assigned to it."
+                    )
+                if cnt < 1 or cnt > group_size:
+                    raise Exception(
+                        f"Taskipelago: task {i + 1} uses '{gname}*{cnt}' but group "
+                        f"'{gname}' only has {group_size} reward(s)."
+                    )
 
         task_progressive_reqs: List[List[Tuple[str, int]]] = [[] for _ in range(n)]
         for gname in raw_prog_groups:
-            task_refs: List[Tuple[int, int | None]] = []
-            for i, refs in enumerate(task_group_refs):
-                for ref_group, ref_n in refs:
-                    if ref_group == gname:
-                        task_refs.append((i, ref_n))
+            # Ordering refs for this group (from group_ref nodes, - or bare)
+            order_refs: List[Tuple[int, int | None]] = [
+                (i, ref_n)
+                for i, refs in enumerate(task_group_refs)
+                for ref_name, ref_n in refs
+                if ref_name == gname
+            ]
+            # Count refs for this group (from group_count nodes, *)
+            count_refs: List[Tuple[int, int]] = [
+                (i, cnt)
+                for i, refs in enumerate(task_group_count_refs)
+                for ref_name, cnt in refs
+                if ref_name == gname
+            ]
 
-            if not task_refs:
+            if not order_refs and not count_refs:
                 continue
 
-            group_size = len(group_to_reward_indices[gname])
-            explicit_threshold_tasks: Dict[int, List[int]] = {}
-            implicit_tasks: List[int] = []
-            for ti, n_val in task_refs:
-                if n_val is not None:
-                    explicit_threshold_tasks.setdefault(n_val, []).append(ti)
-                else:
-                    implicit_tasks.append(ti)
-            implicit_tasks.sort()
+            has_explicit_dash = any(n_val is not None for _, n_val in order_refs)
+            has_explicit_star = bool(count_refs)
 
-            num_steps = len(explicit_threshold_tasks) + len(implicit_tasks)
-            if num_steps > group_size:
+            if has_explicit_dash and has_explicit_star:
                 raise Exception(
-                    f"Taskipelago: progressive group '{gname}' has {group_size} reward(s) but "
-                    f"requires {num_steps} distinct unlock steps."
+                    f"Taskipelago: progressive group '{gname}' cannot mix * (count mode) "
+                    f"and - (ordering mode) notation."
                 )
 
-            free_thresholds = [p for p in range(1, group_size + 1) if p not in explicit_threshold_tasks]
-            for threshold, task_list in explicit_threshold_tasks.items():
-                for ti in task_list:
+            group_size = len(group_to_reward_indices[gname])
+
+            if has_explicit_star or (not has_explicit_dash and count_refs):
+                # COUNT MODE: each task gets the explicit count (or 1 for bare refs)
+                for ti, cnt in count_refs:
+                    task_progressive_reqs[ti].append((gname, cnt))
+                for ti, _ in order_refs:  # bare refs in count mode -> require 1
+                    task_progressive_reqs[ti].append((gname, 1))
+            else:
+                # ORDERING MODE: each task gets a unique positional threshold
+                explicit_pos: Dict[int, int] = {}  # position -> task_idx (one per position)
+                implicit_tasks: List[int] = []
+                for ti, n_val in order_refs:
+                    if n_val is not None:
+                        if n_val in explicit_pos:
+                            raise Exception(
+                                f"Taskipelago: progressive group '{gname}' has two tasks both "
+                                f"requiring ordering position {n_val}. Use count mode ({gname}*N) "
+                                f"if multiple tasks should unlock at the same threshold."
+                            )
+                        explicit_pos[n_val] = ti
+                    else:
+                        implicit_tasks.append(ti)
+                implicit_tasks.sort()
+
+                num_steps = len(explicit_pos) + len(implicit_tasks)
+                if num_steps > group_size:
+                    raise Exception(
+                        f"Taskipelago: progressive group '{gname}' has {group_size} reward(s) but "
+                        f"requires {num_steps} distinct ordering positions."
+                    )
+
+                free_thresholds = [p for p in range(1, group_size + 1) if p not in explicit_pos]
+                for threshold, ti in explicit_pos.items():
                     task_progressive_reqs[ti].append((gname, threshold))
-            for ti, threshold in zip(implicit_tasks, free_thresholds):
-                task_progressive_reqs[ti].append((gname, threshold))
+                for ti, threshold in zip(implicit_tasks, free_thresholds):
+                    task_progressive_reqs[ti].append((gname, threshold))
 
         parsed_reward_prereqs = []
         for i, ast in enumerate(parsed_reward_prereqs_unresolved):
+            # group_ref nodes need resolution; group_count nodes pass through
             group_thresh = {gname: count for gname, count in task_progressive_reqs[i]}
             parsed_reward_prereqs.append(resolve_ast_refs(ast, group_thresh, {}))
 
@@ -491,11 +568,12 @@ class TaskipelagoWorld(World):
                 parse_prereq(txt, n, i, "task prereq", known_regions=region_set)
             )
 
-        task_region_reqs: List[List[Tuple[str, int]]] = []
+        task_region_reqs: List[List[dict]] = []
         for i, ast in enumerate(parsed_prereqs_unresolved):
-            refs = collect_region_refs(ast)
-            reqs: List[Tuple[str, int]] = []
-            for rname, pct_val in refs:
+            pct_refs = collect_region_refs(ast)
+            abs_refs = collect_region_abs_refs(ast)
+            reqs: List[dict] = []
+            for rname, pct_val in pct_refs:
                 if task_region[i] == rname:
                     raise Exception(
                         f"Taskipelago: task {i + 1} cannot depend on its own region '{rname}'."
@@ -509,12 +587,32 @@ class TaskipelagoWorld(World):
                     raise Exception(
                         f"Taskipelago: task {i + 1} references region '{rname}' which has no tasks assigned."
                     )
-                reqs.append((rname, pct))
+                reqs.append({"region": rname, "pct": pct})
+            for rname, abs_n in abs_refs:
+                if task_region[i] == rname:
+                    raise Exception(
+                        f"Taskipelago: task {i + 1} cannot depend on its own region '{rname}'."
+                    )
+                region_size = len(region_to_task_indices.get(rname, []))
+                if region_size == 0:
+                    raise Exception(
+                        f"Taskipelago: task {i + 1} references region '{rname}' which has no tasks assigned."
+                    )
+                if abs_n < 1 or abs_n > region_size:
+                    raise Exception(
+                        f"Taskipelago: task {i + 1} uses '{rname}*{abs_n}' but region "
+                        f"'{rname}' only has {region_size} task(s)."
+                    )
+                reqs.append({"region": rname, "abs_count": abs_n})
             task_region_reqs.append(reqs)
 
         parsed_prereqs = []
         for i, ast in enumerate(parsed_prereqs_unresolved):
-            region_pct = {rname: pct for rname, pct in task_region_reqs[i]}
+            region_pct = {
+                req["region"]: req["pct"]
+                for req in task_region_reqs[i]
+                if "pct" in req
+            }
             ast = resolve_ast_refs(ast, {}, region_pct)
             if ast is not None and i in collect_leaves(ast):
                 raise Exception(f"Taskipelago: task {i + 1} cannot require itself.")
@@ -925,10 +1023,7 @@ class TaskipelagoWorld(World):
             "regions": list(self._regions),
             "region_default_pcts": dict(self._region_default_pcts),
             "task_region": list(self._task_region),
-            "task_region_reqs": [
-                [{"region": r, "pct": p} for r, p in reqs]
-                for reqs in self._task_region_reqs
-            ],
+            "task_region_reqs": [list(reqs) for reqs in self._task_region_reqs],
             "bingo_mode": bool(self.options.bingo_mode),
             "bingo_dimension_x": int(self.options.bingo_dimension_x),
             "bingo_dimension_y": int(self.options.bingo_dimension_y),

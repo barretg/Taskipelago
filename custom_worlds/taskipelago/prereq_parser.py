@@ -5,20 +5,26 @@ Grammar:
     expr     := or_expr
     or_expr  := and_expr ('||' and_expr)*
     and_expr := atom ('&&' atom | ',' atom)*
-    atom     := INTEGER | NAME | NAME-INTEGER | '(' expr ')'
+    atom     := INTEGER | NAME | NAME*INTEGER | NAME-INTEGER | '(' expr ')'
 
-    INTEGER  - 1-based task/item index
-    NAME     - group or region reference (resolved against known_groups / known_regions)
-    NAME-N   - group/region reference with explicit count or percentage suffix
+    INTEGER   - 1-based task/item index
+    NAME      - group or region reference (resolved against known_groups / known_regions)
+    NAME*N    - group count mode (N items from group) or region absolute count (N tasks)
+    NAME-N    - group ordering mode (N-th position) or region percentage (N%)
 
 Output AST nodes:
-    int                       - leaf: task/item index (0-based)
-    ("and", [node, ...])      - all children must be satisfied
-    ("or",  [node, ...])      - at least one child must be satisfied
-    ("group_ref", name, n)    - progressive group ref; n is int or None (unresolved)
-    ("region_ref", name, pct) - region ref; pct is int or None (unresolved)
-    ("group", name, count)    - resolved group ref (count is int)
-    ("region", name, pct)     - resolved region ref (pct is int)
+    int                         - leaf: task/item index (0-based)
+    ("and", [node, ...])        - all children must be satisfied
+    ("or",  [node, ...])        - at least one child must be satisfied
+    ("group_ref", name, n)      - progressive group ordering ref; n is position int or None
+    ("group_count", name, n)    - progressive group count mode ref; n is required count
+    ("region_ref", name, pct)   - region percentage ref; pct is int or None (unresolved)
+    ("region_abs", name, n)     - region absolute count ref; n is required task count
+    ("group", name, count)      - resolved ordering group ref (count is threshold int)
+    ("region", name, pct)       - resolved region percentage ref (pct is int)
+
+group_count and region_abs nodes are already resolved (count embedded) and pass through
+resolve_ast_refs unchanged.
 
 A single-child "and" or "or" is simplified to just the child.
 """
@@ -111,14 +117,21 @@ def parse_prereq(
             return idx_1 - 1  # 0-based
         if isinstance(tok, str) and tok not in ("&&", "||", "(", ")", ","):
             consume()
-            m = _re.match(r'^(.+[a-zA-Z_])-(\d+)$', tok)
-            if m:
-                base, suffix = m.group(1), int(m.group(2))
+            m_dash = _re.match(r'^(.+[a-zA-Z_])-(\d+)$', tok)
+            m_star = _re.match(r'^(.+[a-zA-Z_])\*(\d+)$', tok)
+            if m_dash:
+                base, suffix, mode = m_dash.group(1), int(m_dash.group(2)), "dash"
+            elif m_star:
+                base, suffix, mode = m_star.group(1), int(m_star.group(2)), "star"
             else:
-                base, suffix = tok, None
+                base, suffix, mode = tok, None, "none"
             if known_groups is not None and base in known_groups:
+                if mode == "star":
+                    return ("group_count", base, suffix)
                 return ("group_ref", base, suffix)
             if known_regions is not None and base in known_regions:
+                if mode == "star":
+                    return ("region_abs", base, suffix)
                 return ("region_ref", base, suffix)
             raise Exception(
                 f"Taskipelago: unknown name '{base}' in {label} on task {task_index + 1}."
@@ -138,7 +151,8 @@ def parse_prereq(
 
 
 def resolve_ast_refs(node: Node | None, group_thresh: dict, region_pct: dict) -> Node | None:
-    """Replace group_ref/region_ref nodes with resolved group/region nodes."""
+    """Replace group_ref/region_ref nodes with resolved group/region nodes.
+    group_count and region_abs nodes are already resolved and passed through unchanged."""
     if node is None or isinstance(node, int):
         return node
     op = node[0]
@@ -148,6 +162,8 @@ def resolve_ast_refs(node: Node | None, group_thresh: dict, region_pct: dict) ->
     if op == "region_ref":
         _, name, _ = node
         return ("region", name, region_pct[name])
+    if op in ("group_count", "region_abs"):
+        return node  # already resolved, count embedded
     tag, children = node
     return (tag, [resolve_ast_refs(c, group_thresh, region_pct) for c in children])
 
@@ -222,7 +238,7 @@ def collect_leaves(node: Node | None) -> List[int]:
     if isinstance(node, int):
         return [node]
     op = node[0]
-    if op in ("group_ref", "region_ref", "group", "region"):
+    if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region"):
         return []
     _, children = node
     result = []
@@ -232,13 +248,13 @@ def collect_leaves(node: Node | None) -> List[int]:
 
 
 def collect_group_refs(node: Node | None) -> List[Tuple]:
-    """Return list of (name, n_or_None) for all group_ref leaves in the AST."""
+    """Return list of (name, n_or_None) for all group_ref (ordering mode) leaves."""
     if node is None or isinstance(node, int):
         return []
     op = node[0]
     if op == "group_ref":
         return [(node[1], node[2])]
-    if op in ("group", "region_ref", "region"):
+    if op in ("group", "group_count", "region_ref", "region_abs", "region"):
         return []
     _, children = node
     result = []
@@ -247,19 +263,51 @@ def collect_group_refs(node: Node | None) -> List[Tuple]:
     return result
 
 
+def collect_group_count_refs(node: Node | None) -> List[Tuple]:
+    """Return list of (name, count) for all group_count (count mode) leaves."""
+    if node is None or isinstance(node, int):
+        return []
+    op = node[0]
+    if op == "group_count":
+        return [(node[1], node[2])]
+    if op in ("group", "group_ref", "region_ref", "region_abs", "region"):
+        return []
+    _, children = node
+    result = []
+    for child in children:
+        result.extend(collect_group_count_refs(child))
+    return result
+
+
 def collect_region_refs(node: Node | None) -> List[Tuple]:
-    """Return list of (name, pct_or_None) for all region_ref leaves in the AST."""
+    """Return list of (name, pct_or_None) for all region_ref (percentage mode) leaves."""
     if node is None or isinstance(node, int):
         return []
     op = node[0]
     if op == "region_ref":
         return [(node[1], node[2])]
-    if op in ("region", "group_ref", "group"):
+    if op in ("region", "region_abs", "group_ref", "group_count", "group"):
         return []
     _, children = node
     result = []
     for child in children:
         result.extend(collect_region_refs(child))
+    return result
+
+
+def collect_region_abs_refs(node: Node | None) -> List[Tuple]:
+    """Return list of (name, count) for all region_abs (absolute count) leaves."""
+    if node is None or isinstance(node, int):
+        return []
+    op = node[0]
+    if op == "region_abs":
+        return [(node[1], node[2])]
+    if op in ("region", "region_ref", "group_ref", "group_count", "group"):
+        return []
+    _, children = node
+    result = []
+    for child in children:
+        result.extend(collect_region_abs_refs(child))
     return result
 
 
@@ -289,10 +337,17 @@ def eval_node(
     if op == "group":
         _, name, count = node
         return state.has_from_list(group_items[name], player, count)
+    if op == "group_count":
+        _, name, count = node
+        return state.has_from_list(group_items[name], player, count)
     if op == "region":
         _, name, pct = node
         tokens = region_tokens[name]
         return state.has_from_list(tokens, player, _math.ceil(len(tokens) * pct / 100))
+    if op == "region_abs":
+        _, name, n = node
+        tokens = region_tokens[name]
+        return state.has_from_list(tokens, player, n)
     raise ValueError(f"Unknown AST op: {op}")
 
 
@@ -303,7 +358,9 @@ def eval_node(
 #   cost_expr := cost_or
 #   cost_or   := cost_and ('||' cost_and)*
 #   cost_and  := cost_atom ('&&' cost_atom | ',' cost_atom)*
-#   cost_atom := '"Name"-N' | 'idx-N' | '(' cost_expr ')'
+#   cost_atom := '"Name"*N' | '"Name"' | 'idx*N' | 'idx' | '(' cost_expr ')'
+#
+#   Bare "Name" or idx (no *N) defaults to count=1.
 #
 # AST output nodes:
 #   ("cost_group", name: str, count: int)  - spend N of consumable named 'name'
@@ -420,7 +477,7 @@ def _tokenize_cost(text: str, item_names_ordered: "list[str] | None") -> list:
             i += 1
             continue
 
-        # Quoted name: "Name"-N or "Name" (count defaults to 1)
+        # Quoted name: "Name"*N or "Name" (bare = cost 1)
         if c == '"':
             j = i + 1
             while j < len(text) and text[j] != '"':
@@ -430,7 +487,7 @@ def _tokenize_cost(text: str, item_names_ordered: "list[str] | None") -> list:
             name = text[i+1:j]
             j += 1  # skip closing quote
             count = 1
-            if j < len(text) and text[j] == '-':
+            if j < len(text) and text[j] == '*':
                 k = j + 1
                 while k < len(text) and text[k].isdigit():
                     k += 1
@@ -441,14 +498,14 @@ def _tokenize_cost(text: str, item_names_ordered: "list[str] | None") -> list:
             i = j
             continue
 
-        # Numeric index: idx-N (1-based item index followed by count)
+        # Numeric index: idx*N (1-based item index followed by count)
         if c.isdigit():
             j = i
             while j < len(text) and text[j].isdigit():
                 j += 1
             idx_1 = int(text[i:j])
             count = 1
-            if j < len(text) and text[j] == '-':
+            if j < len(text) and text[j] == '*':
                 k = j + 1
                 while k < len(text) and text[k].isdigit():
                     k += 1
@@ -561,7 +618,7 @@ def _has_or(node: Node | None) -> bool:
     if node is None or isinstance(node, int):
         return False
     op = node[0]
-    if op in ("group_ref", "region_ref", "group", "region"):
+    if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region"):
         return False
     if op == "or":
         return True

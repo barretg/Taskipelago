@@ -479,7 +479,8 @@ class ItemRow:
             parent, text="Filler", variable=self.filler_var, command=self.on_filler_toggle
         )
         self.consumable_cb = ttk.Checkbutton(
-            parent, text="Consumable", variable=self.consumable_var
+            parent, text="Consumable", variable=self.consumable_var,
+            command=self.on_consumable_toggle,
         )
         self.count_spinbox = ttk.Spinbox(parent, from_=1, to=999, textvariable=self.count_var, width=5)
         self.remove_btn = ttk.Button(parent, text="Remove", width=8, command=self.remove)
@@ -540,10 +541,35 @@ class ItemRow:
         else:
             self.item_entry.state(["!disabled"])
             self.item_var.set(self._saved_item)
-            self.prog_group_cb.state(["!disabled"])
             self.consumable_cb.state(["!disabled"])
-            self.prog_group_var.set(self._saved_prog_group)
-            # _on_prog_group_change fires from the trace and restores type / disables as needed
+            if self.consumable_var.get():
+                # Re-apply consumable constraints (prog group stays locked)
+                self.on_consumable_toggle()
+            else:
+                self.prog_group_cb.state(["!disabled"])
+                self.prog_group_var.set(self._saved_prog_group)
+                # _on_prog_group_change fires from the trace and restores type / disables as needed
+
+    def on_consumable_toggle(self):
+        if self.consumable_var.get():
+            # Force progression type and lock dropdown
+            current_type = self.reward_type_var.get().strip().lower()
+            if current_type != "progression":
+                self._saved_reward_type = current_type or DEFAULT_REWARD_TYPE
+            self.reward_type_var.set("progression")
+            self.reward_type_cb.state(["disabled"])
+            # Consumables cannot be in a progressive group
+            if not self._saved_prog_group:
+                self._saved_prog_group = self.prog_group_var.get()
+            self.prog_group_var.set("")
+            self.prog_group_cb.state(["disabled"])
+        else:
+            # Restore type and prog group if not filler
+            if not self.filler_var.get():
+                self.reward_type_cb.state(["!disabled"])
+                self.reward_type_var.set(self._saved_reward_type or DEFAULT_REWARD_TYPE)
+                self.prog_group_cb.state(["!disabled"])
+                self.prog_group_var.set(self._saved_prog_group)
 
     def _on_prog_group_change(self, *_):
         if self.prog_group_var.get():
@@ -557,7 +583,7 @@ class ItemRow:
         else:
             self.reward_type_cb.state(["!disabled"])
             self.reward_type_var.set(self._saved_reward_type or DEFAULT_REWARD_TYPE)
-            if not self.filler_var.get():
+            if not self.filler_var.get() and not self.consumable_var.get():
                 self.filler_cb.state(["!disabled"])
 
     def update_groups(self, groups):
@@ -1147,7 +1173,8 @@ class TaskipelagoApp(tk.Tk):
             "Assign tasks to a region using the Region column in the task table.\n\n"
             "Reference a region in 'Task prereqs' using the region name:\n"
             "  myregion       ->  region's default % of tasks must be completed\n"
-            "  myregion-75    ->  exactly 75% of that region's tasks must be completed\n\n"
+            "  myregion-75    ->  exactly 75% of that region's tasks must be completed\n"
+            "  myregion*5     ->  exactly 5 tasks in that region must be completed\n\n"
             "A task cannot depend on its own region.\n"
             "Regions also appear as Archipelago regions for location hinting."
         ))
@@ -1177,9 +1204,10 @@ class TaskipelagoApp(tk.Tk):
             '  1 && "Buy groceries"  ->  task 1 AND task named "Buy groceries"\n'
             "  1 || 2               ->  task 1 OR task 2\n"
             "  (1 || 2) && 3        ->  (1 or 2) and also 3\n\n"
-            "Region refs (require % of region's tasks completed):\n"
-            "  myregion       ->  region's default % of tasks must be completed\n"
-            "  myregion-75    ->  exactly 75% of that region's tasks must be completed\n\n"
+            "Region refs:\n"
+            "  myregion      ->  region's default % of tasks must be completed\n"
+            "  myregion-75   ->  exactly 75% of that region's tasks must be completed\n"
+            "  myregion*5    ->  exactly 5 tasks in that region must be completed\n\n"
             "Quoted names resolve to the first matching task number at export.\n"
             "Quotation marks are not allowed in task names.\n"
             "A task cannot depend on its own region."
@@ -1193,25 +1221,30 @@ class TaskipelagoApp(tk.Tk):
             "Quoted names resolve to the first matching item number at export.\n"
             "Quotation marks are not allowed in item names.\n\n"
             "Progressive group refs:\n"
-            "  mygroup    ->  count inferred (lowest unused threshold by task order)\n"
-            "  mygroup-2  ->  requires at least 2 items from 'mygroup'"
+            "  mygroup     ->  ordering mode: count inferred (fills lowest unused position)\n"
+            "  mygroup-2   ->  ordering mode: requires the 2nd item in the group ordering\n"
+            "  mygroup*2   ->  count mode: any 2 items from the group\n\n"
+            "Can't mix - and * notation for the same group.\n"
+            "Ordering mode: each position can only be held by one task.\n"
+            "Count mode: multiple tasks can share the same threshold."
         )
         _region_col_tip = (
             "Assign this task to a named region.\n\n"
-            "Tasks in a region can be used as completion-percentage prerequisites.\n"
-            "Other tasks can require 'myregion' or 'myregion-75' in Task prereqs.\n\n"
+            "Tasks in a region can be used as completion prerequisites.\n"
+            "Other tasks can require 'myregion', 'myregion-75', or 'myregion*5' in Task prereqs.\n\n"
             "Regions also appear as Archipelago regions, enabling location hinting by region.\n"
             "A task cannot depend on its own region."
         )
         _cost_col_tip = (
             "Consumable items that must be spent to unlock (purchase) this task.\n\n"
-            'Format: "ItemName"-N or item index N-count:\n'
-            '  "Gold"-3             ->  spend 3 Gold\n'
-            '  "Gold"-3 && "Silver"-2  ->  spend 3 Gold AND 2 Silver\n'
-            '  "Gold"-5 || "Silver"-10  ->  player chooses which to spend\n\n'
+            'Format: "ItemName"*N or bare "ItemName" (bare = cost 1):\n'
+            '  "Gold"*3              ->  spend 3 Gold\n'
+            '  "Gold"*3 && "Silver"*2  ->  spend 3 Gold AND 2 Silver\n'
+            '  "Gold"*5 || "Silver"*10  ->  player chooses which to spend\n'
+            '  "Gold"                ->  spend 1 Gold\n\n'
             "Items used as currency must be marked Consumable in the Items table.\n"
             "Leave blank for no cost.\n"
-            "If enforce prereqs is off, purchase is skipped but cost is tracked."
+            "For OR-branch tasks, a Make Change button lets players swap branches after purchase."
         )
         _count_task_tip = (
             "How many times this task is duplicated in the exported YAML.\n\n"
@@ -1230,7 +1263,7 @@ class TaskipelagoApp(tk.Tk):
         ttk.Label(t_tbl, text="Location", style="Muted.TLabel").grid(row=1, column=1, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text='1  or  "Task Name"  or  region', style="Muted.TLabel").grid(row=1, column=2, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text='1  or  "Item Name"', style="Muted.TLabel").grid(row=1, column=3, sticky="w", padx=(0, 8))
-        ttk.Label(t_tbl, text='"ItemName"-N', style="Muted.TLabel").grid(row=1, column=4, sticky="w", padx=(0, 8))
+        ttk.Label(t_tbl, text='"ItemName"*N', style="Muted.TLabel").grid(row=1, column=4, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=5, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=6, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=7, sticky="w")
@@ -1293,13 +1326,17 @@ class TaskipelagoApp(tk.Tk):
         _pg_hint.pack(side="left", padx=(8, 0))
         Tooltip(_pg_hint, (
             "Group names may only contain letters, underscores, and hyphens - no digits.\n\n"
-            "Reference a group in 'Item prereqs' using the group name:\n"
-            "  mygroup    ->  required count inferred (assigned to lowest unused threshold)\n"
-            "  mygroup-2  ->  explicitly requires at least 2 items from the group\n\n"
-            "Multiple tasks may share the same explicit count (e.g. two tasks both using\n"
-            "mygroup-2 will both unlock when 2 items from the group are received).\n\n"
+            "Reference a group in 'Item prereqs' using the group name:\n\n"
+            "Ordering mode (- notation):\n"
+            "  mygroup    ->  count inferred (fills lowest unused position in ordering)\n"
+            "  mygroup-2  ->  requires the 2nd item unlocked in the group ordering\n"
+            "  Each position can only be held by one task. Can't mix with * notation.\n\n"
+            "Count mode (* notation):\n"
+            "  mygroup*2  ->  any 2 items from the group received\n"
+            "  Multiple tasks may share the same threshold.\n\n"
             "Receiving any item assigned to a group counts toward that group's total.\n"
-            "All group items are forced to 'progression' classification."
+            "All group items are forced to 'progression' classification.\n"
+            "Consumable items cannot be assigned to a progressive group."
         ))
         self._refresh_prog_groups_panel()
 
@@ -1326,7 +1363,7 @@ class TaskipelagoApp(tk.Tk):
             "  progression - placed early; advances sphere logic\n"
             "  trap        - negative-effect item\n\n"
             "Items in a progressive group are always forced to 'progression'.\n"
-            "Consumable items are forced to 'progression' when used in task costs."
+            "Consumable items are always forced to 'progression'."
         )
         _filler_tip = (
             "Mark this as a filler item.\n\n"
@@ -1341,17 +1378,23 @@ class TaskipelagoApp(tk.Tk):
             "All copies with the same name are pooled together as shared currency.\n\n"
             "When a task has a cost and all other prereqs are met, a Purchase button\n"
             "appears. Spending locks the task until the cost is deducted.\n\n"
-            "Consumable items used in any task cost are forced to 'progression'.\n"
+            "Consumable items are always forced to 'progression' and cannot be assigned\n"
+            "to a progressive group.\n"
             "Filler items cannot be consumable."
         )
         _prog_group_tip = (
             "Assign this item to a progressive group.\n\n"
-            "Group items are interchangeable - receiving any of them increments the group "
-            "counter. Other tasks can require N items from the group in 'Item prereqs':\n"
-            "  groupname    ->  required count inferred (lowest unused threshold)\n"
-            "  groupname-2  ->  unlock when at least 2 items from the group are received\n\n"
-            "Multiple tasks may share the same -N count; they all unlock at that threshold.\n"
+            "Group items are interchangeable - receiving any of them increments the group\n"
+            "counter. Tasks reference a group in 'Item prereqs' using two modes:\n\n"
+            "Ordering mode (- notation):\n"
+            "  groupname    ->  count inferred (fills lowest unused position in ordering)\n"
+            "  groupname-2  ->  requires the 2nd item unlocked in the group ordering\n"
+            "  One task per position. Can't mix with * notation for the same group.\n\n"
+            "Count mode (* notation):\n"
+            "  groupname*2  ->  any 2 items from the group received\n"
+            "  Multiple tasks can share the same threshold.\n\n"
             "Items in a group are always forced to 'progression' classification.\n"
+            "Consumable items cannot be assigned to a group.\n"
             "Groups are defined in the Progressive Groups panel above."
         )
         _count_item_tip = (
@@ -1796,14 +1839,15 @@ class TaskipelagoApp(tk.Tk):
     def _convert_cost_idx_to_quote(cost_text: str, item_names: list, item_counts: list) -> str:
         """Replace integer-indexed cost refs with quoted names for items with count > 1."""
         import re as _re
-        pattern = _re.compile(r'"[^"]*"-\d+|\b(\d+)-(\d+)\b')
+        # Match already-quoted refs (leave alone) or bare idx*N / idx patterns
+        pattern = _re.compile(r'"[^"]*"\*?\d*|\b(\d+)(?:\*(\d+))?\b')
         def repl(m):
             if m.group(1) is None:
-                return m.group(0)
+                return m.group(0)  # already quoted, leave alone
             idx = int(m.group(1))
-            n = m.group(2)
+            n = m.group(2) or "1"
             if 1 <= idx <= len(item_names) and item_counts[idx - 1] > 1:
-                return f'"{item_names[idx - 1]}"-{n}'
+                return f'"{item_names[idx - 1]}"*{n}'
             return m.group(0)
         return pattern.sub(repl, cost_text)
 
@@ -1829,6 +1873,19 @@ class TaskipelagoApp(tk.Tk):
             messagebox.showerror("Error", "No tasks defined.")
             return
 
+        # Duplicate task name check
+        _seen_tasks = {}
+        for t in tasks:
+            _seen_tasks[t] = _seen_tasks.get(t, 0) + 1
+        _dup_tasks = [n for n, c in _seen_tasks.items() if c > 1]
+        if _dup_tasks:
+            messagebox.showerror(
+                "Duplicate Task Names",
+                "Duplicate task names are not allowed - use the Count field for multiple copies:\n"
+                + "\n".join(_dup_tasks)
+            )
+            return
+
         raw_item_names = []
         items, item_types, item_fillers, item_prog_groups, item_consumables, item_counts = [], [], [], [], [], []
         for r in self.item_rows:
@@ -1841,6 +1898,20 @@ class TaskipelagoApp(tk.Tk):
             item_prog_groups.append(pgrp if not is_filler_row else "")
             item_consumables.append(consumable if not is_filler_row else False)
             item_counts.append(count)
+
+        # Duplicate item name check (non-filler items only)
+        _seen_items = {}
+        for itm, filler in zip(items, item_fillers):
+            if not filler and itm:
+                _seen_items[itm] = _seen_items.get(itm, 0) + 1
+        _dup_items = [n for n, c in _seen_items.items() if c > 1]
+        if _dup_items:
+            messagebox.showerror(
+                "Duplicate Item Names",
+                "Duplicate item names are not allowed - use the Count field for multiple copies:\n"
+                + "\n".join(_dup_items)
+            )
+            return
 
         n_tasks = len(tasks)
         n_items = len(items)
@@ -2182,9 +2253,9 @@ class TaskipelagoApp(tk.Tk):
                 item_row.item_var.set(itm)
                 if consumable:
                     item_row.consumable_var.set(True)
-
-            if pgrp in self.prog_groups:
-                item_row.prog_group_var.set(pgrp)
+                    item_row.on_consumable_toggle()
+                elif pgrp in self.prog_groups:
+                    item_row.prog_group_var.set(pgrp)
 
         self._refresh_item_remove_visibility()
 
@@ -2538,12 +2609,22 @@ class TaskipelagoApp(tk.Tk):
             region_prereq_ok = True
             for req in region_reqs:
                 if isinstance(req, dict):
-                    r, pct = req.get("region", ""), req.get("pct", 100)
+                    r = req.get("region", "")
+                    abs_count = req.get("abs_count")
+                    pct = req.get("pct", 100)
+                    if abs_count is not None:
+                        if not self._region_req_satisfied_abs(r, abs_count):
+                            region_prereq_ok = False
+                            region_hint_parts.append(f"region '{r}' (need {abs_count} tasks)")
+                    else:
+                        if not self._region_req_satisfied(r, pct):
+                            region_prereq_ok = False
+                            region_hint_parts.append(f"region '{r}' ({pct}% completed)")
                 else:
                     r, pct = req[0], req[1]
-                if not self._region_req_satisfied(r, pct):
-                    region_prereq_ok = False
-                    region_hint_parts.append(f"region '{r}' ({pct}% completed)")
+                    if not self._region_req_satisfied(r, pct):
+                        region_prereq_ok = False
+                        region_hint_parts.append(f"region '{r}' ({pct}% completed)")
 
             # Cost requirement
             cost_amounts = list(getattr(self.ctx, "task_cost_amounts", []) or [])
@@ -2587,30 +2668,48 @@ class TaskipelagoApp(tk.Tk):
             )
             task_label.pack(side="left", fill="x", expand=True)
 
-            if not completed:
-                if cost_only_locked and effective_lock:
-                    # All prereqs met but cost not paid - show Purchase button
-                    purchase_btn = ttk.Button(
+            # Make Change button: available any time a task with OR branches is purchased
+            task_branches = cost_amounts[i] if i < len(cost_amounts) else []
+            can_make_change = len(task_branches) > 1 and i in self._task_purchases
+
+            if completed:
+                if can_make_change:
+                    mc_btn = ttk.Button(
                         top,
-                        text="Purchase",
-                        command=lambda idx=i: self._attempt_purchase(idx)
+                        text="Make Change",
+                        command=lambda idx=i: self._attempt_make_change(idx)
                     )
-                    purchase_btn.pack(side="right", padx=(10, 0))
-                else:
-                    can_complete = True
-                    if effective_lock and (not other_prereqs_ok or not cost_paid):
-                        can_complete = False
+                    mc_btn.pack(side="right", padx=(10, 0))
+            elif cost_only_locked and effective_lock:
+                # All prereqs met but cost not paid - show Purchase button
+                purchase_btn = ttk.Button(
+                    top,
+                    text="Purchase",
+                    command=lambda idx=i: self._attempt_purchase(idx)
+                )
+                purchase_btn.pack(side="right", padx=(10, 0))
+            else:
+                can_complete = True
+                if effective_lock and (not other_prereqs_ok or not cost_paid):
+                    can_complete = False
 
-                    btn = ttk.Button(
+                btn = ttk.Button(
+                    top,
+                    text="Complete",
+                    command=lambda idx=i: self.complete_task(idx)
+                )
+                if not can_complete:
+                    btn.state(["disabled"])
+                btn.pack(side="right", padx=(10, 0))
+
+                # Make Change appears to the left of Complete
+                if can_make_change:
+                    mc_btn = ttk.Button(
                         top,
-                        text="Complete",
-                        command=lambda idx=i: self.complete_task(idx)
+                        text="Make Change",
+                        command=lambda idx=i: self._attempt_make_change(idx)
                     )
-
-                    if not can_complete:
-                        btn.state(["disabled"])
-
-                    btn.pack(side="right", padx=(10, 0))
+                    mc_btn.pack(side="right", padx=(10, 0))
 
             showed_hint = False
 
@@ -3090,8 +3189,86 @@ class TaskipelagoApp(tk.Tk):
         self.wait_window(win)
         return result[0]
 
+    def _attempt_make_change(self, task_idx: int):
+        """Swap OR branch for a purchased task, refunding old and deducting new."""
+        ctx = getattr(self, "ctx", None)
+        if not ctx:
+            return
+        cost_amounts = list(getattr(ctx, "task_cost_amounts", []) or [])
+        if task_idx >= len(cost_amounts) or not cost_amounts[task_idx]:
+            return
+        branches = cost_amounts[task_idx]
+        if len(branches) <= 1:
+            return
+
+        current_deduction = self._task_purchases.get(task_idx)
+        if current_deduction is None:
+            return
+
+        # Compute balance assuming current branch is refunded
+        base_balance = self._consumable_balance()
+        refund_balance = dict(base_balance)
+        for name, amt in current_deduction.items():
+            refund_balance[name] = refund_balance.get(name, 0) + amt
+
+        current_label = ", ".join(
+            f"{amt} {name}" for name, amt in sorted(current_deduction.items())
+        )
+
+        def _branch_dict(branch):
+            return {name: amt for name, amt in branch}
+
+        def _is_current(branch):
+            return _branch_dict(branch) == current_deduction
+
+        def _can_afford(branch):
+            for name, amt in branch:
+                if refund_balance.get(name, 0) < amt:
+                    return False
+            return True
+
+        alternatives = [b for b in branches if not _is_current(b) and _can_afford(b)]
+
+        if not alternatives:
+            messagebox.showinfo(
+                "No Alternatives",
+                f"Currently paid: {current_label}\n\n"
+                "No alternative payment can be afforded right now.\n"
+                "(Other branches require items you don't have yet.)"
+            )
+            return
+
+        win = tk.Toplevel(self)
+        win.title("Make Change")
+        win.resizable(False, False)
+        win.grab_set()
+
+        ttk.Label(win, text=f"Currently paid: {current_label}").pack(padx=16, pady=(12, 2))
+        ttk.Label(win, text="Switch payment to:").pack(padx=16, pady=(0, 6))
+
+        result = [None]
+
+        def pick(branch):
+            result[0] = branch
+            win.destroy()
+
+        for b in alternatives:
+            parts = ", ".join(f"{amt} {name}" for name, amt in b)
+            ttk.Button(win, text=parts, command=lambda br=b: pick(br)).pack(
+                fill="x", padx=16, pady=3
+            )
+
+        ttk.Button(win, text="Cancel", command=win.destroy).pack(padx=16, pady=(4, 12))
+        self.wait_window(win)
+
+        if result[0] is not None:
+            self._task_purchases[task_idx] = {name: amt for name, amt in result[0]}
+            self.after(0, self.refresh_play_tab)
+            self.after(0, self._render_consumable_tab)
+
     def _recalculate_purchases_from_completed(self):
-        """On connect, retroactively deduct minimum cost for already-completed tasks."""
+        """Ensure completed tasks have a recorded purchase deduction.
+        Preserves existing entries (user's Make Change choices and in-session purchases)."""
         ctx = getattr(self, "ctx", None)
         if not ctx:
             return
@@ -3100,19 +3277,15 @@ class TaskipelagoApp(tk.Tk):
         cost_amounts = list(getattr(ctx, "task_cost_amounts", []) or [])
         if base_complete is None:
             return
-        self._task_purchases = {}
         for i, branches in enumerate(cost_amounts):
             if not branches:
                 continue
-            complete_loc_id = base_complete + i
-            if complete_loc_id not in checked:
+            if (base_complete + i) not in checked:
                 continue
-            # Already completed - deduct minimum cost branch
-            min_branch = min(
-                branches,
-                key=lambda b: sum(amt for _, amt in b)
-            )
-            self._task_purchases[i] = {name: amt for name, amt in min_branch}
+            if i not in self._task_purchases:
+                # Assign minimum-cost branch as default for newly-seen completed tasks
+                min_branch = min(branches, key=lambda b: sum(amt for _, amt in b))
+                self._task_purchases[i] = {name: amt for name, amt in min_branch}
 
     def _render_consumable_tab(self):
         if not hasattr(self, "consumable_tab_scroll"):
@@ -3834,6 +4007,16 @@ class TaskipelagoApp(tk.Tk):
         required = math.ceil(len(region_indices) * pct / 100)
         completed = sum(1 for i in region_indices if (base_complete + i) in checked)
         return completed >= required
+
+    def _region_req_satisfied_abs(self, rname: str, required_count: int) -> bool:
+        checked = set(getattr(self.ctx, "checked_locations_set", set()) or set())
+        task_region = list(getattr(self.ctx, "task_region", []) or [])
+        base_complete = getattr(self.ctx, "base_complete_location_id", None)
+        if base_complete is None:
+            return True
+        region_indices = [i for i, r in enumerate(task_region) if r == rname]
+        completed = sum(1 for i in region_indices if (base_complete + i) in checked)
+        return completed >= required_count
 
     def _reward_prereq_display(self, prereq_text: str) -> str:
         items = list(getattr(self.ctx, "items", getattr(self.ctx, "rewards", [])) or [])
