@@ -414,18 +414,19 @@ class CollapsibleSection:
             w.bind("<Button-1>", self._toggle)
 
         self.body = ttk.Frame(self.outer)
-        if expanded:
-            self.body.grid(row=1, column=0, sticky="nsew")
+        self.body.grid(row=1, column=0, sticky="nsew")
+        if not expanded:
+            self.body.grid_remove()
 
     def _toggle(self, event=None):
         if self._expanded:
             self.body.grid_remove()
-            self._arrow.set("▶")
+            self._arrow.set("[+]")
             self._expanded = False
             self._parent.grid_rowconfigure(self._row, weight=0, minsize=0)
         else:
             self.body.grid()
-            self._arrow.set("▼")
+            self._arrow.set("[-]")
             self._expanded = True
             self._parent.grid_rowconfigure(self._row, weight=1, minsize=self._min_height)
 
