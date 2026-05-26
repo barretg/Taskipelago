@@ -402,9 +402,9 @@ class CollapsibleSection:
         hdr = tk.Frame(self.outer, bg=_bg, cursor="hand2")
         hdr.grid(row=0, column=0, sticky="ew")
 
-        self._arrow = tk.StringVar(value="▼" if expanded else "▶")
+        self._arrow = tk.StringVar(value="[-]" if expanded else "[+]")
         arrow_lbl = tk.Label(hdr, textvariable=self._arrow, bg=_bg, fg=_fg,
-                             font=("TkDefaultFont", 9), cursor="hand2")
+                             font=("Courier", 9), cursor="hand2")
         arrow_lbl.pack(side="left", padx=(6, 2), pady=3)
         title_lbl = tk.Label(hdr, text=title, bg=_bg, fg=_fg,
                              font=("TkDefaultFont", 9, "bold"), cursor="hand2")
