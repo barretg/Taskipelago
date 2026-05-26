@@ -1595,6 +1595,7 @@ class TaskipelagoApp(tk.Tk):
             list(self.regions),
         )
         self.task_rows.append(row)
+        row.count_var.trace_add("write", lambda *_: self._update_item_counter())
         self._update_item_counter()
         return row
 
@@ -1606,6 +1607,7 @@ class TaskipelagoApp(tk.Tk):
             list(self.prog_groups),
         )
         self.item_rows.append(row)
+        row.count_var.trace_add("write", lambda *_: self._update_item_counter())
         self._refresh_item_remove_visibility()
         self._update_item_counter()
         return row
@@ -1617,9 +1619,18 @@ class TaskipelagoApp(tk.Tk):
     def _update_item_counter(self):
         if not hasattr(self, "items_counter_lbl"):
             return
-        n_tasks = len(self.task_rows)
-        n_items = len(self.item_rows)
+        try:
+            n_tasks = sum(max(1, int(r.count_var.get())) for r in self.task_rows)
+        except (ValueError, tk.TclError):
+            n_tasks = len(self.task_rows)
+        try:
+            n_items = sum(max(1, int(r.count_var.get())) for r in self.item_rows)
+        except (ValueError, tk.TclError):
+            n_items = len(self.item_rows)
         self.items_counter_var.set(f"{n_items}/{n_tasks} items")
+        self.items_counter_lbl.configure(
+            style="Warning.TLabel" if n_items != n_tasks else "Muted.TLabel"
+        )
 
     # ---------------- Progressive groups management ----------------
     def _add_prog_group(self):
@@ -2405,7 +2416,7 @@ class TaskipelagoApp(tk.Tk):
                 "  chores            region's default percentage done\n"
                 "  chores-75         exactly 75% of chores tasks done\n"
                 "  chores*5          exactly 5 tasks in chores done\n\n"
-                "Regions also appear as separate Archipelago locations for the hint system."
+                "Regions also appear as Archipelago regions for location hinting."
             ),
             (
                 "Task Count (Duplicating Tasks)",
@@ -2435,7 +2446,7 @@ class TaskipelagoApp(tk.Tk):
                 "Each item has a classification that tells the multiworld how to prioritize "
                 "placing it:\n\n"
                 "Progression\n"
-                "Required to advance the game. The multiworld places these early so they're "
+                "Required to advance the game. The multiworld places these so they're "
                 "accessible when needed. Any item referenced in a task's prerequisites should "
                 "be Progression.\n\n"
                 "Useful\n"
@@ -2471,7 +2482,7 @@ class TaskipelagoApp(tk.Tk):
                 "2. Set Count to how many Gold items should be in the pool (e.g. 10).\n"
                 "3. In a task's Cost field, write \"Gold\"*3 to require spending 3 Gold.\n"
                 "4. When you receive enough Gold and all other prerequisites are met, a "
-                "   Purchase button appears in the play screen.\n"
+                "Purchase button appears in the play screen.\n"
                 "5. Clicking Purchase deducts the Gold and unlocks the task for completion.\n\n"
                 "All copies of a consumable item with the same name are pooled together. "
                 "If you have 10 Gold in the pool and receive 4 of them, your balance is 4.\n\n"
@@ -2485,7 +2496,7 @@ class TaskipelagoApp(tk.Tk):
                 "Setting up:\n"
                 "1. In the Progressive Groups panel, type a name and click \"Add Group\".\n"
                 "2. In the Items table, assign items to that group using the \"Prog. Group\" "
-                "   dropdown.\n\n"
+                "dropdown.\n\n"
                 "Ordering Mode (use - notation in Item Prereqs):\n"
                 "  power-1           requires the 1st item from the group received\n"
                 "  power-2           requires the 2nd item from the group received\n"
@@ -2529,8 +2540,7 @@ class TaskipelagoApp(tk.Tk):
                 "Adding DeathLink Tasks:\n"
                 "Click \"Add DeathLink Task\" and type a task description. The Weight column "
                 "controls how likely each task is to be chosen when an event fires -- higher "
-                "weight means more likely.\n\n"
-                "If challenge modes are not for you, leave this section alone."
+                "weight means more likely."
             ),
             (
                 "Export, Import, and Reset",
@@ -2579,10 +2589,22 @@ class TaskipelagoApp(tk.Tk):
         ttk.Label(header_frame, textvariable=title_var, font=("TkDefaultFont", 11, "bold")).pack(anchor="w")
         ttk.Label(header_frame, textvariable=counter_var, style="Muted.TLabel").pack(anchor="w", pady=(2, 0))
 
-        ttk.Separator(win, orient="horizontal").pack(fill="x", padx=16, pady=(8, 0))
+        ttk.Separator(win, orient="horizontal").pack(side="top", fill="x", padx=16, pady=(8, 0))
+
+        # Bottom bar packed before text frame so it always claims space first
+        btn_row = ttk.Frame(win)
+        btn_row.pack(side="bottom", fill="x", padx=16, pady=(8, 14))
+        prev_btn = ttk.Button(btn_row, text="< Previous")
+        prev_btn.pack(side="left")
+        close_btn = ttk.Button(btn_row, text="Close", command=win.destroy)
+        close_btn.pack(side="right")
+        next_btn = ttk.Button(btn_row, text="Next >")
+        next_btn.pack(side="right", padx=(0, 8))
+
+        ttk.Separator(win, orient="horizontal").pack(side="bottom", fill="x", padx=16, pady=(0, 8))
 
         txt_frame = ttk.Frame(win)
-        txt_frame.pack(fill="both", expand=True, padx=16, pady=(8, 0))
+        txt_frame.pack(side="top", fill="both", expand=True, padx=16, pady=(8, 0))
         txt_frame.grid_rowconfigure(0, weight=1)
         txt_frame.grid_columnconfigure(0, weight=1)
 
@@ -2597,17 +2619,6 @@ class TaskipelagoApp(tk.Tk):
         txt.configure(yscrollcommand=sb.set)
         txt.grid(row=0, column=0, sticky="nsew")
         sb.grid(row=0, column=1, sticky="ns")
-
-        ttk.Separator(win, orient="horizontal").pack(fill="x", padx=16, pady=(8, 0))
-
-        btn_row = ttk.Frame(win)
-        btn_row.pack(fill="x", padx=16, pady=(8, 14))
-        prev_btn = ttk.Button(btn_row, text="< Previous")
-        prev_btn.pack(side="left")
-        close_btn = ttk.Button(btn_row, text="Close", command=win.destroy)
-        close_btn.pack(side="right")
-        next_btn = ttk.Button(btn_row, text="Next >")
-        next_btn.pack(side="right", padx=(0, 8))
 
         def show_step(i: int):
             step_idx[0] = i
