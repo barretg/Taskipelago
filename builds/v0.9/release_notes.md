@@ -1,4 +1,4 @@
-# Taskipelago Version 0.9
+# Taskipelago/Taskipelabingo Version 0.9
 ### *Making way for 1.0!*
 NOTE: This version is not backwards compatible with any existing v0.8.x multiworlds that utilize progression groups.
 
