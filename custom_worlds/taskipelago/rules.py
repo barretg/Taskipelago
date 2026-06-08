@@ -61,7 +61,7 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
     group_items = world._group_item_display_names       # Dict[str, List[str]]
     region_tokens = world._region_token_names           # Dict[str, List[str]]
     consumable_display = world._consumable_group_display_names  # Dict[str, List[str]]
-    task_cost_reqs = world._task_cost_reqs              # List[List[Tuple[str, int]]]
+    task_cost_reqs = world._task_cost_reqs              # List[List[List[Tuple[str, int]]]] - OR of AND branches
 
     for i in range(n):
         token_ast = world._parsed_prereqs[i]
@@ -82,10 +82,11 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
                     return False
                 if not eval_node(ra, state, p, rn, gi, rt):
                     return False
-                for cname, threshold in cr:
-                    items = cd.get(cname, [])
-                    if not state.has_from_list(items, p, threshold):
-                        return False
+                if cr and not any(
+                    all(state.has_from_list(cd.get(cname, []), p, thr) for cname, thr in branch)
+                    for branch in cr
+                ):
+                    return False
                 return True
 
             complete_loc.access_rule = complete_rule
@@ -103,10 +104,11 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
                 return False
             if not eval_node(ra, state, p, rn, gi, rt):
                 return False
-            for cname, threshold in cr:
-                items = cd.get(cname, [])
-                if not state.has_from_list(items, p, threshold):
-                    return False
+            if cr and not any(
+                all(state.has_from_list(cd.get(cname, []), p, thr) for cname, thr in branch)
+                for branch in cr
+            ):
+                return False
             return True
 
         reward_loc.access_rule = reward_rule

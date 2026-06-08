@@ -60,7 +60,7 @@ class TaskipelagoWorld(World):
     _parsed_reward_prereqs: List[Node | None]
     _raw_costs: List[str]
     _parsed_costs: List[Node | None]
-    _task_cost_reqs: List[List[Tuple[str, int]]]   # cumulative AND cost thresholds per task
+    _task_cost_reqs: List[List[List[Tuple[str, int]]]]  # per-task cost branches (OR of ANDs)
     _forced_progression_rewards: set
     _lock_prereqs: bool
     _reward_location_names: List[str]
@@ -647,27 +647,22 @@ class TaskipelagoWorld(World):
                     f"Taskipelago: cost expression for task {i + 1} is invalid: {e}"
                 )
 
-        # Validate total consumable supply covers all task costs.
-        # For AND costs: all items are mandatory.
-        # For OR costs: at least one branch must be fully coverable.
-        # Conservative check: for each consumable, sum up the minimum demand
-        # (assuming OR branches allow the cheapest choice per currency).
+        # Validate total consumable supply covers minimum possible task costs.
+        # Uses min-cost (cheapest branch per currency per task) to check that the
+        # world is theoretically beatable with optimal play. The Stage 12 threshold
+        # model uses worst-case (max branch) costs to prevent drought regardless of
+        # player choices; those thresholds are validated separately against supply.
         consumable_supply: Dict[str, int] = {name: len(idxs) for name, idxs in consumable_groups.items()}
         consumable_demand: Dict[str, int] = {}
         for cost_ast in parsed_costs:
             if cost_ast is None:
                 continue
             branches = collect_cost_groups_per_branch(cost_ast)
-            # For each currency, credit the branch that uses the least of it
-            # (player will pick the cheapest branch per-currency)
-            # Build per-currency minimum contribution from this task
             currencies_in_any_branch: set = set()
             for branch in branches:
                 for name, _ in branch:
                     currencies_in_any_branch.add(name)
             for cname in currencies_in_any_branch:
-                # Find minimum cost for this currency across all branches that contain it
-                # (branches that DON'T contain it count as 0 for this currency)
                 min_cost = min(
                     (sum(cnt for n, cnt in branch if n == cname) for branch in branches),
                     default=0,
@@ -685,52 +680,78 @@ class TaskipelagoWorld(World):
         # ------------------------------------------------------------------ #
         # 12. Compute cumulative cost thresholds for AP logic                #
         # ------------------------------------------------------------------ #
-        # For each consumable group, tasks that cost from it get cumulative
-        # thresholds based on topological ordering (earlier tasks get lower thresholds).
-        # This ensures AP places enough currency items before tasks that need them.
-        # Only pure AND cost contributions are accumulated; OR branches use simple thresholds.
+        # Every task that can spend currency C (AND or OR) advances the
+        # per-currency cumulative by its worst-case (max branch) cost.
+        # OR tasks' gold-branch threshold = cumulative_before + branch_gold_cost,
+        # ensuring AP places enough currency even if the player never uses Make Change.
+        # AP rule shape: at least one branch's thresholds all satisfied (OR of ANDs).
 
-        # task_cost_reqs[i] = list of (consumable_name, threshold) tuples for AP logic.
-        # These are resolved cumulative requirements (like task_progressive_reqs).
-        task_cost_reqs: List[List[Tuple[str, int]]] = [[] for _ in range(n)]
+        topo_depth = _compute_topo_depths(parsed_prereqs, n)
+
+        # per_currency_cb[cname][task_idx] = cumulative collected *before* this task
+        per_currency_cb: Dict[str, Dict[int, int]] = {}
 
         for cname in consumable_names:
-            # Collect tasks that have an AND cost involving this consumable
-            # (tasks with OR costs for this consumable get simple thresholds)
-            and_tasks: List[Tuple[int, int]] = []  # (task_idx, simple_cost)
-            or_tasks: List[Tuple[int, int]] = []   # (task_idx, simple_min_cost)
-
+            tasks_with_max_cost: List[Tuple[int, int]] = []  # (task_idx, max_cost)
             for i, cost_ast in enumerate(parsed_costs):
                 if cost_ast is None:
                     continue
                 branches = collect_cost_groups_per_branch(cost_ast)
-                cost_here = sum(cnt for n, cnt in branches[0] if n == cname) if len(branches) == 1 else 0
-                if len(branches) == 1 and cost_here > 0:
-                    and_tasks.append((i, cost_here))
-                elif len(branches) > 1:
-                    min_cost = min(
-                        (sum(cnt for n, cnt in b if n == cname) for b in branches),
-                        default=0,
-                    )
-                    if min_cost > 0:
-                        or_tasks.append((i, min_cost))
+                max_c = max(
+                    (sum(cnt for nm, cnt in b if nm == cname) for b in branches),
+                    default=0,
+                )
+                if max_c > 0:
+                    tasks_with_max_cost.append((i, max_c))
 
-            if not and_tasks and not or_tasks:
+            if not tasks_with_max_cost:
                 continue
 
-            # Sort AND tasks by topological depth, then by index
-            topo_depth = _compute_topo_depths(parsed_prereqs, n)
-            and_tasks.sort(key=lambda x: (topo_depth[x[0]], x[0]))
+            tasks_with_max_cost.sort(key=lambda x: (topo_depth[x[0]], x[0]))
 
-            # Assign cumulative thresholds for AND tasks
+            cb: Dict[int, int] = {}
             cumulative = 0
-            for task_idx, cost_amount in and_tasks:
-                cumulative += cost_amount
-                task_cost_reqs[task_idx].append((cname, cumulative))
+            for task_idx, max_c in tasks_with_max_cost:
+                cb[task_idx] = cumulative
+                cumulative += max_c
 
-            # OR tasks get simple (non-cumulative) thresholds
-            for task_idx, min_cost in or_tasks:
-                task_cost_reqs[task_idx].append((cname, min_cost))
+            per_currency_cb[cname] = cb
+
+        # task_cost_reqs[i] = list of branches; each branch is [(cname, threshold), ...].
+        # AP rule: at least one branch must have all its thresholds satisfied.
+        task_cost_reqs: List[List[List[Tuple[str, int]]]] = [[] for _ in range(n)]
+
+        for i, cost_ast in enumerate(parsed_costs):
+            if cost_ast is None:
+                continue
+            branches = collect_cost_groups_per_branch(cost_ast)
+            branch_reqs: List[List[Tuple[str, int]]] = []
+            for branch in branches:
+                req: List[Tuple[str, int]] = []
+                for cname in consumable_names:
+                    if cname not in per_currency_cb or i not in per_currency_cb[cname]:
+                        continue
+                    cb_c = per_currency_cb[cname][i]
+                    branch_c_cost = sum(cnt for nm, cnt in branch if nm == cname)
+                    if branch_c_cost > 0:
+                        req.append((cname, cb_c + branch_c_cost))
+                branch_reqs.append(req)
+            task_cost_reqs[i] = branch_reqs
+
+        # Validate AND tasks (single branch): threshold must not exceed supply.
+        # A threshold above supply means the rule can never be satisfied regardless
+        # of item placement, making the world unbeatable.
+        for i, branches in enumerate(task_cost_reqs):
+            if len(branches) != 1:
+                continue
+            for cname, threshold in branches[0]:
+                supply = consumable_supply.get(cname, 0)
+                if threshold > supply:
+                    raise Exception(
+                        f"Taskipelago: task {i + 1} requires {threshold} '{cname}' item(s) "
+                        f"in cumulative AP logic (including worst-case OR-task spending before it) "
+                        f"but only {supply} exist. Add more '{cname}' items or reduce costs."
+                    )
 
         # ------------------------------------------------------------------ #
         # 13. Parse goal tasks                                                #
@@ -1007,8 +1028,11 @@ class TaskipelagoWorld(World):
                 for reqs in self._task_progressive_reqs
             ],
             "task_cost_reqs": [
-                [{"consumable": cname, "threshold": thr} for cname, thr in reqs]
-                for reqs in self._task_cost_reqs
+                [
+                    [{"consumable": cname, "threshold": thr} for cname, thr in branch]
+                    for branch in branches
+                ]
+                for branches in self._task_cost_reqs
             ],
             "task_cost_amounts": [
                 [
