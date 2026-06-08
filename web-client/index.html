@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taskipelago Web Client</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <nav id="main-tabs">
+      <button class="tab-btn active" data-tab="play">Connect and Play</button>
+      <button class="tab-btn" data-tab="console">Text Console</button>
+    </nav>
+
+    <!-- ===== Connect and Play ===== -->
+    <section id="tab-play" class="tab-pane active">
+      <div class="play-layout">
+
+        <!-- Main column: connection + tasks -->
+        <div class="play-main">
+          <fieldset class="panel" id="conn-panel">
+            <legend>Connection</legend>
+            <div class="field-row">
+              <label for="server-input">Server (host:port)</label>
+              <input id="server-input" type="text" placeholder="archipelago.gg:38281" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="field-row">
+              <label for="slot-input">Slot Name</label>
+              <input id="slot-input" type="text" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="field-row">
+              <label for="pass-input">Password</label>
+              <input id="pass-input" type="password" autocomplete="off">
+            </div>
+            <div class="btn-row">
+              <button id="connect-btn">Connect</button>
+              <button id="deathlink-send-btn" class="hidden">Send Deathlink</button>
+            </div>
+            <div id="connect-status" class="status-text">Not connected.</div>
+          </fieldset>
+
+          <div id="enforce-header" class="option-bar hidden">
+            <span class="muted-text">Prereqs are optional in your YAML (lock_prereqs is off).</span>
+            <label class="check-label">
+              <input type="checkbox" id="enforce-cb"> Enforce locally
+            </label>
+          </div>
+          <div id="show-locked-header" class="option-bar hidden">
+            <label class="check-label">
+              <input type="checkbox" id="show-locked-cb"> Show hidden tasks
+            </label>
+          </div>
+
+          <fieldset class="panel tasks-panel">
+            <legend>Tasks</legend>
+            <div id="tasks-list" class="scroll-area"></div>
+            <div id="bingo-section" class="hidden bingo-wrapper">
+              <div id="bingo-counter" class="bingo-counter"></div>
+              <div id="bingo-grid"></div>
+            </div>
+          </fieldset>
+        </div>
+
+        <!-- Side column: notifications/items/consumables -->
+        <div class="play-side">
+          <nav class="sub-tabs">
+            <button class="tab-btn active" data-subtab="notifications">Notifications</button>
+            <button class="tab-btn" data-subtab="items">Items</button>
+            <button class="tab-btn" data-subtab="consumables">Consumable Items</button>
+          </nav>
+          <div id="subtab-notifications" class="subtab-pane active">
+            <div class="subtab-toolbar">
+              <button id="clear-notifs-btn">Clear</button>
+            </div>
+            <div id="notif-list" class="scroll-area"></div>
+          </div>
+          <div id="subtab-items" class="subtab-pane">
+            <div id="items-list" class="scroll-area"></div>
+          </div>
+          <div id="subtab-consumables" class="subtab-pane">
+            <p class="hint-text">Remaining balance of each consumable item type available to spend.</p>
+            <div id="consumables-list" class="scroll-area"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===== Text Console ===== -->
+    <section id="tab-console" class="tab-pane">
+      <div class="console-layout">
+        <div id="console-output" class="console-output"></div>
+        <div class="console-input-bar">
+          <input id="console-input" type="text" disabled
+                 placeholder="Must be connected to a multiworld"
+                 autocomplete="off" spellcheck="false">
+          <button id="console-send-btn">Send</button>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- #app -->
+
+  <!-- Modal for purchase / make-change dialogs -->
+  <div id="modal-overlay" class="hidden">
+    <div id="modal-box">
+      <div id="modal-title" class="modal-title"></div>
+      <div id="modal-desc"  class="modal-desc"></div>
+      <div id="modal-btns"  class="modal-btns"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
