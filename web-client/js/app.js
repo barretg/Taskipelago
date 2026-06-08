@@ -568,6 +568,12 @@ els.connectBtn.addEventListener('click', () => {
   }
 });
 
+[els.serverInput, els.slotInput, els.passInput].forEach(inp => {
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && state.connState === 'disconnected') startConnect();
+  });
+});
+
 els.deathLinkBtn.addEventListener('click', () => {
   if (state.connState !== 'connected') return;
   ap.sendBounce(['DeathLink'], {

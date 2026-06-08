@@ -1546,15 +1546,21 @@ class TaskipelagoApp(tk.Tk):
 
         ttk.Label(conn_frame, text="Server (host:port):").grid(row=0, column=0, sticky="w", padx=5, pady=5)
         self.server_var = tk.StringVar(value=server_default)
-        ttk.Entry(conn_frame, textvariable=self.server_var, width=30).grid(row=0, column=1, padx=5)
+        self._server_entry = ttk.Entry(conn_frame, textvariable=self.server_var, width=30)
+        self._server_entry.grid(row=0, column=1, padx=5)
 
         ttk.Label(conn_frame, text="Slot Name:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
         self.slot_var = tk.StringVar(value=slot_default)
-        ttk.Entry(conn_frame, textvariable=self.slot_var, width=30).grid(row=1, column=1, padx=5)
+        self._slot_entry = ttk.Entry(conn_frame, textvariable=self.slot_var, width=30)
+        self._slot_entry.grid(row=1, column=1, padx=5)
 
         ttk.Label(conn_frame, text="Password:").grid(row=2, column=0, sticky="w", padx=5, pady=5)
         self.pass_var = tk.StringVar()
-        ttk.Entry(conn_frame, textvariable=self.pass_var, width=30, show="*").grid(row=2, column=1, padx=5)
+        self._pass_entry = ttk.Entry(conn_frame, textvariable=self.pass_var, width=30, show="*")
+        self._pass_entry.grid(row=2, column=1, padx=5)
+
+        for _e in (self._server_entry, self._slot_entry, self._pass_entry):
+            _e.bind("<Return>", lambda e: self.connection_state == "disconnected" and self._start_connect())
 
         btns = ttk.Frame(conn_frame)
         btns.grid(row=3, column=0, columnspan=2, sticky="w", padx=5, pady=(8, 0))
