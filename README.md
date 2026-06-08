@@ -18,13 +18,17 @@
 
 * As an example things like "10 pushups" or "Tidy one thing in your room" or "Read 2 pages of a book" or "1 minute plank" make for good DeathLink tasks.
 
+### Taskipelabingo
+
+* Taskipelabingo mode allows you to provide a list of tasks to be selected at random and shuffled into a bingo board. For more information, see the Taskipelabingo tab in the client.
+
 ## Setup:
 
 * Download taskipelago.apworld from the releases page.
 
 * Place taskipelago.apworld in the custom_worlds folder of your archipelago install
 
-* Launch the client from archipelago and use it to generate a yaml to place in your host's Players folder
+* Launch the client from archipelago and use it to build a yaml to place in your host's Players folder. Follow the in-client tutorial for more information.
 
 * Once the server is up, you can join from the client through your archipelago launcher, or via the [web client](https://barretg.github.io/Taskipelago/web-client/).
 
