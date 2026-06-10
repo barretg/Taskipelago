@@ -1266,11 +1266,46 @@ const AP_COLORS = {
   plum:      '#af99ef', salmon:   '#fa8072',
 };
 
+function resolveItemName(id) {
+  if (state.baseItemId !== null) {
+    const idx = id - state.baseItemId;
+    if (idx >= 0 && idx < state.items.length) return state.items[idx];
+  }
+  if (state.baseTokenId !== null) {
+    const idx = id - state.baseTokenId;
+    if (idx >= 0 && idx < state.tasks.length) return `${state.tasks[idx]} Token`;
+  }
+  return String(id);
+}
+
+function resolveLocationName(id) {
+  if (state.baseCompleteId !== null) {
+    const idx = id - state.baseCompleteId;
+    if (idx >= 0 && idx < state.tasks.length) return state.tasks[idx];
+  }
+  if (state.baseRewardId !== null) {
+    const idx = id - state.baseRewardId;
+    if (idx >= 0 && idx < state.tasks.length) return `${state.tasks[idx]} Reward`;
+  }
+  return String(id);
+}
+
 function printJsonToHTML(parts, senderSlot) {
   let html = '';
   for (const part of parts) {
-    const text = escapeHtml(part.text || '');
     const type = part.type || 'text';
+
+    let displayText = part.text || '';
+    if (type === 'player_id') {
+      const slot = parseInt(displayText);
+      displayText = ap.playerNames[slot] || displayText;
+    } else if (type === 'item_id') {
+      displayText = resolveItemName(parseInt(displayText));
+    } else if (type === 'location_id') {
+      displayText = resolveLocationName(parseInt(displayText));
+    }
+
+    const text = escapeHtml(displayText);
 
     let color = null;
     let bold  = false;
