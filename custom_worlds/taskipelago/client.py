@@ -5097,6 +5097,11 @@ class TaskipelagoApp(tk.Tk):
         self.after(0, lambda: self._show_deathlink_popup(data))
 
     def _show_deathlink_popup(self, data: dict):
+        # Ignore self-sent bounces
+        own_slot = (getattr(self.ctx, "auth", None) or "") if getattr(self, "ctx", None) else ""
+        if (data.get("source") or "") == own_slot and own_slot:
+            return
+
         # dedupe
         key = (data.get("time"), data.get("source"), data.get("cause"))
         now = time.time()

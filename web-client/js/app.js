@@ -786,6 +786,10 @@ ap.onBounced = (tags, data) => {
 
   if (!tags.includes('DeathLink')) return;
 
+  // Ignore self-sent bounces
+  const ownSlot = (els.slotInput.value || '').trim() || 'Taskipelago';
+  if ((data.source || '') === ownSlot) return;
+
   // Amnesty
   if (state.deathLinkAmnestyLeft > 0) {
     state.deathLinkAmnestyLeft--;
