@@ -56,6 +56,7 @@ const state = {
   // UI toggles
   localEnforce: false,
   showLocked: false,
+  hideCompleted: false,
 };
 
 const MAX_NOTIFICATIONS = 200;
@@ -81,6 +82,8 @@ const els = {
   enforceCb:     $('enforce-cb'),
   showLockedHeader: $('show-locked-header'),
   showLockedCb:  $('show-locked-cb'),
+  hideCompletedHeader: $('hide-completed-header'),
+  hideCompletedCb: $('hide-completed-cb'),
 
   tasksList:     $('tasks-list'),
   bingoSection:  $('bingo-section'),
@@ -622,8 +625,10 @@ function clearPlayState() {
   state.notifications    = [];
   state.localEnforce     = false;
   state.showLocked       = false;
+  state.hideCompleted    = false;
   els.enforceCb.checked  = false;
   els.showLockedCb.checked = false;
+  els.hideCompletedCb.checked = false;
   state.tasks = [];
   state.checkedLocations = new Set();
   state.baseCompleteId = state.baseRewardId = state.baseItemId = state.baseTokenId = null;
@@ -834,6 +839,12 @@ function renderTasks() {
     els.showLockedHeader.classList.add('hidden');
   }
 
+  if (connected && !state.bingoMode) {
+    els.hideCompletedHeader.classList.remove('hidden');
+  } else {
+    els.hideCompletedHeader.classList.add('hidden');
+  }
+
   // DeathLink button
   if (connected && state.deathLinkEnabled) {
     els.deathLinkBtn.classList.remove('hidden');
@@ -926,6 +937,7 @@ function renderTasks() {
     const wouldHide = !otherPrereqsOk && state.hideUnreachable && effectiveLock;
     const showAsLocked = wouldHide && state.showLocked;
     if (wouldHide && !showAsLocked) continue;
+    if (completed && state.hideCompleted) continue;
 
     const card = document.createElement('div');
     card.className = 'task-card';
@@ -1391,6 +1403,11 @@ els.enforceCb.addEventListener('change', () => {
 
 els.showLockedCb.addEventListener('change', () => {
   state.showLocked = els.showLockedCb.checked;
+  renderTasks();
+});
+
+els.hideCompletedCb.addEventListener('change', () => {
+  state.hideCompleted = els.hideCompletedCb.checked;
   renderTasks();
 });
 

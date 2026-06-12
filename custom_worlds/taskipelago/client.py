@@ -1580,6 +1580,7 @@ class TaskipelagoApp(tk.Tk):
 
         self._local_enforce_var = tk.BooleanVar(value=False)
         self._show_locked_var = tk.BooleanVar(value=False)
+        self._hide_completed_var = tk.BooleanVar(value=False)
         self._enforce_header_frame = ttk.Frame(tasks_frame)
         ttk.Label(
             self._enforce_header_frame,
@@ -1599,6 +1600,14 @@ class TaskipelagoApp(tk.Tk):
             command=self.refresh_play_tab,
         )
         self._show_locked_checkbox.pack(side="left", padx=(10, 8), pady=4)
+        self._hide_completed_frame = ttk.Frame(tasks_frame)
+        self._hide_completed_checkbox = ttk.Checkbutton(
+            self._hide_completed_frame,
+            text="Hide completed tasks",
+            variable=self._hide_completed_var,
+            command=self.refresh_play_tab,
+        )
+        self._hide_completed_checkbox.pack(side="left", padx=(10, 8), pady=4)
 
         self.play_tasks_scroll = ScrollableFrame(tasks_frame, colors=self.colors)
         self.play_tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
@@ -2786,6 +2795,8 @@ class TaskipelagoApp(tk.Tk):
             self._local_enforce_var.set(False)
         if hasattr(self, "_show_locked_var"):
             self._show_locked_var.set(False)
+        if hasattr(self, "_hide_completed_var"):
+            self._hide_completed_var.set(False)
         if getattr(self, "ctx", None):
             self.ctx.tasks = []
             self.ctx.items = []
@@ -2955,6 +2966,10 @@ class TaskipelagoApp(tk.Tk):
             self._show_locked_frame.pack(side="top", fill="x", before=self.play_tasks_scroll)
         else:
             self._show_locked_frame.pack_forget()
+        if connected and not bingo_mode:
+            self._hide_completed_frame.pack(side="top", fill="x", before=self.play_tasks_scroll)
+        else:
+            self._hide_completed_frame.pack_forget()
 
         if not connected:
             self.play_bingo_frame.pack_forget()
@@ -3060,6 +3075,8 @@ class TaskipelagoApp(tk.Tk):
             would_hide = (not other_prereqs_ok) and hide_tasks and effective_lock
             show_as_locked = would_hide and self._show_locked_var.get()
             if would_hide and not show_as_locked:
+                continue
+            if completed and self._hide_completed_var.get():
                 continue
 
             card = tk.Frame(self.play_tasks_scroll.inner, bg=panel, highlightbackground=border, highlightthickness=1)
