@@ -191,7 +191,7 @@ export class ArchipelagoClient {
       name: this._slotName,
       password: this._password,
       version: { major: 0, minor: 5, build: 1, class: 'Version' },
-      tags: ['TaskipelagoSync'],
+      tags: ['AP', 'TaskipelagoSync'],
       items_handling: 7,
       uuid: (typeof crypto !== 'undefined' && crypto.randomUUID)
         ? crypto.randomUUID()

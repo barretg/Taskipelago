@@ -960,7 +960,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
             return
 
         self._deathlink_tag_enabled = True
-        await self.send_msgs([{"cmd": "ConnectUpdate", "tags": ["DeathLink"]}])
+        await self._update_tags()
 
     def _make_notify_key(self) -> str:
         # Slot name is stored in ctx.auth by your connect flow
@@ -1035,7 +1035,15 @@ class TaskipelagoContext(CommonClient.CommonContext):
         if self._sync_tag_enabled:
             return
         self._sync_tag_enabled = True
-        await self.send_msgs([{"cmd": "ConnectUpdate", "tags": ["TaskipelagoSync"]}])
+        await self._update_tags()
+
+    async def _update_tags(self) -> None:
+        if not getattr(self, "server", None):
+            return
+        tags = ['AP', 'TaskipelagoSync']
+        if self._deathlink_tag_enabled:
+            tags.append('DeathLink')
+        await self.send_msgs([{"cmd": "ConnectUpdate", "tags": tags}])
 
     def _load_notify_state(self) -> dict:
         try:
@@ -3924,7 +3932,7 @@ class TaskipelagoApp(tk.Tk):
 
             ttk.Label(
                 row,
-                text=f"{name}:  {bal} remaining  ({recv} received, {sp} spent)",
+                text=f"{name}:  {bal} remaining  ({recv} received, {sp + manual} spent)",
                 style=color_style,
             ).pack(side="left")
 

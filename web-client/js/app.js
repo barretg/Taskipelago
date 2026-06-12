@@ -697,7 +697,7 @@ ap.onConnected = (slotData, checkedLocs) => {
   state.deathLinkAmnestyLeft = state.deathLinkAmnesty;
 
   if (state.deathLinkEnabled) {
-    ap.sendConnectUpdate(['DeathLink']);
+    ap.sendConnectUpdate(['AP', 'TaskipelagoSync', 'DeathLink']);
     els.deathLinkBtn.classList.remove('hidden');
   }
 
@@ -1427,7 +1427,7 @@ function renderConsumables() {
     row.className = 'consumable-entry' + (b < 0 ? ' consumable-warning' : '');
 
     const label = document.createElement('span');
-    label.textContent = `${name}:  ${b} remaining  (${r} received, ${s} spent)`;
+    label.textContent = `${name}:  ${b} remaining  (${r} received, ${s + m} spent)`;
     row.appendChild(label);
 
     if (!usedInTasks.has(name)) {
