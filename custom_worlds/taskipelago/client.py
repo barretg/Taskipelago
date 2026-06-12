@@ -1105,6 +1105,7 @@ class TaskipelagoApp(tk.Tk):
         self.sent_goal = False
         self.pending_reward_locations = set()  # only track reward loc pending (UI completion)
         self._task_purchases: dict = {}  # {task_idx: {consumable_name: amount_spent}}
+        self._manual_consumptions: dict = {}  # {consumable_name: manually consumed count}
 
         # Incremental task-card reconciliation state
         self._task_cards: dict = {}          # {task_idx: card_dict}
@@ -2796,6 +2797,7 @@ class TaskipelagoApp(tk.Tk):
     def _clear_play_state(self):
         self.pending_reward_locations = set()
         self._task_purchases = {}
+        self._manual_consumptions = {}
         if hasattr(self, "_local_enforce_var"):
             self._local_enforce_var.set(False)
         if hasattr(self, "_show_locked_var"):
@@ -3583,11 +3585,12 @@ class TaskipelagoApp(tk.Tk):
         return totals
 
     def _consumable_balance(self) -> dict:
-        """Remaining balance per consumable name (received - spent)."""
+        """Remaining balance per consumable name (received - spent - manual)."""
         received = self._consumable_received_counts()
         spent = self._consumable_spent_counts()
-        all_names = set(received) | set(spent)
-        return {name: received.get(name, 0) - spent.get(name, 0) for name in all_names}
+        manual = self._manual_consumptions
+        all_names = set(received) | set(spent) | set(manual)
+        return {name: received.get(name, 0) - spent.get(name, 0) - manual.get(name, 0) for name in all_names}
 
     def _task_cost_is_paid(self, task_idx: int) -> bool:
         """True if the task has no cost or has been purchased."""
@@ -3769,6 +3772,19 @@ class TaskipelagoApp(tk.Tk):
                 min_branch = min(branches, key=lambda b: sum(amt for _, amt in b))
                 self._task_purchases[i] = {name: amt for name, amt in min_branch}
 
+    def _consumable_names_used_in_tasks(self) -> set:
+        ctx = getattr(self, "ctx", None)
+        if not ctx:
+            return set()
+        used = set()
+        for branches in (getattr(ctx, "task_cost_amounts", []) or []):
+            if not branches:
+                continue
+            for branch in branches:
+                for name, _ in branch:
+                    used.add(name)
+        return used
+
     def _render_consumable_tab(self):
         if not hasattr(self, "consumable_tab_scroll"):
             return
@@ -3796,16 +3812,41 @@ class TaskipelagoApp(tk.Tk):
             )
             return
 
+        used_in_tasks = self._consumable_names_used_in_tasks()
+
         for name in all_names:
             recv = received.get(name, 0)
             sp = spent.get(name, 0)
             bal = balance.get(name, 0)
+            manual = self._manual_consumptions.get(name, 0)
             color_style = "Warning.TLabel" if bal < 0 else "TLabel"
+
+            row = ttk.Frame(inner)
+            row.pack(fill="x", padx=6, pady=2)
+
             ttk.Label(
-                inner,
+                row,
                 text=f"{name}:  {bal} remaining  ({recv} received, {sp} spent)",
                 style=color_style,
-            ).pack(anchor="w", padx=6, pady=2)
+            ).pack(side="left")
+
+            if name not in used_in_tasks:
+                def _minus(n=name):
+                    self._manual_consumptions[n] = self._manual_consumptions.get(n, 0) + 1
+                    self._render_consumable_tab()
+
+                def _plus(n=name):
+                    self._manual_consumptions[n] = max(0, self._manual_consumptions.get(n, 0) - 1)
+                    self._render_consumable_tab()
+
+                btn_minus = ttk.Button(row, text="-1", width=3, command=_minus)
+                btn_minus.pack(side="right", padx=(4, 0))
+                btn_plus = ttk.Button(row, text="+1", width=3, command=_plus)
+                btn_plus.pack(side="right", padx=(4, 0))
+                if bal < 1:
+                    btn_minus.state(["disabled"])
+                if manual < 1:
+                    btn_plus.state(["disabled"])
 
     # ---------------- Items received tab ----------------
     def _render_items_tab(self):
