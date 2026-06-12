@@ -645,8 +645,9 @@ class ItemRow:
             self.reward_type_cb.state(["disabled"])
             self.filler_cb.state(["disabled"])
         else:
-            self.reward_type_cb.state(["!disabled"])
-            self.reward_type_var.set(self._saved_reward_type or DEFAULT_REWARD_TYPE)
+            if not self.consumable_var.get():
+                self.reward_type_cb.state(["!disabled"])
+                self.reward_type_var.set(self._saved_reward_type or DEFAULT_REWARD_TYPE)
             if not self.filler_var.get() and not self.consumable_var.get():
                 self.filler_cb.state(["!disabled"])
 

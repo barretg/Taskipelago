@@ -504,10 +504,24 @@ button:disabled {
   padding: 4px 8px;
   font-size: 12px;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
+.consumable-entry span { flex: 1; }
 .consumable-entry:last-child { border-bottom: none; }
 .consumable-warning { color: var(--warning); }
+
+.consumable-manual-btn {
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.consumable-manual-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
 
 /* =============================================================
    Text console

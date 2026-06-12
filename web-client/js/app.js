@@ -44,6 +44,7 @@ const state = {
   checkedLocations: new Set(), // combined server + optimistic
   pendingLocations: new Set(), // optimistic (not yet confirmed by server)
   taskPurchases: {},           // taskIdx -> {name: amount}
+  manualConsumptions: {},      // name -> count of manually consumed units
   notifications: [],           // [{kind, title, body, createdAt}]
   sentGoal: false,
   deathLinkAmnestyLeft: 0,
@@ -287,9 +288,10 @@ function consumableSpentCounts() {
 function consumableBalance() {
   const recv = consumableReceivedCounts();
   const spent = consumableSpentCounts();
-  const all = new Set([...Object.keys(recv), ...Object.keys(spent)]);
+  const manual = state.manualConsumptions;
+  const all = new Set([...Object.keys(recv), ...Object.keys(spent), ...Object.keys(manual)]);
   const bal = {};
-  for (const n of all) bal[n] = (recv[n] || 0) - (spent[n] || 0);
+  for (const n of all) bal[n] = (recv[n] || 0) - (spent[n] || 0) - (manual[n] || 0);
   return bal;
 }
 
@@ -652,6 +654,7 @@ function startDisconnect() {
 function clearPlayState() {
   state.pendingLocations = new Set();
   state.taskPurchases    = {};
+  state.manualConsumptions = {};
   state.sentGoal         = false;
   state.notifications    = [];
   state.localEnforce     = false;
@@ -1307,6 +1310,17 @@ function renderItems() {
   }
 }
 
+function consumableNamesUsedInTasks() {
+  const used = new Set();
+  for (const branches of state.taskCostAmounts) {
+    if (!branches) continue;
+    for (const branch of branches) {
+      for (const [name] of branch) used.add(name);
+    }
+  }
+  return used;
+}
+
 // =============================================================
 // Rendering: consumables
 // =============================================================
@@ -1327,14 +1341,43 @@ function renderConsumables() {
     return;
   }
 
+  const usedInTasks = consumableNamesUsedInTasks();
   const frag = document.createDocumentFragment();
   for (const name of names) {
     const b = bal[name]  || 0;
     const r = recv[name] || 0;
     const s = spent[name]|| 0;
+    const m = state.manualConsumptions[name] || 0;
     const row = document.createElement('div');
     row.className = 'consumable-entry' + (b < 0 ? ' consumable-warning' : '');
-    row.textContent = `${name}:  ${b} remaining  (${r} received, ${s} spent)`;
+
+    const label = document.createElement('span');
+    label.textContent = `${name}:  ${b} remaining  (${r} received, ${s} spent)`;
+    row.appendChild(label);
+
+    if (!usedInTasks.has(name)) {
+      const btnMinus = document.createElement('button');
+      btnMinus.className = 'consumable-manual-btn';
+      btnMinus.textContent = '-1';
+      btnMinus.disabled = b < 1;
+      btnMinus.addEventListener('click', () => {
+        state.manualConsumptions[name] = (state.manualConsumptions[name] || 0) + 1;
+        renderConsumables();
+      });
+
+      const btnPlus = document.createElement('button');
+      btnPlus.className = 'consumable-manual-btn';
+      btnPlus.textContent = '+1';
+      btnPlus.disabled = m < 1;
+      btnPlus.addEventListener('click', () => {
+        state.manualConsumptions[name] = Math.max(0, (state.manualConsumptions[name] || 0) - 1);
+        renderConsumables();
+      });
+
+      row.appendChild(btnMinus);
+      row.appendChild(btnPlus);
+    }
+
     frag.appendChild(row);
   }
   els.consumablesList.innerHTML = '';
