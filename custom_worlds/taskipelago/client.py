@@ -1105,6 +1105,11 @@ class TaskipelagoApp(tk.Tk):
         self.pending_reward_locations = set()  # only track reward loc pending (UI completion)
         self._task_purchases: dict = {}  # {task_idx: {consumable_name: amount_spent}}
 
+        # Incremental task-card reconciliation state
+        self._task_cards: dict = {}          # {task_idx: card_dict}
+        self._visible_task_order: list = []  # current ordered list of visible task indices
+        self._refresh_after_id: int | None = None
+
         # Dedupe popups
         self._last_deathlink_key = None
         self._last_deathlink_seen_at = 0.0
@@ -2907,6 +2912,11 @@ class TaskipelagoApp(tk.Tk):
         self.loop.run_forever()
 
     # ---------------- Network -> UI updates ----------------
+    def _schedule_play_refresh(self, delay_ms: int = 50) -> None:
+        if self._refresh_after_id is not None:
+            self.after_cancel(self._refresh_after_id)
+        self._refresh_after_id = self.after(delay_ms, self.refresh_play_tab)
+
     def _on_enforce_toggle(self):
         if not self._local_enforce_var.get():
             self._show_locked_var.set(False)
@@ -2928,7 +2938,7 @@ class TaskipelagoApp(tk.Tk):
 
         self._recalculate_purchases_from_completed()
         self._maybe_send_goal_complete()
-        self.after(0, self.refresh_play_tab)
+        self._schedule_play_refresh()
         self.after(0, self._render_items_tab)
         self.after(0, self._render_consumable_tab)
         if self.connection_state == "connected":
@@ -2940,9 +2950,98 @@ class TaskipelagoApp(tk.Tk):
         else:
             self.send_deathlink_btn.pack_forget()
 
+    def _build_task_card(self, parent: tk.Widget, task_idx: int) -> dict:
+        panel = self.colors.get("panel", "#252526")
+        border = self.colors.get("border", "#3a3a3a")
+        fg = self.colors.get("fg", "#e6e6e6")
+        muted = self.colors.get("muted", "#bdbdbd")
+
+        card = tk.Frame(parent, bg=panel, highlightbackground=border, highlightthickness=1)
+
+        top = tk.Frame(card, bg=panel)
+        top.pack(fill="x", padx=10, pady=(8, 2))
+
+        label = tk.Label(
+            top, text="", bg=panel, fg=fg,
+            font=("Segoe UI", 12), wraplength=720, justify="left", anchor="w",
+        )
+        label.pack(side="left", fill="x", expand=True)
+
+        complete_btn = ttk.Button(
+            top, text="Complete",
+            command=lambda idx=task_idx: self.complete_task(idx),
+        )
+        purchase_btn = ttk.Button(
+            top, text="Purchase",
+            command=lambda idx=task_idx: self._attempt_purchase(idx),
+        )
+        mc_btn = ttk.Button(
+            top, text="Make Change",
+            command=lambda idx=task_idx: self._attempt_make_change(idx),
+        )
+
+        hints = [
+            tk.Label(card, text="", bg=panel, fg=muted,
+                     font=("Segoe UI", 10), anchor="w", justify="left", wraplength=740)
+            for _ in range(4)
+        ]
+        spacer = tk.Frame(card, bg=panel, height=6)
+
+        return {
+            "frame": card,
+            "label": label,
+            "complete_btn": complete_btn,
+            "purchase_btn": purchase_btn,
+            "make_change_btn": mc_btn,
+            "hints": hints,
+            "spacer": spacer,
+            "sig": (),
+        }
+
+    def _apply_task_card_state(self, card_dict: dict, s: dict) -> None:
+        card_dict["label"].config(text=s["label_text"], fg=s["label_color"])
+
+        complete_btn = card_dict["complete_btn"]
+        purchase_btn = card_dict["purchase_btn"]
+        mc_btn = card_dict["make_change_btn"]
+
+        complete_btn.pack_forget()
+        purchase_btn.pack_forget()
+        mc_btn.pack_forget()
+
+        if s["completed"]:
+            if s["can_make_change"]:
+                mc_btn.pack(side="right", padx=(10, 0))
+        elif s["show_purchase"]:
+            purchase_btn.pack(side="right", padx=(10, 0))
+        else:
+            if s["can_complete"]:
+                complete_btn.state(["!disabled"])
+            else:
+                complete_btn.state(["disabled"])
+            complete_btn.pack(side="right", padx=(10, 0))
+            if s["can_make_change"]:
+                mc_btn.pack(side="right", padx=(10, 0))
+
+        showed = False
+        for j, h in enumerate(card_dict["hints"]):
+            text = s["hint_texts"][j] if j < len(s["hint_texts"]) else ""
+            if text:
+                h.config(text=text)
+                h.pack(fill="x", padx=28, pady=(0, 2))
+                showed = True
+            else:
+                h.pack_forget()
+
+        if showed:
+            card_dict["spacer"].pack_forget()
+        else:
+            card_dict["spacer"].pack(fill="x")
+
+        card_dict["sig"] = s["sig"]
+
     def refresh_play_tab(self):
-        for child in self.play_tasks_scroll.inner.winfo_children():
-            child.destroy()
+        self._refresh_after_id = None
 
         connected = bool(
             getattr(self, "ctx", None)
@@ -2955,7 +3054,6 @@ class TaskipelagoApp(tk.Tk):
         hide_tasks = bool(getattr(self.ctx, "hide_unreachable_tasks", True)) if getattr(self, "ctx", None) else True
         local_enforce = self._local_enforce_var.get()
 
-        # Header frames are only relevant in non-bingo mode
         if connected and not yaml_lock and not bingo_mode:
             self._enforce_header_frame.pack(side="top", fill="x", before=self.play_tasks_scroll)
         else:
@@ -2972,12 +3070,23 @@ class TaskipelagoApp(tk.Tk):
         else:
             self._show_locked_frame.pack_forget()
 
+        def _clear_task_cards():
+            for cd in self._task_cards.values():
+                try:
+                    cd["frame"].destroy()
+                except Exception:
+                    pass
+            self._task_cards.clear()
+            self._visible_task_order.clear()
+
         if not connected:
+            _clear_task_cards()
             self.play_bingo_frame.pack_forget()
             self.play_tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
             return
 
         if bingo_mode:
+            _clear_task_cards()
             self.play_tasks_scroll.pack_forget()
             self.play_bingo_frame.pack(fill="both", expand=True, padx=10, pady=10)
             self._render_bingo_board()
@@ -2986,21 +3095,21 @@ class TaskipelagoApp(tk.Tk):
             self.play_bingo_frame.pack_forget()
             self.play_tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
 
-        panel = self.colors.get("panel", "#252526")
-        border = self.colors.get("border", "#3a3a3a")
         fg = self.colors.get("fg", "#e6e6e6")
         muted = self.colors.get("muted", "#bdbdbd")
 
         checked = set(getattr(self.ctx, "checked_locations_set", set()) or set())
-
         prereq_list = list(getattr(self.ctx, "task_prereqs", []) or [])
         item_prereq_list = list(getattr(self.ctx, "item_prereqs", []) or [])
-        lock_prereqs = yaml_lock
-        effective_lock = lock_prereqs or self._local_enforce_var.get()
+        effective_lock = yaml_lock or self._local_enforce_var.get()
+        show_locked = self._show_locked_var.get()
+        hide_completed = self._hide_completed_var.get()
+        cost_amounts = list(getattr(self.ctx, "task_cost_amounts", []) or [])
+
+        new_visible: list = []  # [(task_idx, s_dict), ...]
 
         for i, task_name in enumerate(self.ctx.tasks):
             complete_loc_id = self.ctx.base_complete_location_id + i
-
             completed = complete_loc_id in checked
 
             task_prereq_ok = True
@@ -3019,7 +3128,6 @@ class TaskipelagoApp(tk.Tk):
                 if item_prereq_text:
                     item_prereq_ok = self._reward_prereqs_satisfied(item_prereq_text, checked)
 
-            # Progressive group requirement (resolved server-side, delivered via slot_data)
             prog_reqs = []
             task_prog_reqs_list = list(getattr(self.ctx, "task_progressive_reqs", []) or [])
             if i < len(task_prog_reqs_list):
@@ -3036,7 +3144,6 @@ class TaskipelagoApp(tk.Tk):
                     item_prereq_ok = False
                 prog_hint_parts.append(f"group '{g}' (need {c})")
 
-            # Region requirement (resolved server-side, delivered via slot_data)
             region_reqs = []
             task_region_reqs_list = list(getattr(self.ctx, "task_region_reqs", []) or [])
             if i < len(task_region_reqs_list):
@@ -3064,166 +3171,100 @@ class TaskipelagoApp(tk.Tk):
                         region_prereq_ok = False
                         region_hint_parts.append(f"region '{r}' ({pct}% completed)")
 
-            # Cost requirement
-            cost_amounts = list(getattr(self.ctx, "task_cost_amounts", []) or [])
             task_has_cost = i < len(cost_amounts) and bool(cost_amounts[i])
             cost_paid = not task_has_cost or (not effective_lock) or self._task_cost_is_paid(i)
 
             other_prereqs_ok = task_prereq_ok and item_prereq_ok and region_prereq_ok
-            # "Cost-only locked" means all prereqs pass but cost isn't paid yet
             cost_only_locked = other_prereqs_ok and not cost_paid
 
             would_hide = (not other_prereqs_ok) and hide_tasks and effective_lock
-            show_as_locked = would_hide and self._show_locked_var.get()
+            show_as_locked = would_hide and show_locked
             if would_hide and not show_as_locked:
                 continue
-            if completed and self._hide_completed_var.get():
+            if completed and hide_completed:
                 continue
 
-            card = tk.Frame(self.play_tasks_scroll.inner, bg=panel, highlightbackground=border, highlightthickness=1)
-            card.pack(fill="x", pady=6, padx=4)
-
-            top = tk.Frame(card, bg=panel)
-            top.pack(fill="x", padx=10, pady=(8, 2))
-
             if show_as_locked:
-                display_text = f"{i+1}. Locked Task"
-                task_color = muted
+                label_text = f"{i+1}. Locked Task"
+                label_color = muted
             elif completed:
-                display_text = f"✔ {i+1}. {task_name}"
-                task_color = muted
+                label_text = f"✔ {i+1}. {task_name}"
+                label_color = muted
             else:
-                display_text = f"{i+1}. {task_name}"
-                task_color = fg
+                label_text = f"{i+1}. {task_name}"
+                label_color = fg
 
-            task_label = tk.Label(
-                top,
-                text=display_text,
-                bg=panel,
-                fg=task_color,
-                font=("Segoe UI", 12),
-                wraplength=720,
-                justify="left",
-                anchor="w",
-            )
-            task_label.pack(side="left", fill="x", expand=True)
+            hint_texts = ["", "", "", ""]
+            if not completed:
+                if task_prereq_text and not task_prereq_ok:
+                    hint_texts[0] = f"Locked behind task(s): {task_prereq_text}"
+                if (item_prereq_text or prog_hint_parts) and not item_prereq_ok:
+                    parts = []
+                    if item_prereq_text:
+                        parts.append(self._reward_prereq_display(item_prereq_text))
+                    parts.extend(prog_hint_parts)
+                    hint_texts[1] = f"Locked behind item(s): {', '.join(parts)}"
+                if region_hint_parts and not region_prereq_ok:
+                    hint_texts[2] = f"Locked behind region(s): {', '.join(region_hint_parts)}"
+                if cost_only_locked and effective_lock:
+                    branches = cost_amounts[i] if i < len(cost_amounts) else []
+                    if branches:
+                        cost_parts = [" && ".join(f"{amt} {name}" for name, amt in branch) for branch in branches]
+                        cost_text = " || ".join(f"({p})" if len(branches) > 1 else p for p in cost_parts)
+                        hint_texts[3] = f"Requires purchase: {cost_text}"
 
-            # Make Change button: available any time a task with OR branches is purchased
             task_branches = cost_amounts[i] if i < len(cost_amounts) else []
             can_make_change = len(task_branches) > 1 and i in self._task_purchases
+            can_complete = not (effective_lock and (not other_prereqs_ok or not cost_paid))
+            show_purchase = cost_only_locked and effective_lock
 
-            if completed:
-                if can_make_change:
-                    mc_btn = ttk.Button(
-                        top,
-                        text="Make Change",
-                        command=lambda idx=i: self._attempt_make_change(idx)
-                    )
-                    mc_btn.pack(side="right", padx=(10, 0))
-            elif cost_only_locked and effective_lock:
-                # All prereqs met but cost not paid - show Purchase button
-                purchase_btn = ttk.Button(
-                    top,
-                    text="Purchase",
-                    command=lambda idx=i: self._attempt_purchase(idx)
+            sig = (label_text, label_color, can_complete, show_purchase, can_make_change, *hint_texts)
+            new_visible.append((i, {
+                "label_text": label_text,
+                "label_color": label_color,
+                "completed": completed,
+                "can_complete": can_complete,
+                "show_purchase": show_purchase,
+                "can_make_change": can_make_change,
+                "hint_texts": hint_texts,
+                "sig": sig,
+            }))
+
+        new_visible_indices = [idx for idx, _ in new_visible]
+        new_visible_set = set(new_visible_indices)
+
+        # Destroy cards that are no longer visible
+        for old_idx in list(self._task_cards.keys()):
+            if old_idx not in new_visible_set:
+                try:
+                    self._task_cards[old_idx]["frame"].destroy()
+                except Exception:
+                    pass
+                del self._task_cards[old_idx]
+
+        # Create or update each visible task card
+        for task_idx, s in new_visible:
+            if task_idx not in self._task_cards:
+                self._task_cards[task_idx] = self._build_task_card(
+                    self.play_tasks_scroll.inner, task_idx
                 )
-                purchase_btn.pack(side="right", padx=(10, 0))
-            else:
-                can_complete = True
-                if effective_lock and (not other_prereqs_ok or not cost_paid):
-                    can_complete = False
+            card_dict = self._task_cards[task_idx]
+            if card_dict["sig"] != s["sig"]:
+                self._apply_task_card_state(card_dict, s)
 
-                btn = ttk.Button(
-                    top,
-                    text="Complete",
-                    command=lambda idx=i: self.complete_task(idx)
-                )
-                if not can_complete:
-                    btn.state(["disabled"])
-                btn.pack(side="right", padx=(10, 0))
-
-                # Make Change appears to the left of Complete
-                if can_make_change:
-                    mc_btn = ttk.Button(
-                        top,
-                        text="Make Change",
-                        command=lambda idx=i: self._attempt_make_change(idx)
-                    )
-                    mc_btn.pack(side="right", padx=(10, 0))
-
-            showed_hint = False
-
-            if (not completed) and task_prereq_text and not task_prereq_ok:
-                hint = tk.Label(
-                    card,
-                    text=f"Locked behind task(s): {task_prereq_text}",
-                    bg=panel,
-                    fg=muted,
-                    font=("Segoe UI", 10),
-                    anchor="w",
-                    justify="left",
-                    wraplength=740
-                )
-                hint.pack(fill="x", padx=28, pady=(0, 2))
-                showed_hint = True
-
-            if (not completed) and (item_prereq_text or prog_hint_parts) and not item_prereq_ok:
-                hint_parts = []
-                if item_prereq_text:
-                    hint_parts.append(self._reward_prereq_display(item_prereq_text))
-                hint_parts.extend(prog_hint_parts)
-                hint2 = tk.Label(
-                    card,
-                    text=f"Locked behind item(s): {', '.join(hint_parts)}",
-                    bg=panel,
-                    fg=muted,
-                    font=("Segoe UI", 10),
-                    anchor="w",
-                    justify="left",
-                    wraplength=740
-                )
-                hint2.pack(fill="x", padx=28, pady=(0, 2))
-                showed_hint = True
-
-            if (not completed) and region_hint_parts and not region_prereq_ok:
-                hint3 = tk.Label(
-                    card,
-                    text=f"Locked behind region(s): {', '.join(region_hint_parts)}",
-                    bg=panel,
-                    fg=muted,
-                    font=("Segoe UI", 10),
-                    anchor="w",
-                    justify="left",
-                    wraplength=740
-                )
-                hint3.pack(fill="x", padx=28, pady=(0, 2))
-                showed_hint = True
-
-            if (not completed) and cost_only_locked and effective_lock:
-                # Show cost hint
-                branches = cost_amounts[i] if i < len(cost_amounts) else []
-                if branches:
-                    cost_parts = []
-                    for branch in branches:
-                        bp = " && ".join(f"{amt} {name}" for name, amt in branch)
-                        cost_parts.append(bp)
-                    cost_text = " || ".join(f"({p})" if len(branches) > 1 else p for p in cost_parts)
-                    hint_cost = tk.Label(
-                        card,
-                        text=f"Requires purchase: {cost_text}",
-                        bg=panel,
-                        fg=muted,
-                        font=("Segoe UI", 10),
-                        anchor="w",
-                        justify="left",
-                        wraplength=740
-                    )
-                    hint_cost.pack(fill="x", padx=28, pady=(0, 2))
-                    showed_hint = True
-
-            if not showed_hint:
-                spacer = tk.Frame(card, bg=panel, height=6)
-                spacer.pack(fill="x")
+        # Re-pack all cards in order when the visible set or order changed
+        if new_visible_indices != self._visible_task_order:
+            for task_idx in new_visible_indices:
+                self._task_cards[task_idx]["frame"].pack_forget()
+            prev = None
+            for task_idx in new_visible_indices:
+                f = self._task_cards[task_idx]["frame"]
+                if prev is not None:
+                    f.pack(fill="x", pady=6, padx=4, after=prev)
+                else:
+                    f.pack(fill="x", pady=6, padx=4)
+                prev = f
+            self._visible_task_order = new_visible_indices
 
     def _render_bingo_board(self):
         for btn in getattr(self, "_bingo_buttons", []):
@@ -3602,7 +3643,7 @@ class TaskipelagoApp(tk.Tk):
 
         deduction = {name: amt for name, amt in chosen}
         self._task_purchases[task_idx] = deduction
-        self.after(0, self.refresh_play_tab)
+        self._schedule_play_refresh()
         self.after(0, self._render_consumable_tab)
 
     def _choose_cost_branch(self, branch_labels: list) -> "int | None":
@@ -3703,7 +3744,7 @@ class TaskipelagoApp(tk.Tk):
 
         if result[0] is not None:
             self._task_purchases[task_idx] = {name: amt for name, amt in result[0]}
-            self.after(0, self.refresh_play_tab)
+            self._schedule_play_refresh()
             self.after(0, self._render_consumable_tab)
 
     def _recalculate_purchases_from_completed(self):
@@ -4726,8 +4767,11 @@ class TaskipelagoApp(tk.Tk):
         if complete_loc_id in checked or complete_loc_id in self.pending_reward_locations:
             return
         
-        # UI optimism on complete location
+        # UI optimism on complete location - cancel any pending debounced refresh first
         self.pending_reward_locations.add(complete_loc_id)
+        if self._refresh_after_id is not None:
+            self.after_cancel(self._refresh_after_id)
+            self._refresh_after_id = None
         self.refresh_play_tab()
 
         try:
