@@ -664,6 +664,9 @@ function clearPlayState() {
   state.checkedLocations = new Set();
   state.baseCompleteId = state.baseRewardId = state.baseItemId = state.baseTokenId = null;
   state.items = [];
+  state.progressiveGroups = [];
+  state.rewardProgressiveGroup = [];
+  state.itemConsumable = [];
   state.deathLinkEnabled = false;
   state.bingoMode = false;
   ap.itemsReceived = [];
