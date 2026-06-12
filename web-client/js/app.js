@@ -685,6 +685,7 @@ ap.onConnected = (slotData, checkedLocs) => {
   for (const c of checkedLocs) state.checkedLocations.add(c);
 
   applySlotData(slotData);
+  loadManualConsumptions();
 
   state.connState = 'connected';
   setStatus('Connected.');
@@ -765,6 +766,18 @@ ap.onRoomUpdate = newChecked => {
 };
 
 ap.onBounced = (tags, data) => {
+  if (tags.includes('TaskipelagoSync') &&
+      data.type === 'taskipelago_manual_sync' &&
+      data.seed === state.seedName &&
+      data.slot_name === (els.slotInput.value || '').trim()) {
+    const incoming = data.manual_consumptions;
+    if (incoming && typeof incoming === 'object') {
+      state.manualConsumptions = incoming;
+      saveManualConsumptions();
+      renderConsumables();
+    }
+  }
+
   if (!tags.includes('DeathLink')) return;
 
   // Amnesty
@@ -1310,6 +1323,45 @@ function renderItems() {
   }
 }
 
+// =============================================================
+// Manual consumption persistence + cross-client sync
+// =============================================================
+function manualConsumptionsKey() {
+  const server = (els.serverInput.value || '').trim().toLowerCase();
+  const slot   = (els.slotInput.value  || '').trim();
+  const seed   = state.seedName || '';
+  return `taskipelago_manual_v1::${server}::${slot}::${seed}`;
+}
+
+function loadManualConsumptions() {
+  try {
+    const raw = localStorage.getItem(manualConsumptionsKey());
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        state.manualConsumptions = parsed;
+        return;
+      }
+    }
+  } catch (_) {}
+  state.manualConsumptions = {};
+}
+
+function saveManualConsumptions() {
+  try {
+    localStorage.setItem(manualConsumptionsKey(), JSON.stringify(state.manualConsumptions));
+  } catch (_) {}
+}
+
+function sendManualSync() {
+  ap.sendBounce(['TaskipelagoSync'], {
+    type: 'taskipelago_manual_sync',
+    seed: state.seedName,
+    slot_name: (els.slotInput.value || '').trim(),
+    manual_consumptions: { ...state.manualConsumptions },
+  });
+}
+
 function consumableNamesUsedInTasks() {
   const used = new Set();
   for (const branches of state.taskCostAmounts) {
@@ -1362,6 +1414,8 @@ function renderConsumables() {
       btnMinus.disabled = b < 1;
       btnMinus.addEventListener('click', () => {
         state.manualConsumptions[name] = (state.manualConsumptions[name] || 0) + 1;
+        saveManualConsumptions();
+        sendManualSync();
         renderConsumables();
       });
 
@@ -1371,6 +1425,8 @@ function renderConsumables() {
       btnPlus.disabled = m < 1;
       btnPlus.addEventListener('click', () => {
         state.manualConsumptions[name] = Math.max(0, (state.manualConsumptions[name] || 0) - 1);
+        saveManualConsumptions();
+        sendManualSync();
         renderConsumables();
       });
 

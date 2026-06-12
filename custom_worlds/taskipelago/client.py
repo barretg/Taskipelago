@@ -747,9 +747,11 @@ class TaskipelagoContext(CommonClient.CommonContext):
 
         self.on_disconnected = None
         self.on_state_changed = None
+        self.on_manual_sync = None
 
         self.on_deathlink = None
         self._deathlink_tag_enabled = False
+        self._sync_tag_enabled = False
         self.death_link_weights = []
         self.death_link_amnesty = 0
         self._deathlink_amnesty_left = 0
@@ -850,6 +852,10 @@ class TaskipelagoContext(CommonClient.CommonContext):
             self.apply_slot_data(args.get("slot_data", {}))
             if self.slot_data.get("death_link_enabled"):
                 asyncio.create_task(self.enable_deathlink_tag())
+            asyncio.create_task(self.enable_sync_tag())
+            loaded = self.load_manual_consumptions()
+            if callable(self.on_manual_sync):
+                self.on_manual_sync(loaded)
 
             # Load persisted "already notified" index for this server+slot.
             # Apply it when we see the first ReceivedItems after connect.
@@ -869,8 +875,18 @@ class TaskipelagoContext(CommonClient.CommonContext):
 
         if cmd == "Bounced":
             tags = args.get("tags") or []
+            data = args.get("data") or {}
+            if "TaskipelagoSync" in tags:
+                if (data.get("type") == "taskipelago_manual_sync"
+                        and data.get("seed") == (getattr(self, "seed_name", "") or "")
+                        and data.get("slot_name") == (getattr(self, "auth", None) or "").strip()):
+                    incoming = data.get("manual_consumptions")
+                    if isinstance(incoming, dict):
+                        consumptions = {k: v for k, v in incoming.items() if isinstance(k, str) and isinstance(v, int) and v > 0}
+                        self.save_manual_consumptions(consumptions)
+                        if callable(self.on_manual_sync):
+                            self.on_manual_sync(consumptions)
             if "DeathLink" in tags:
-                data = args.get("data") or {}
                 if callable(self.on_deathlink):
                     self.on_deathlink(data)
 
@@ -940,6 +956,52 @@ class TaskipelagoContext(CommonClient.CommonContext):
         slot = (getattr(self, "auth", None) or "").strip()
         seed = (getattr(self, "seed_name", None) or "").strip()
         return f"v3::{server}::{slot}::{seed}"
+
+    def _manual_consumptions_key(self) -> str:
+        server = (self.server_address or "").strip().lower()
+        slot = (getattr(self, "auth", None) or "").strip()
+        seed = (getattr(self, "seed_name", None) or "").strip()
+        return f"manual_v1::{server}::{slot}::{seed}"
+
+    def load_manual_consumptions(self) -> dict:
+        key = self._manual_consumptions_key()
+        if not key.strip(":"):
+            return {}
+        data = self._load_notify_state()
+        val = data.get(key)
+        if isinstance(val, dict):
+            return {k: v for k, v in val.items() if isinstance(k, str) and isinstance(v, int) and v > 0}
+        return {}
+
+    def save_manual_consumptions(self, consumptions: dict) -> None:
+        key = self._manual_consumptions_key()
+        if not key.strip(":"):
+            return
+        data = self._load_notify_state()
+        data[key] = {k: v for k, v in consumptions.items() if v > 0}
+        self._save_notify_state(data)
+
+    async def _send_manual_sync(self, consumptions: dict) -> None:
+        if not getattr(self, "server", None):
+            return
+        await self.send_msgs([{
+            "cmd": "Bounce",
+            "tags": ["TaskipelagoSync"],
+            "data": {
+                "type": "taskipelago_manual_sync",
+                "seed": getattr(self, "seed_name", "") or "",
+                "slot_name": (getattr(self, "auth", None) or "").strip(),
+                "manual_consumptions": dict(consumptions),
+            },
+        }])
+
+    async def enable_sync_tag(self) -> None:
+        if not getattr(self, "server", None):
+            return
+        if self._sync_tag_enabled:
+            return
+        self._sync_tag_enabled = True
+        await self.send_msgs([{"cmd": "ConnectUpdate", "tags": ["TaskipelagoSync"]}])
 
     def _load_notify_state(self) -> dict:
         try:
@@ -1160,6 +1222,7 @@ class TaskipelagoApp(tk.Tk):
             self.ctx.on_disconnected = self.on_server_disconnected
             self.ctx.on_deathlink = self.on_deathlink_received
             self.ctx.on_item_received = self.on_items_received
+            self.ctx.on_manual_sync = self._on_manual_sync_received
             self.ctx.on_print_json_callback = self._on_console_message
             self.ctx._cmd_processor = self.ctx.command_processor(self.ctx)
             self.ctx._cmd_processor.console_output_callback = self._append_console_text
@@ -2805,6 +2868,7 @@ class TaskipelagoApp(tk.Tk):
         if hasattr(self, "_hide_completed_var"):
             self._hide_completed_var.set(False)
         if getattr(self, "ctx", None):
+            self.ctx._sync_tag_enabled = False
             self.ctx.tasks = []
             self.ctx.items = []
             self.ctx.task_prereqs = []
@@ -3833,16 +3897,24 @@ class TaskipelagoApp(tk.Tk):
             if name not in used_in_tasks:
                 def _minus(n=name):
                     self._manual_consumptions[n] = self._manual_consumptions.get(n, 0) + 1
+                    ctx = getattr(self, "ctx", None)
+                    if ctx:
+                        ctx.save_manual_consumptions(self._manual_consumptions)
+                        asyncio.run_coroutine_threadsafe(ctx._send_manual_sync(self._manual_consumptions), self.loop)
                     self._render_consumable_tab()
 
                 def _plus(n=name):
                     self._manual_consumptions[n] = max(0, self._manual_consumptions.get(n, 0) - 1)
+                    ctx = getattr(self, "ctx", None)
+                    if ctx:
+                        ctx.save_manual_consumptions(self._manual_consumptions)
+                        asyncio.run_coroutine_threadsafe(ctx._send_manual_sync(self._manual_consumptions), self.loop)
                     self._render_consumable_tab()
 
+                btn_plus = ttk.Button(row, text="+1", width=3, command=_plus)
+                btn_plus.pack(side="right", padx=(0, 0))
                 btn_minus = ttk.Button(row, text="-1", width=3, command=_minus)
                 btn_minus.pack(side="right", padx=(4, 0))
-                btn_plus = ttk.Button(row, text="+1", width=3, command=_plus)
-                btn_plus.pack(side="right", padx=(4, 0))
                 if bal < 1:
                     btn_minus.state(["disabled"])
                 if manual < 1:
@@ -4953,6 +5025,11 @@ class TaskipelagoApp(tk.Tk):
         self._clear_notifications()
         self._clear_play_state()
         self._update_console_connection_state(False)
+
+    # ---------------- Manual sync ----------------
+    def _on_manual_sync_received(self, consumptions: dict):
+        self._manual_consumptions = dict(consumptions)
+        self.after(0, self._render_consumable_tab)
 
     # ---------------- DeathLink ----------------
     def _send_deathlink(self):
