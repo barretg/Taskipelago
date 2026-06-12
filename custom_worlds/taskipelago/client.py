@@ -1599,14 +1599,14 @@ class TaskipelagoApp(tk.Tk):
             variable=self._show_locked_var,
             command=self.refresh_play_tab,
         )
-        self._show_locked_checkbox.pack(side="left", padx=(10, 8), pady=4)
+        self._show_locked_checkbox.pack(side="left", padx=(10, 4), pady=4)
         self._hide_completed_checkbox = ttk.Checkbutton(
             self._show_locked_frame,
             text="Hide completed tasks",
             variable=self._hide_completed_var,
             command=self.refresh_play_tab,
         )
-        self._hide_completed_checkbox.pack(side="left", padx=(0, 8), pady=4)
+        self._hide_completed_checkbox.pack(side="left", padx=(8, 8), pady=4)
 
         self.play_tasks_scroll = ScrollableFrame(tasks_frame, colors=self.colors)
         self.play_tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
@@ -2964,9 +2964,11 @@ class TaskipelagoApp(tk.Tk):
         if connected and not bingo_mode:
             self._show_locked_frame.pack(side="top", fill="x", before=self.play_tasks_scroll)
             if effective_lock_for_header and hide_tasks:
-                self._show_locked_checkbox.pack(side="left", padx=(10, 8), pady=4)
+                self._show_locked_checkbox.pack(side="left", padx=(10, 4), pady=4)
             else:
                 self._show_locked_checkbox.pack_forget()
+            self._hide_completed_checkbox.pack_forget()
+            self._hide_completed_checkbox.pack(side="left", padx=(8, 8), pady=4)
         else:
             self._show_locked_frame.pack_forget()
 
