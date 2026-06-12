@@ -293,6 +293,37 @@ function consumableBalance() {
   return bal;
 }
 
+function consumableItemNames() {
+  const names = [];
+  const seen  = new Set();
+  for (let i = 0; i < state.items.length; i++) {
+    const name = state.items[i];
+    if (state.itemConsumable[i] && name && !seen.has(name)) {
+      names.push(name);
+      seen.add(name);
+    }
+  }
+  return names;
+}
+
+function progressiveGroupCounts() {
+  const progGroup = state.rewardProgressiveGroup;
+  const base = state.baseItemId;
+  const have = receivedItemIds();
+  const result = {};
+  for (const g of state.progressiveGroups) {
+    let total = 0, received = 0;
+    for (let i = 0; i < progGroup.length; i++) {
+      if (progGroup[i] === g) {
+        total++;
+        if (typeof base === 'number' && have.has(base + i)) received++;
+      }
+    }
+    result[g] = { received, total };
+  }
+  return result;
+}
+
 function taskCostIsPaid(idx) {
   const branches = (state.taskCostAmounts[idx] || []);
   if (!branches.length) return true;
@@ -632,8 +663,10 @@ function clearPlayState() {
   state.tasks = [];
   state.checkedLocations = new Set();
   state.baseCompleteId = state.baseRewardId = state.baseItemId = state.baseTokenId = null;
+  state.items = [];
   state.deathLinkEnabled = false;
   state.bingoMode = false;
+  ap.itemsReceived = [];
 }
 
 function setStatus(msg) { els.connectStatus.textContent = msg; }
@@ -1191,12 +1224,49 @@ function renderNotifications() {
 // Rendering: items received
 // =============================================================
 function renderItems() {
-  const baseToken = state.baseTokenId;
-  const nTasks    = state.tasks.length;
-  const base      = state.baseItemId;
-  const frag      = document.createDocumentFragment();
-  let count       = 0;
+  const baseToken  = state.baseTokenId;
+  const nTasks     = state.tasks.length;
+  const base       = state.baseItemId;
+  const frag       = document.createDocumentFragment();
 
+  // --- Group summary section ---
+  const progCounts  = progressiveGroupCounts();
+  const consNames   = consumableItemNames();
+  const consRecv    = consumableReceivedCounts();
+  const hasGroups   = Object.keys(progCounts).length > 0 || consNames.length > 0;
+
+  if (hasGroups) {
+    for (const [name, { received, total }] of Object.entries(progCounts)) {
+      const row = document.createElement('div');
+      row.className = 'group-row';
+      const lbl = document.createElement('span');
+      lbl.textContent = name;
+      const cnt = document.createElement('span');
+      cnt.className = 'group-row-count';
+      cnt.textContent = `${received} / ${total}`;
+      row.appendChild(lbl);
+      row.appendChild(cnt);
+      frag.appendChild(row);
+    }
+    for (const name of consNames) {
+      const row = document.createElement('div');
+      row.className = 'group-row';
+      const lbl = document.createElement('span');
+      lbl.textContent = `${name}  (currency)`;
+      const cnt = document.createElement('span');
+      cnt.className = 'group-row-count';
+      cnt.textContent = `${consRecv[name] || 0} received`;
+      row.appendChild(lbl);
+      row.appendChild(cnt);
+      frag.appendChild(row);
+    }
+    const hr = document.createElement('hr');
+    hr.className = 'group-summary-divider';
+    frag.appendChild(hr);
+  }
+
+  // --- Item list ---
+  let count = 0;
   for (const it of ap.itemsReceived) {
     if (!it || typeof it.item !== 'number') continue;
 
@@ -1227,7 +1297,7 @@ function renderItems() {
   }
 
   els.itemsList.innerHTML = '';
-  if (!count) {
+  if (!hasGroups && !count) {
     els.itemsList.innerHTML = '<div style="padding:8px;color:var(--muted);font-size:12px">No items received yet.</div>';
   } else {
     els.itemsList.appendChild(frag);

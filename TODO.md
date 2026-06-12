@@ -13,4 +13,3 @@ take that Jira.
 ### Low Prio:
 * Tasklock integration to force all task locks to be in the taskipelago world (generate tasklock yaml with plando logic included, warn user to enable plando items in host.yaml)
 * Import from csv/xls option
-* UI Facelift

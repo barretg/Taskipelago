@@ -483,6 +483,22 @@ button:disabled {
 
 .item-entry:last-child { border-bottom: none; }
 
+/* Group summary (top of Items tab) */
+.group-row {
+  padding: 3px 8px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+.group-row:last-of-type { border-bottom: none; }
+.group-row-count { color: var(--muted); }
+.group-summary-divider {
+  border: none;
+  border-top: 2px solid var(--border);
+  margin: 4px 0 2px;
+}
+
 /* Consumables list */
 .consumable-entry {
   padding: 4px 8px;

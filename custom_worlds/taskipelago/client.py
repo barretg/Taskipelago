@@ -3823,6 +3823,52 @@ class TaskipelagoApp(tk.Tk):
         base_item = getattr(ctx, "base_item_id", None)
         n_tasks = len(getattr(ctx, "tasks", []) or [])
         items_text = list(getattr(ctx, "items", getattr(ctx, "rewards", [])) or [])
+        item_consumable = list(getattr(ctx, "item_consumable", []) or [])
+        prog_groups = list(getattr(ctx, "progressive_groups", []) or [])
+        reward_prog_group = list(getattr(ctx, "reward_progressive_group", []) or [])
+        if not reward_prog_group:
+            reward_prog_group = list(getattr(ctx, "item_progressive_group", []) or [])
+
+        # --- Group summary section ---
+        # Progressive groups
+        have = self._received_item_ids()
+        prog_rows = []
+        for g in prog_groups:
+            total = sum(1 for x in reward_prog_group if x == g)
+            if isinstance(base_item, int):
+                received = sum(1 for i, x in enumerate(reward_prog_group) if x == g and (base_item + i) in have)
+            else:
+                received = 0
+            prog_rows.append((g, received, total))
+
+        # Consumable currencies (in pool order, deduplicated)
+        seen_cons: set = set()
+        cons_names = []
+        for i, name in enumerate(items_text):
+            flag = item_consumable[i] if i < len(item_consumable) else False
+            if flag and name and name not in seen_cons:
+                cons_names.append(name)
+                seen_cons.add(name)
+        cons_recv = self._consumable_received_counts()
+
+        if prog_rows or cons_names:
+            muted = self.colors.get("muted", "#bdbdbd")
+            fg = self.colors.get("fg", "#e6e6e6")
+            bg = self.colors.get("bg", "#1e1e1e")
+
+            for g, received, total in prog_rows:
+                row = tk.Frame(inner, bg=bg)
+                row.pack(fill="x", padx=4, pady=1)
+                tk.Label(row, text=g, bg=bg, fg=fg, font=("Segoe UI", 10)).pack(side="left")
+                tk.Label(row, text=f"{received} / {total}", bg=bg, fg=muted, font=("Segoe UI", 10)).pack(side="right", padx=(0, 6))
+
+            for name in cons_names:
+                row = tk.Frame(inner, bg=bg)
+                row.pack(fill="x", padx=4, pady=1)
+                tk.Label(row, text=f"{name}  (currency)", bg=bg, fg=fg, font=("Segoe UI", 10)).pack(side="left")
+                tk.Label(row, text=f"{cons_recv.get(name, 0)} received", bg=bg, fg=muted, font=("Segoe UI", 10)).pack(side="right", padx=(0, 6))
+
+            ttk.Separator(inner, orient="horizontal").pack(fill="x", pady=(4, 2))
 
         if not items_received:
             ttk.Label(inner, text="No items received yet.", style="Muted.TLabel").pack(anchor="w", padx=6, pady=4)
