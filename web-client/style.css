@@ -495,8 +495,8 @@ button:disabled {
 .group-row-count { color: var(--muted); }
 .group-summary-divider {
   border: none;
-  border-top: 2px solid var(--border);
-  margin: 4px 0 2px;
+  border-top: 5px solid var(--border);
+  margin: 10px 0;
 }
 
 /* Consumables list */
