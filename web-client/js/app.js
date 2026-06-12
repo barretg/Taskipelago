@@ -81,8 +81,8 @@ const els = {
   enforceHeader: $('enforce-header'),
   enforceCb:     $('enforce-cb'),
   showLockedHeader: $('show-locked-header'),
+  showLockedWrapper: $('show-locked-wrapper'),
   showLockedCb:  $('show-locked-cb'),
-  hideCompletedHeader: $('hide-completed-header'),
   hideCompletedCb: $('hide-completed-cb'),
 
   tasksList:     $('tasks-list'),
@@ -833,16 +833,16 @@ function renderTasks() {
     els.enforceHeader.classList.add('hidden');
   }
 
-  if (connected && effectiveLock && state.hideUnreachable && !state.bingoMode) {
+  if (connected && !state.bingoMode) {
     els.showLockedHeader.classList.remove('hidden');
   } else {
     els.showLockedHeader.classList.add('hidden');
   }
 
-  if (connected && !state.bingoMode) {
-    els.hideCompletedHeader.classList.remove('hidden');
+  if (connected && effectiveLock && state.hideUnreachable && !state.bingoMode) {
+    els.showLockedWrapper.classList.remove('hidden');
   } else {
-    els.hideCompletedHeader.classList.add('hidden');
+    els.showLockedWrapper.classList.add('hidden');
   }
 
   // DeathLink button
