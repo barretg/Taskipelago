@@ -173,6 +173,12 @@ export class ArchipelagoClient {
     } else if (cmd === 'Bounced') {
       this.onBounced?.(msg.tags || [], msg.data || {});
 
+    } else if (cmd === 'Retrieved') {
+      this.onRetrieved?.(msg.keys || {});
+
+    } else if (cmd === 'SetReply') {
+      this.onSetReply?.(msg.key, msg.value);
+
     } else if (cmd === 'PrintJSON') {
       this.onPrintJSON?.(msg.data || [], msg.type || 'text', msg.slot ?? null);
     }
@@ -239,5 +245,21 @@ export class ArchipelagoClient {
   /** Update the tags advertised to the server (used to opt into DeathLink). */
   sendConnectUpdate(tags) {
     this._send([{ cmd: 'ConnectUpdate', tags }]);
+  }
+
+  /** Read keys from data storage. Results arrive via onRetrieved callback. */
+  sendGet(keys) {
+    this._send([{ cmd: 'Get', keys }]);
+  }
+
+  /** Write a value to data storage. */
+  sendSet(key, value, defaultValue = null) {
+    this._send([{
+      cmd: 'Set',
+      key,
+      default: defaultValue,
+      want_reply: false,
+      operations: [{ operation: 'replace', value }],
+    }]);
   }
 }

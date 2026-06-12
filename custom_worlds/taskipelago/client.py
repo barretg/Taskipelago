@@ -752,6 +752,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.on_deathlink = None
         self._deathlink_tag_enabled = False
         self._sync_tag_enabled = False
+        self._sync_client_id = str(id(self)) + "_" + str(int(time.time() * 1000))
         self.death_link_weights = []
         self.death_link_amnesty = 0
         self._deathlink_amnesty_left = 0
@@ -856,6 +857,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
             loaded = self.load_manual_consumptions()
             if callable(self.on_manual_sync):
                 self.on_manual_sync(loaded)
+            asyncio.create_task(self._get_server_manual_consumptions())
 
             # Load persisted "already notified" index for this server+slot.
             # Apply it when we see the first ReceivedItems after connect.
@@ -873,11 +875,21 @@ class TaskipelagoContext(CommonClient.CommonContext):
             if callable(self.on_state_changed):
                 self.on_state_changed()
 
+        if cmd == "Retrieved":
+            server_key = self._manual_consumptions_server_key()
+            keys = args.get("keys") or {}
+            if server_key in keys and isinstance(keys[server_key], dict):
+                consumptions = {k: v for k, v in keys[server_key].items() if isinstance(k, str) and isinstance(v, int) and v > 0}
+                self.save_manual_consumptions(consumptions)
+                if callable(self.on_manual_sync):
+                    self.on_manual_sync(consumptions)
+
         if cmd == "Bounced":
             tags = args.get("tags") or []
             data = args.get("data") or {}
             if "TaskipelagoSync" in tags:
                 if (data.get("type") == "taskipelago_manual_sync"
+                        and data.get("client_id") != self._sync_client_id
                         and data.get("seed") == (getattr(self, "seed_name", "") or "")
                         and data.get("slot_name") == (getattr(self, "auth", None) or "").strip()):
                     incoming = data.get("manual_consumptions")
@@ -963,6 +975,11 @@ class TaskipelagoContext(CommonClient.CommonContext):
         seed = (getattr(self, "seed_name", None) or "").strip()
         return f"manual_v1::{server}::{slot}::{seed}"
 
+    def _manual_consumptions_server_key(self) -> str:
+        slot = (getattr(self, "auth", None) or "").strip()
+        seed = (getattr(self, "seed_name", None) or "").strip()
+        return f"taskipelago_manual::{slot}::{seed}"
+
     def load_manual_consumptions(self) -> dict:
         key = self._manual_consumptions_key()
         if not key.strip(":"):
@@ -981,6 +998,22 @@ class TaskipelagoContext(CommonClient.CommonContext):
         data[key] = {k: v for k, v in consumptions.items() if v > 0}
         self._save_notify_state(data)
 
+    async def _set_server_manual_consumptions(self, consumptions: dict) -> None:
+        if not getattr(self, "server", None):
+            return
+        await self.send_msgs([{
+            "cmd": "Set",
+            "key": self._manual_consumptions_server_key(),
+            "default": {},
+            "want_reply": False,
+            "operations": [{"operation": "replace", "value": {k: v for k, v in consumptions.items() if v > 0}}],
+        }])
+
+    async def _get_server_manual_consumptions(self) -> None:
+        if not getattr(self, "server", None):
+            return
+        await self.send_msgs([{"cmd": "Get", "keys": [self._manual_consumptions_server_key()]}])
+
     async def _send_manual_sync(self, consumptions: dict) -> None:
         if not getattr(self, "server", None):
             return
@@ -989,6 +1022,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
             "tags": ["TaskipelagoSync"],
             "data": {
                 "type": "taskipelago_manual_sync",
+                "client_id": self._sync_client_id,
                 "seed": getattr(self, "seed_name", "") or "",
                 "slot_name": (getattr(self, "auth", None) or "").strip(),
                 "manual_consumptions": dict(consumptions),
@@ -3900,6 +3934,7 @@ class TaskipelagoApp(tk.Tk):
                     ctx = getattr(self, "ctx", None)
                     if ctx:
                         ctx.save_manual_consumptions(self._manual_consumptions)
+                        asyncio.run_coroutine_threadsafe(ctx._set_server_manual_consumptions(self._manual_consumptions), self.loop)
                         asyncio.run_coroutine_threadsafe(ctx._send_manual_sync(self._manual_consumptions), self.loop)
                     self._render_consumable_tab()
 
@@ -3908,6 +3943,7 @@ class TaskipelagoApp(tk.Tk):
                     ctx = getattr(self, "ctx", None)
                     if ctx:
                         ctx.save_manual_consumptions(self._manual_consumptions)
+                        asyncio.run_coroutine_threadsafe(ctx._set_server_manual_consumptions(self._manual_consumptions), self.loop)
                         asyncio.run_coroutine_threadsafe(ctx._send_manual_sync(self._manual_consumptions), self.loop)
                     self._render_consumable_tab()
 

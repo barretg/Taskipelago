@@ -60,6 +60,8 @@ const state = {
   hideCompleted: false,
 };
 
+const CLIENT_ID = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+
 const MAX_NOTIFICATIONS = 200;
 
 // =============================================================
@@ -685,7 +687,8 @@ ap.onConnected = (slotData, checkedLocs) => {
   for (const c of checkedLocs) state.checkedLocations.add(c);
 
   applySlotData(slotData);
-  loadManualConsumptions();
+  loadManualConsumptions();        // seed from localStorage as initial value
+  ap.sendGet([manualConsumptionsServerKey()]); // server value will arrive via onRetrieved and override if present
 
   state.connState = 'connected';
   setStatus('Connected.');
@@ -765,17 +768,20 @@ ap.onRoomUpdate = newChecked => {
   renderAll();
 };
 
+ap.onRetrieved = (keys) => {
+  const serverKey = manualConsumptionsServerKey();
+  if (serverKey in keys && keys[serverKey] && typeof keys[serverKey] === 'object') {
+    applyManualConsumptions(keys[serverKey]);
+  }
+};
+
 ap.onBounced = (tags, data) => {
   if (tags.includes('TaskipelagoSync') &&
       data.type === 'taskipelago_manual_sync' &&
+      data.client_id !== CLIENT_ID &&
       data.seed === state.seedName &&
       data.slot_name === (els.slotInput.value || '').trim()) {
-    const incoming = data.manual_consumptions;
-    if (incoming && typeof incoming === 'object') {
-      state.manualConsumptions = incoming;
-      saveManualConsumptions();
-      renderConsumables();
-    }
+    applyManualConsumptions(data.manual_consumptions);
   }
 
   if (!tags.includes('DeathLink')) return;
@@ -1333,6 +1339,19 @@ function manualConsumptionsKey() {
   return `taskipelago_manual_v1::${server}::${slot}::${seed}`;
 }
 
+function manualConsumptionsServerKey() {
+  const slot = (els.slotInput.value || '').trim();
+  const seed = state.seedName || '';
+  return `taskipelago_manual::${slot}::${seed}`;
+}
+
+function applyManualConsumptions(incoming) {
+  if (!incoming || typeof incoming !== 'object') return;
+  state.manualConsumptions = incoming;
+  saveManualConsumptions();
+  renderConsumables();
+}
+
 function loadManualConsumptions() {
   try {
     const raw = localStorage.getItem(manualConsumptionsKey());
@@ -1351,11 +1370,15 @@ function saveManualConsumptions() {
   try {
     localStorage.setItem(manualConsumptionsKey(), JSON.stringify(state.manualConsumptions));
   } catch (_) {}
+  if (state.connState === 'connected') {
+    ap.sendSet(manualConsumptionsServerKey(), { ...state.manualConsumptions }, {});
+  }
 }
 
 function sendManualSync() {
   ap.sendBounce(['TaskipelagoSync'], {
     type: 'taskipelago_manual_sync',
+    client_id: CLIENT_ID,
     seed: state.seedName,
     slot_name: (els.slotInput.value || '').trim(),
     manual_consumptions: { ...state.manualConsumptions },
