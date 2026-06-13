@@ -3,8 +3,12 @@ from __future__ import annotations
 import re as _re
 from typing import Any, Dict, List, Tuple
 
+import logging
+
 from BaseClasses import Item, ItemClassification, Region
 from worlds.AutoWorld import WebWorld, World
+
+logger = logging.getLogger("Taskipelago")
 from worlds.LauncherComponents import Component, Type, components, launch_subprocess
 
 from .items import (
@@ -831,6 +835,26 @@ class TaskipelagoWorld(World):
             cname: [self._reward_item_names[idx] for idx in idxs]
             for cname, idxs in consumable_groups.items()
         }
+
+        # ------------------------------------------------------------------ #
+        # DEBUG LOGGING                                                        #
+        # ------------------------------------------------------------------ #
+        logger.info("=== Taskipelago generate_early ===")
+        logger.info("n_yaml_tasks=%d  n_yaml_items=%d", n, n_yaml_items)
+        for gname, idxs in group_to_reward_indices.items():
+            names = [f"Item {idx+1}: {rewards[idx]}" for idx in idxs]
+            logger.info("group '%s' -> indices %s -> %s", gname, idxs, names)
+        for ti, reqs in enumerate(task_progressive_reqs):
+            if reqs:
+                logger.info("Task %d (%s) progressive reqs: %s", ti + 1, tasks[ti], reqs)
+        for ti, txt in enumerate(raw_reward_prereqs_input):
+            if txt:
+                logger.info("Task %d raw item prereq: %r", ti + 1, txt)
+        for ti, ast in enumerate(parsed_reward_prereqs):
+            if ast is not None:
+                logger.info("Task %d (%s) parsed reward prereq AST: %s", ti + 1, tasks[ti], ast)
+        logger.info("forced_progression_rewards (0-based): %s", sorted(forced_prog))
+        logger.info("=== end generate_early ===")
 
     @classmethod
     def stage_generate_early(cls, multiworld) -> None:

@@ -89,11 +89,12 @@ def _gen_bingoal_expr(n_spaces: int, n_lines: int, bingoal: int) -> str:
 
 
 # parsing help
-def _eval_prereq_expr(text: str, leaf_fn) -> bool:
+def _eval_prereq_expr(text: str, leaf_fn, name_fn=None) -> bool:
     """
     Evaluate a boolean prereq expression string client-side.
     leaf_fn(idx_1based) -> bool
-    Supports: integers, &&, ||, ',', parentheses.
+    name_fn(group_name, count_or_none) -> bool  (for group name tokens like Infamy*5)
+    Supports: integers, group names (Name, Name*N, Name-N), &&, ||, ',', parentheses.
     """
     text = text.strip()
     if not text:
@@ -118,6 +119,17 @@ def _eval_prereq_expr(text: str, leaf_fn) -> bool:
         elif c in ("(", ")", ","):
             tokens.append(c)
             i += 1
+        elif c.isalpha() or c == '_':
+            j = i
+            while j < len(text):
+                ch = text[j]
+                if ch.isspace() or ch in ("(", ")", ","):
+                    break
+                if text[j:j+2] in ("&&", "||"):
+                    break
+                j += 1
+            tokens.append(text[i:j])  # raw name token e.g. "Infamy*5"
+            i = j
         else:
             raise ValueError(f"Unexpected char: {c}")
 
@@ -155,6 +167,18 @@ def _eval_prereq_expr(text: str, leaf_fn) -> bool:
         if isinstance(tok, int):
             consume()
             return leaf_fn(tok)
+        if isinstance(tok, str) and tok not in ("&&", "||", "(", ")", ","):
+            consume()
+            if name_fn is not None:
+                m_star = re.match(r'^(.+[a-zA-Z_])\*(\d+)$', tok)
+                m_dash = re.match(r'^(.+[a-zA-Z_])-(\d+)$', tok)
+                if m_star:
+                    return name_fn(m_star.group(1), int(m_star.group(2)))
+                elif m_dash:
+                    return name_fn(m_dash.group(1), None)
+                else:
+                    return name_fn(tok, None)
+            return True
         raise ValueError(f"Unexpected token: {tok}")
 
     return parse_or()
@@ -3229,20 +3253,21 @@ class TaskipelagoApp(tk.Tk):
                 if task_prereq_text:
                     task_prereq_ok = self._prereqs_satisfied(task_prereq_text, checked)
 
-            item_prereq_ok = True
-            item_prereq_text = ""
-            if i < len(item_prereq_list):
-                raw = item_prereq_list[i]
-                item_prereq_text = ("" if raw is None else str(raw)).strip()
-                if item_prereq_text:
-                    item_prereq_ok = self._reward_prereqs_satisfied(item_prereq_text, checked)
-
             prog_reqs = []
             task_prog_reqs_list = list(getattr(self.ctx, "task_progressive_reqs", []) or [])
             if i < len(task_prog_reqs_list):
                 raw_pr = task_prog_reqs_list[i]
                 if isinstance(raw_pr, list):
                     prog_reqs = raw_pr
+
+            item_prereq_ok = True
+            item_prereq_text = ""
+            if i < len(item_prereq_list):
+                raw = item_prereq_list[i]
+                item_prereq_text = ("" if raw is None else str(raw)).strip()
+                if item_prereq_text:
+                    item_prereq_ok = self._reward_prereqs_satisfied(item_prereq_text, checked, prog_reqs)
+
             prog_hint_parts = []
             for req in prog_reqs:
                 if isinstance(req, dict):
@@ -3250,8 +3275,7 @@ class TaskipelagoApp(tk.Tk):
                 else:
                     g, c = req[0], req[1]
                 if not self._progressive_req_satisfied(g, c):
-                    item_prereq_ok = False
-                prog_hint_parts.append(f"group '{g}' (need {c})")
+                    prog_hint_parts.append(f"group '{g}' (need {c})")
 
             region_reqs = []
             task_region_reqs_list = list(getattr(self.ctx, "task_region_reqs", []) or [])
@@ -4618,15 +4642,28 @@ class TaskipelagoApp(tk.Tk):
         except Exception:
             return True  # if we can't parse, don't lock the UI
 
-    def _reward_prereqs_satisfied(self, prereq_text: str, checked_locations: set) -> bool:
+    def _reward_prereqs_satisfied(self, prereq_text: str, checked_locations: set, prog_reqs=None) -> bool:
         if not prereq_text:
             return True
         have = self._received_item_ids()
         base = getattr(self.ctx, "base_item_id", None)
+        prog_count = {}
+        for req in (prog_reqs or []):
+            if isinstance(req, dict):
+                g, c = req.get("group", ""), req.get("count", 1)
+            else:
+                g, c = req[0], req[1]
+            prog_count[g] = c
+
+        def name_fn(group, count):
+            c = count if count is not None else prog_count.get(group, 1)
+            return self._progressive_req_satisfied(group, c)
+
         try:
             return _eval_prereq_expr(
                 prereq_text,
-                lambda idx_1: (isinstance(base, int) and (base + idx_1 - 1) in have)
+                lambda idx_1: (isinstance(base, int) and (base + idx_1 - 1) in have),
+                name_fn=name_fn,
             )
         except Exception:
             return True

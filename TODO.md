@@ -6,6 +6,9 @@ take that Jira.
 
 ### High Prio:
 * Pomodoro-sanity
+* Region requirements
+* Change percentage of region
+* Regions don't display well when there are too many
 
 ### Medium Prio:
 * Submission box and presets for community made yamls

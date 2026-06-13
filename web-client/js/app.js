@@ -113,7 +113,7 @@ const els = {
 // Utility – prereq expression evaluator
 // (port of client.py _eval_prereq_expr)
 // =============================================================
-function evalPrereqExpr(text, leafFn) {
+function evalPrereqExpr(text, leafFn, nameFn) {
   text = (text || '').trim();
   if (!text) return true;
 
@@ -130,7 +130,17 @@ function evalPrereqExpr(text, leafFn) {
     } else if (text.slice(i, i + 2) === '&&') { tokens.push('&&'); i += 2; }
     else if (text.slice(i, i + 2) === '||') { tokens.push('||'); i += 2; }
     else if (c === '(' || c === ')' || c === ',') { tokens.push(c); i++; }
-    else { i++; } // skip unknown chars
+    else if (/[a-zA-Z_]/.test(c)) {
+      let j = i;
+      while (j < text.length) {
+        const ch = text[j];
+        if (ch === ' ' || ch === '\t' || ch === '(' || ch === ')' || ch === ',') break;
+        if (text.slice(j, j + 2) === '&&' || text.slice(j, j + 2) === '||') break;
+        j++;
+      }
+      tokens.push(text.slice(i, j)); // raw name token e.g. "Infamy*5"
+      i = j;
+    } else { i++; } // skip unknown chars
   }
 
   let pos = 0;
@@ -151,7 +161,18 @@ function evalPrereqExpr(text, leafFn) {
     const tok = peek();
     if (tok === '(') { consume(); const v = parseOr(); consume(); return v; }
     if (typeof tok === 'number') { consume(); return leafFn(tok); }
-    if (tok !== null) consume(); // skip unexpected token
+    if (typeof tok === 'string' && tok !== '&&' && tok !== '||' && tok !== '(' && tok !== ')' && tok !== ',') {
+      consume();
+      if (nameFn) {
+        const mStar = tok.match(/^(.+[a-zA-Z_])\*(\d+)$/);
+        const mDash = tok.match(/^(.+[a-zA-Z_])-(\d+)$/);
+        if (mStar) return nameFn(mStar[1], parseInt(mStar[2], 10));
+        if (mDash) return nameFn(mDash[1], null);
+        return nameFn(tok, null);
+      }
+      return true;
+    }
+    if (tok !== null) consume();
     return true;
   };
 
@@ -216,12 +237,24 @@ function receivedItemIds() {
   return out;
 }
 
-function itemPrereqsSatisfied(prereqText) {
+function itemPrereqsSatisfied(prereqText, progReqs) {
   if (!prereqText) return true;
   const have = receivedItemIds();
   const base = state.baseItemId;
-  return evalPrereqExpr(prereqText, idx1 =>
-    typeof base === 'number' && have.has(base + idx1 - 1)
+  const progCount = {};
+  for (const req of (progReqs || [])) {
+    const g = req.group ?? req[0];
+    const c = req.count ?? req[1] ?? 1;
+    progCount[g] = c;
+  }
+  const nameFn = (group, count) => {
+    const c = count !== null ? count : (progCount[group] ?? 1);
+    return progressiveReqSatisfied(group, c);
+  };
+  return evalPrereqExpr(
+    prereqText,
+    idx1 => typeof base === 'number' && have.has(base + idx1 - 1),
+    nameFn
   );
 }
 
@@ -947,24 +980,22 @@ function renderTasks() {
       if (taskPrereqText) taskPrereqOk = prereqsSatisfied(taskPrereqText, checked);
     }
 
+    // Progressive group requirements
+    const progReqs = (Array.isArray(state.taskProgressiveReqs[i]) ? state.taskProgressiveReqs[i] : []);
+
     // Item prereqs
     let itemPrereqOk = true;
     let itemPrereqText = '';
     if (i < state.itemPrereqs.length && state.itemPrereqs[i]) {
       itemPrereqText = String(state.itemPrereqs[i]).trim();
-      if (itemPrereqText) itemPrereqOk = itemPrereqsSatisfied(itemPrereqText);
+      if (itemPrereqText) itemPrereqOk = itemPrereqsSatisfied(itemPrereqText, progReqs);
     }
 
-    // Progressive group requirements
-    const progReqs = (Array.isArray(state.taskProgressiveReqs[i]) ? state.taskProgressiveReqs[i] : []);
     const progHints = [];
     for (const req of progReqs) {
       const g = req.group ?? req[0];
       const c = req.count ?? req[1] ?? 1;
-      if (!progressiveReqSatisfied(g, c)) {
-        itemPrereqOk = false;
-        progHints.push(`group '${g}' (need ${c})`);
-      }
+      if (!progressiveReqSatisfied(g, c)) progHints.push(`group '${g}' (need ${c})`);
     }
 
     // Region requirements
