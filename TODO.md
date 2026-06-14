@@ -14,6 +14,7 @@ take that Jira.
 ### Medium Prio:
 * Submission box and presets for community made yamls
 * Facelift/make purchaseables distinct
+* Taskmaster style ui
 * Task description text?
 
 ### Low Prio:
