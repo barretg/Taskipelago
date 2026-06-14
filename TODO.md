@@ -9,9 +9,12 @@ take that Jira.
 * Region requirements
 * Change percentage of region
 * Regions don't display well when there are too many
+* Visible/hidden task rewards and scout/hint all yaml option
 
 ### Medium Prio:
 * Submission box and presets for community made yamls
+* Facelift/make purchaseables distinct
+* Task description text?
 
 ### Low Prio:
 * Tasklock integration to force all task locks to be in the taskipelago world (generate tasklock yaml with plando logic included, warn user to enable plando items in host.yaml)
