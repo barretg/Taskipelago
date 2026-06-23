@@ -170,11 +170,20 @@ class TaskipelagoWorld(World):
         # Pad items_raw_input to editor task count, then normalize
         allowed_types = {"trap", "junk", "useful", "progression"}
 
-        # Warn if item/task counts don't match (editor level)
-        if n_editor_items != n_editor_tasks:
+        _n_yaml_tasks_expected = sum(task_counts_editor)
+
+        # Compute expanded item count from defined items before any padding
+        _item_counts_defined = [
+            _parse_count(item_count_raw[i] if i < len(item_count_raw) else "")
+            for i in range(n_editor_items)
+        ]
+        _n_defined_expanded = sum(_item_counts_defined)
+
+        # Warn using expanded counts, not editor slot counts
+        if _n_defined_expanded != _n_yaml_tasks_expected:
             print(
                 f"[Taskipelago] WARNING: Unbalanced item and task counts can lead to generation failures. "
-                f"Tasks: {n_editor_tasks}, Items: {n_editor_items}.",
+                f"Tasks: {_n_yaml_tasks_expected}, Items: {_n_defined_expanded}.",
                 file=_sys.stderr,
             )
         if len(items_raw_input) < n_editor_tasks:
@@ -191,9 +200,11 @@ class TaskipelagoWorld(World):
             item_consumable_raw += ["false"] * (n_editor_tasks - len(item_consumable_raw))
         item_consumable_editor = [s == "true" for s in item_consumable_raw[:n_editor_tasks]]
 
-        item_counts_editor = [
-            _parse_count(item_count_raw[i] if i < len(item_count_raw) else "")
-            for i in range(n_editor_tasks)
+        # Padded filler slots (indices >= n_editor_items) only fill remaining item slots
+        _remaining_slots = max(0, _n_yaml_tasks_expected - _n_defined_expanded)
+        item_counts_editor = _item_counts_defined + [
+            1 if i < _remaining_slots else 0
+            for i in range(n_editor_tasks - n_editor_items)
         ]
 
         # ------------------------------------------------------------------ #
