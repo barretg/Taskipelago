@@ -7,7 +7,8 @@ import random
 import re
 import threading
 import time
-from tkinter import colorchooser, filedialog, messagebox
+from tkinter import filedialog, messagebox
+import tkinter.colorchooser as colorchooser
 import tkinter as tk
 from tkinter import ttk
 
