@@ -1333,8 +1333,9 @@ class TaskipelagoApp(tk.Tk):
         regions_body.grid_rowconfigure(0, weight=1)   # rows list
         regions_body.grid_rowconfigure(1, weight=0)   # add row
 
-        self.regions_chips_frame = ttk.Frame(regions_body)
-        self.regions_chips_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=(4, 2))
+        _regions_scroll = ScrollableFrame(regions_body, colors=self.colors)
+        _regions_scroll.grid(row=0, column=0, sticky="nsew", padx=10, pady=(4, 2))
+        self.regions_chips_frame = _regions_scroll.inner
 
         rg_add_row = ttk.Frame(regions_body)
         rg_add_row.grid(row=1, column=0, sticky="w", padx=10, pady=(0, 6))
@@ -1938,7 +1939,7 @@ class TaskipelagoApp(tk.Tk):
             messagebox.showerror("Error",
                 f"Region name '{name}' is invalid.\n"
                 "Names must start and end with a letter or underscore, "
-                "may contain hyphens in the middle, and must not contain digits.")
+                "may contain hyphens in the middle, and must not contain spaces or digits.")
             return
         if name in self.regions:
             messagebox.showerror("Error", f"Region '{name}' already exists.")
@@ -2058,7 +2059,7 @@ class TaskipelagoApp(tk.Tk):
             messagebox.showerror("Error",
                 f"Region name '{new_name}' is invalid.\n"
                 "Names must start and end with a letter or underscore, "
-                "may contain hyphens in the middle, and must not contain digits.")
+                "may contain hyphens in the middle, and must not contain spaces or digits.")
             row_data["name_var"].set(old_name)
             return
         if new_name in self.regions:
@@ -2325,6 +2326,20 @@ class TaskipelagoApp(tk.Tk):
                 "Duplicate Item Names",
                 "Duplicate item names are not allowed - use the Count field for multiple copies:\n"
                 + "\n".join(_dup_items)
+            )
+            return
+
+        _bad_regions = [
+            r for r in self.regions
+            if not re.match(r'^[a-zA-Z_][a-zA-Z_-]*$', r) or re.search(r'\d', r) or r.endswith('-')
+        ]
+        if _bad_regions:
+            messagebox.showerror(
+                "Invalid Region Names",
+                "The following region names are invalid and cannot be exported.\n"
+                "Names must start and end with a letter or underscore, may contain hyphens in the middle, "
+                "and must not contain digits:\n\n"
+                + "\n".join(_bad_regions)
             )
             return
 
