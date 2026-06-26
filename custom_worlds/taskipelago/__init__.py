@@ -403,6 +403,11 @@ class TaskipelagoWorld(World):
                 )
             region_default_pcts[rname] = pct
 
+        raw_rcolors = [str(x).strip() for x in (self.options.region_colors.value or [])]
+        if len(raw_rcolors) < len(raw_regions):
+            raw_rcolors += [""] * (len(raw_regions) - len(raw_rcolors))
+        region_colors = raw_rcolors[:len(raw_regions)]
+
         for i, rname in enumerate(raw_task_region):
             if rname and rname not in region_set:
                 raise Exception(
@@ -815,6 +820,7 @@ class TaskipelagoWorld(World):
         self._task_progressive_reqs = task_progressive_reqs
         self._regions = raw_regions
         self._region_default_pcts = region_default_pcts
+        self._region_colors = region_colors
         self._task_region = task_region
         self._task_region_reqs = task_region_reqs
         self._region_to_task_indices = region_to_task_indices
@@ -1081,6 +1087,7 @@ class TaskipelagoWorld(World):
             },
             "regions": list(self._regions),
             "region_default_pcts": dict(self._region_default_pcts),
+            "region_colors": list(self._region_colors),
             "task_region": list(self._task_region),
             "task_region_reqs": [list(reqs) for reqs in self._task_region_reqs],
             "bingo_mode": bool(self.options.bingo_mode),

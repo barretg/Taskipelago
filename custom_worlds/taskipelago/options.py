@@ -159,6 +159,17 @@ class RegionDefaultPcts(OptionList):
     default: List[str] = []
 
 
+class RegionColors(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with regions.
+    Each entry is a hex color string (e.g. '#e05c5c') for that region's color coding.
+    Missing or empty entries will be treated as no color.
+    """
+    display_name = "Region Colors"
+    default: List[str] = []
+
+
 class TaskRegion(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -279,6 +290,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     item_progressive_group: ItemProgressiveGroup
     regions: Regions
     region_default_pcts: RegionDefaultPcts
+    region_colors: RegionColors
     task_region: TaskRegion
     bingo_mode: BingoMode
     bingo_dimension_x: BingoDimensionX

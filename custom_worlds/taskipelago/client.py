@@ -7,7 +7,7 @@ import random
 import re
 import threading
 import time
-from tkinter import filedialog, messagebox
+from tkinter import colorchooser, filedialog, messagebox
 import tkinter as tk
 from tkinter import ttk
 
@@ -22,6 +22,12 @@ import websockets
 import copy
 import CommonClient
 from NetUtils import Endpoint, decode
+
+REGION_COLOR_PALETTE = [
+    "#e05c5c", "#e0955c", "#e0d45c", "#8de05c",
+    "#5ce09a", "#5cd4e0", "#5c8de0", "#7b5ce0",
+    "#c05ce0", "#e05cb4", "#a0a0a0", "#5ce0c8",
+]
 
 FILLER_ITEMS = [
     "Several pats on the back",
@@ -794,6 +800,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
 
         self.regions = []
         self.region_default_pcts = {}
+        self.region_colors = []
         self.task_region = []
         self.task_region_reqs = []
 
@@ -851,6 +858,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
 
         self.regions = list(self.slot_data.get("regions", []) or [])
         self.region_default_pcts = dict(self.slot_data.get("region_default_pcts", {}) or {})
+        self.region_colors = list(self.slot_data.get("region_colors", []) or [])
         self.task_region = list(self.slot_data.get("task_region", []) or [])
         self.task_region_reqs = list(self.slot_data.get("task_region_reqs", []) or [])
 
@@ -1255,6 +1263,9 @@ class TaskipelagoApp(tk.Tk):
         self.prog_groups: list = []
         self.regions: list = []
         self.region_default_pcts: dict = {}
+        self.region_colors: dict = {}  # name -> hex
+        self._next_color_idx: int = 0
+        self._region_rows: list = []
 
         # Notifications state
         self._notifications: list[Notification] = []
@@ -1302,8 +1313,8 @@ class TaskipelagoApp(tk.Tk):
         # YAML tab layout
         self.editor_tab.grid_columnconfigure(0, weight=1)
         self.editor_tab.grid_rowconfigure(0, weight=0)   # player name strip
-        # rows 1-3 managed dynamically by CollapsibleSection (tasks, items, deathlink)
-        self.editor_tab.grid_rowconfigure(4, weight=0, minsize=52)    # buttons
+        # rows 1-4 managed dynamically by CollapsibleSection (regions, tasks, items, deathlink)
+        self.editor_tab.grid_rowconfigure(5, weight=0, minsize=52)    # buttons
 
         # --- Player name strip (row 0) ---
         name_strip = ttk.Frame(self.editor_tab)
@@ -1313,47 +1324,19 @@ class TaskipelagoApp(tk.Tk):
         self.player_name_var = tk.StringVar()
         ttk.Entry(name_strip, textvariable=self.player_name_var, width=28).pack(side="left")
 
-        # ======== TASKS section (collapsible, row 1, expanded by default) ========
-        _tasks_cs = CollapsibleSection(self.editor_tab, "Tasks", row=1,
-                                       expanded=True, min_height=180, colors=self.colors)
-        _tasks_cs.outer.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 2))
-        tasks_lf = _tasks_cs.body
-        tasks_lf.grid_columnconfigure(0, weight=1)
-        tasks_lf.grid_rowconfigure(0, weight=0)   # settings
-        tasks_lf.grid_rowconfigure(1, weight=0)   # regions panel
-        tasks_lf.grid_rowconfigure(2, weight=1)   # table
-        tasks_lf.grid_rowconfigure(3, weight=0, minsize=40)  # button row
+        # ======== REGIONS section (collapsible, row 1, expanded by default) ========
+        _regions_cs = CollapsibleSection(self.editor_tab, "Regions", row=1,
+                                         expanded=True, min_height=80, colors=self.colors)
+        _regions_cs.outer.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 2))
+        regions_body = _regions_cs.body
+        regions_body.grid_columnconfigure(0, weight=1)
+        regions_body.grid_rowconfigure(0, weight=1)   # rows list
+        regions_body.grid_rowconfigure(1, weight=0)   # add row
 
-        # Task settings sub-row
-        task_settings = ttk.Frame(tasks_lf)
-        task_settings.grid(row=0, column=0, sticky="ew", padx=10, pady=(6, 4))
+        self.regions_chips_frame = ttk.Frame(regions_body)
+        self.regions_chips_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=(4, 2))
 
-        self.lock_prereqs_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            task_settings, text="In logic only (lock task completion behind prereqs)",
-            variable=self.lock_prereqs_var,
-        ).pack(side="left")
-
-        self.hide_unreachable_tasks = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            task_settings, text="Hide Unreachable Tasks",
-            variable=self.hide_unreachable_tasks,
-        ).pack(side="left", padx=(16, 0))
-
-        ttk.Label(task_settings, text="Goal task(s):").pack(side="left", padx=(16, 4))
-        self.goal_tasks_var = tk.StringVar()
-        ttk.Entry(task_settings, textvariable=self.goal_tasks_var, width=16).pack(side="left")
-        ttk.Label(task_settings, text="(blank = all)", style="Muted.TLabel").pack(side="left", padx=(4, 0))
-
-        # Regions panel (inside tasks section)
-        regions_frame = ttk.LabelFrame(tasks_lf, text="Regions")
-        regions_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 4))
-        regions_frame.grid_columnconfigure(0, weight=1)
-
-        self.regions_chips_frame = ttk.Frame(regions_frame)
-        self.regions_chips_frame.grid(row=0, column=0, sticky="w", padx=10, pady=(4, 2))
-
-        rg_add_row = ttk.Frame(regions_frame)
+        rg_add_row = ttk.Frame(regions_body)
         rg_add_row.grid(row=1, column=0, sticky="w", padx=10, pady=(0, 6))
         ttk.Label(rg_add_row, text="New region name:").pack(side="left", padx=(0, 6))
         self.new_region_var = tk.StringVar()
@@ -1377,13 +1360,46 @@ class TaskipelagoApp(tk.Tk):
             "  myregion-75    ->  exactly 75% of that region's tasks must be completed\n"
             "  myregion*5     ->  exactly 5 tasks in that region must be completed\n\n"
             "A task cannot depend on its own region.\n"
-            "Regions also appear as Archipelago regions for location hinting."
+            "Regions also appear as Archipelago regions for location hinting.\n\n"
+            "Click the color swatch on any region row to change its color.\n"
+            "Region names and default percentages are editable inline."
         ))
         self._refresh_regions_panel()
 
+        # ======== TASKS section (collapsible, row 2, expanded by default) ========
+        _tasks_cs = CollapsibleSection(self.editor_tab, "Tasks", row=2,
+                                       expanded=True, min_height=180, colors=self.colors)
+        _tasks_cs.outer.grid(row=2, column=0, sticky="nsew", padx=10, pady=(0, 2))
+        tasks_lf = _tasks_cs.body
+        tasks_lf.grid_columnconfigure(0, weight=1)
+        tasks_lf.grid_rowconfigure(0, weight=0)   # settings
+        tasks_lf.grid_rowconfigure(1, weight=1)   # table
+        tasks_lf.grid_rowconfigure(2, weight=0, minsize=40)  # button row
+
+        # Task settings sub-row
+        task_settings = ttk.Frame(tasks_lf)
+        task_settings.grid(row=0, column=0, sticky="ew", padx=10, pady=(6, 4))
+
+        self.lock_prereqs_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            task_settings, text="In logic only (lock task completion behind prereqs)",
+            variable=self.lock_prereqs_var,
+        ).pack(side="left")
+
+        self.hide_unreachable_tasks = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            task_settings, text="Hide Unreachable Tasks",
+            variable=self.hide_unreachable_tasks,
+        ).pack(side="left", padx=(16, 0))
+
+        ttk.Label(task_settings, text="Goal task(s):").pack(side="left", padx=(16, 4))
+        self.goal_tasks_var = tk.StringVar()
+        ttk.Entry(task_settings, textvariable=self.goal_tasks_var, width=16).pack(side="left")
+        ttk.Label(task_settings, text="(blank = all)", style="Muted.TLabel").pack(side="left", padx=(4, 0))
+
         # Tasks scrollable table
         self.tasks_scroll = ScrollableFrame(tasks_lf, colors=self.colors)
-        self.tasks_scroll.grid(row=2, column=0, sticky="nsew", padx=10, pady=0)
+        self.tasks_scroll.grid(row=1, column=0, sticky="nsew", padx=10, pady=0)
 
         t_tbl = self.tasks_scroll.inner
         t_tbl.grid_columnconfigure(0, weight=0)   # #
@@ -1471,13 +1487,13 @@ class TaskipelagoApp(tk.Tk):
         ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=7, sticky="w")
 
         tasks_btn_row = ttk.Frame(tasks_lf)
-        tasks_btn_row.grid(row=3, column=0, sticky="ew", padx=10, pady=(4, 8))
+        tasks_btn_row.grid(row=2, column=0, sticky="ew", padx=10, pady=(4, 8))
         ttk.Button(tasks_btn_row, text="Add Task", command=self.add_task_row).pack(side="left")
 
-        # ======== ITEMS section (collapsible, row 2, expanded by default) ========
-        _items_cs = CollapsibleSection(self.editor_tab, "Items", row=2,
+        # ======== ITEMS section (collapsible, row 3, expanded by default) ========
+        _items_cs = CollapsibleSection(self.editor_tab, "Items", row=3,
                                        expanded=True, min_height=200, colors=self.colors)
-        _items_cs.outer.grid(row=2, column=0, sticky="nsew", padx=10, pady=(0, 2))
+        _items_cs.outer.grid(row=3, column=0, sticky="nsew", padx=10, pady=(0, 2))
         items_lf = _items_cs.body
         items_lf.grid_columnconfigure(0, weight=1)
         items_lf.grid_rowconfigure(0, weight=0)   # settings
@@ -1612,10 +1628,10 @@ class TaskipelagoApp(tk.Tk):
         )
         self.add_item_btn.pack(side="left")
 
-        # ======== DEATHLINK section (collapsible, row 3, collapsed by default) ========
-        _dl_cs = CollapsibleSection(self.editor_tab, "DeathLink", row=3,
+        # ======== DEATHLINK section (collapsible, row 4, collapsed by default) ========
+        _dl_cs = CollapsibleSection(self.editor_tab, "DeathLink", row=4,
                                     expanded=False, min_height=120, colors=self.colors)
-        _dl_cs.outer.grid(row=3, column=0, sticky="nsew", padx=10, pady=(0, 2))
+        _dl_cs.outer.grid(row=4, column=0, sticky="nsew", padx=10, pady=(0, 2))
         dl = _dl_cs.body
         dl.grid_columnconfigure(0, weight=1)
         dl.grid_rowconfigure(0, weight=0)   # settings
@@ -1647,9 +1663,9 @@ class TaskipelagoApp(tk.Tk):
             row=2, column=0, sticky="w", padx=10, pady=(0, 10)
         )
 
-        # ======== Bottom buttons (row 4) ========
+        # ======== Bottom buttons (row 5) ========
         bottom = ttk.Frame(self.editor_tab)
-        bottom.grid(row=4, column=0, sticky="ew", pady=(8, 0))
+        bottom.grid(row=5, column=0, sticky="ew", pady=(8, 0))
         bottom.grid_columnconfigure(0, weight=1)
         ttk.Button(bottom, text="Reset", command=self.reset_yaml_generator).grid(
             row=0, column=0, sticky="w", padx=(10, 0)
@@ -1743,6 +1759,18 @@ class TaskipelagoApp(tk.Tk):
             command=self.refresh_play_tab,
         )
         self._hide_completed_checkbox.pack(side="left", padx=(8, 8), pady=4)
+
+        self._region_progress_expanded = True
+        self._region_progress_outer = ttk.Frame(tasks_frame)
+        _rp_hdr = ttk.Frame(self._region_progress_outer)
+        _rp_hdr.pack(fill="x")
+        self._region_progress_toggle_btn = ttk.Button(
+            _rp_hdr, text="[-] Regions", width=14,
+            command=self._toggle_region_progress,
+        )
+        self._region_progress_toggle_btn.pack(side="left", padx=(6, 0), pady=2)
+        self._region_progress_inner = ttk.Frame(self._region_progress_outer)
+        self._region_progress_inner.pack(fill="x", padx=6, pady=(0, 4))
 
         self.play_tasks_scroll = ScrollableFrame(tasks_frame, colors=self.colors)
         self.play_tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
@@ -1913,8 +1941,11 @@ class TaskipelagoApp(tk.Tk):
             messagebox.showerror("Error", f"Region '{name}' already exists.")
             return
         pct = self.new_region_pct_var.get()
+        color = REGION_COLOR_PALETTE[self._next_color_idx % len(REGION_COLOR_PALETTE)]
+        self._next_color_idx += 1
         self.regions.append(name)
         self.region_default_pcts[name] = int(pct)
+        self.region_colors[name] = color
         self.new_region_var.set("")
         self.new_region_pct_var.set(100)
         self._refresh_regions_panel()
@@ -1924,27 +1955,119 @@ class TaskipelagoApp(tk.Tk):
         if rname in self.regions:
             self.regions.remove(rname)
         self.region_default_pcts.pop(rname, None)
+        self.region_colors.pop(rname, None)
         for row in self.task_rows:
             if row.region_var.get() == rname:
                 row.region_var.set("")
         self._refresh_regions_panel()
         self._update_all_task_row_regions()
 
+    def _pick_region_color(self, row_data: dict):
+        name = row_data["committed_name"]
+        current = self.region_colors.get(name, "#808080")
+        result = colorchooser.askcolor(color=current, title=f"Region Color: {name}")
+        if result and result[1]:
+            new_color = result[1].lower()
+            self.region_colors[name] = new_color
+            try:
+                row_data["swatch"].configure(bg=new_color)
+            except Exception:
+                pass
+
+    def _commit_region_rename(self, row_data: dict):
+        old_name = row_data["committed_name"]
+        new_name = row_data["name_var"].get().strip()
+        if new_name == old_name:
+            return
+        if not new_name:
+            row_data["name_var"].set(old_name)
+            return
+        if re.search(r'\d', new_name):
+            messagebox.showerror("Error", f"Region name '{new_name}' must not contain digits.")
+            row_data["name_var"].set(old_name)
+            return
+        if new_name in self.regions:
+            messagebox.showerror("Error", f"Region '{new_name}' already exists.")
+            row_data["name_var"].set(old_name)
+            return
+        idx = self.regions.index(old_name)
+        self.regions[idx] = new_name
+        if old_name in self.region_default_pcts:
+            self.region_default_pcts[new_name] = self.region_default_pcts.pop(old_name)
+        if old_name in self.region_colors:
+            self.region_colors[new_name] = self.region_colors.pop(old_name)
+        for task_row in self.task_rows:
+            if task_row.region_var.get() == old_name:
+                task_row.region_var.set(new_name)
+        row_data["committed_name"] = new_name
+        self._update_all_task_row_regions()
+
+    def _commit_region_pct(self, row_data: dict):
+        name = row_data["committed_name"]
+        try:
+            pct = max(0, min(100, int(row_data["pct_var"].get())))
+        except (ValueError, tk.TclError):
+            pct = self.region_default_pcts.get(name, 100)
+        self.region_default_pcts[name] = pct
+        row_data["pct_var"].set(pct)
+
     def _refresh_regions_panel(self):
         if not hasattr(self, "regions_chips_frame"):
             return
         for w in self.regions_chips_frame.winfo_children():
             w.destroy()
+        self._region_rows = []
+
         if not self.regions:
-            ttk.Label(self.regions_chips_frame, text="No regions defined.", style="Muted.TLabel").pack(side="left")
+            ttk.Label(self.regions_chips_frame, text="No regions defined.", style="Muted.TLabel").pack(anchor="w", pady=4)
             return
+
+        border = self.colors.get("border", "#3a3a3a")
+
+        # Header labels
+        hdr = ttk.Frame(self.regions_chips_frame)
+        hdr.pack(fill="x", pady=(0, 2))
+        ttk.Label(hdr, text="Color", style="Muted.TLabel", width=6).pack(side="left", padx=(0, 4))
+        ttk.Label(hdr, text="Name", style="Muted.TLabel", width=18).pack(side="left", padx=(0, 6))
+        ttk.Label(hdr, text="Default %", style="Muted.TLabel", width=10).pack(side="left", padx=(0, 6))
+
         for rname in self.regions:
             pct = self.region_default_pcts.get(rname, 100)
-            chip = ttk.Frame(self.regions_chips_frame)
-            chip.pack(side="left", padx=(0, 6))
-            ttk.Label(chip, text=f"{rname} ({pct}%)").pack(side="left", padx=(0, 2))
-            ttk.Button(chip, text="x", width=2,
-                       command=lambda r=rname: self._remove_region(r)).pack(side="left")
+            color = self.region_colors.get(rname, "#808080")
+
+            row_data = {
+                "committed_name": rname,
+                "name_var": tk.StringVar(value=rname),
+                "pct_var": tk.IntVar(value=pct),
+                "swatch": None,
+            }
+
+            row = ttk.Frame(self.regions_chips_frame)
+            row.pack(fill="x", pady=2)
+
+            swatch = tk.Canvas(row, width=18, height=18, bg=color,
+                               highlightthickness=1, highlightbackground=border,
+                               cursor="hand2")
+            swatch.pack(side="left", padx=(0, 6))
+            row_data["swatch"] = swatch
+            swatch.bind("<Button-1>", lambda e, rd=row_data: self._pick_region_color(rd))
+
+            name_entry = ttk.Entry(row, textvariable=row_data["name_var"], width=18)
+            name_entry.pack(side="left", padx=(0, 6))
+            name_entry.bind("<FocusOut>", lambda e, rd=row_data: self._commit_region_rename(rd))
+            name_entry.bind("<Return>", lambda e, rd=row_data: self._commit_region_rename(rd))
+
+            ttk.Label(row, text="Default %:").pack(side="left", padx=(0, 4))
+            pct_spin = ttk.Spinbox(row, from_=0, to=100, textvariable=row_data["pct_var"], width=5)
+            pct_spin.pack(side="left", padx=(0, 8))
+            pct_spin.bind("<FocusOut>", lambda e, rd=row_data: self._commit_region_pct(rd))
+            pct_spin.bind("<Return>", lambda e, rd=row_data: self._commit_region_pct(rd))
+
+            ttk.Button(row, text="Remove", width=7,
+                       command=lambda rd=row_data: self._remove_region(rd["committed_name"])
+                       ).pack(side="left")
+
+            self._region_rows.append(row_data)
 
     def _update_all_task_row_regions(self):
         for row in self.task_rows:
@@ -2211,6 +2334,7 @@ class TaskipelagoApp(tk.Tk):
 
                 "regions": list(self.regions),
                 "region_default_pcts": [self.region_default_pcts.get(r, 100) for r in self.regions],
+                "region_colors": [self.region_colors.get(r, "") for r in self.regions],
                 "task_region": task_region_list,
 
                 "tasks": tasks,
@@ -2311,14 +2435,19 @@ class TaskipelagoApp(tk.Tk):
         # --------- Regions (must be loaded before task rows) ---------
         raw_rg = list(block.get("regions", []) or [])
         raw_rdp = list(block.get("region_default_pcts", []) or [])
+        raw_rcolors = list(block.get("region_colors", []) or [])
         self.regions = [str(r).strip() for r in raw_rg if str(r).strip()]
         self.region_default_pcts = {}
+        self.region_colors = {}
+        self._next_color_idx = len(self.regions)
         for i, rname in enumerate(self.regions):
             try:
                 pct = int(raw_rdp[i]) if i < len(raw_rdp) else 100
             except (ValueError, TypeError):
                 pct = 100
             self.region_default_pcts[rname] = pct
+            color = str(raw_rcolors[i]).strip() if i < len(raw_rcolors) else ""
+            self.region_colors[rname] = color if color else REGION_COLOR_PALETTE[i % len(REGION_COLOR_PALETTE)]
         self._refresh_regions_panel()
 
         # --------- Read tasks ---------
@@ -2519,6 +2648,8 @@ class TaskipelagoApp(tk.Tk):
 
         self.regions = []
         self.region_default_pcts = {}
+        self.region_colors = {}
+        self._next_color_idx = 0
         self._refresh_regions_panel()
 
         self._clear_task_rows()
@@ -3083,7 +3214,7 @@ class TaskipelagoApp(tk.Tk):
         else:
             self.send_deathlink_btn.pack_forget()
 
-    def _build_task_card(self, parent: tk.Widget, task_idx: int) -> dict:
+    def _build_task_card(self, parent: tk.Widget, task_idx: int, bar_color: str = "") -> dict:
         panel = self.colors.get("panel", "#252526")
         border = self.colors.get("border", "#3a3a3a")
         fg = self.colors.get("fg", "#e6e6e6")
@@ -3091,8 +3222,15 @@ class TaskipelagoApp(tk.Tk):
 
         card = tk.Frame(parent, bg=panel, highlightbackground=border, highlightthickness=1)
 
-        top = tk.Frame(card, bg=panel)
-        top.pack(fill="x", padx=10, pady=(8, 2))
+        bar = tk.Frame(card, width=4, bg=bar_color if bar_color else panel)
+        bar.pack(side="left", fill="y")
+        bar.pack_propagate(False)
+
+        content = tk.Frame(card, bg=panel)
+        content.pack(side="left", fill="both", expand=True)
+
+        top = tk.Frame(content, bg=panel)
+        top.pack(fill="x", padx=(6, 10), pady=(8, 2))
 
         label = tk.Label(
             top, text="", bg=panel, fg=fg,
@@ -3114,11 +3252,11 @@ class TaskipelagoApp(tk.Tk):
         )
 
         hints = [
-            tk.Label(card, text="", bg=panel, fg=muted,
+            tk.Label(content, text="", bg=panel, fg=muted,
                      font=("Segoe UI", 10), anchor="w", justify="left", wraplength=740)
             for _ in range(4)
         ]
-        spacer = tk.Frame(card, bg=panel, height=6)
+        spacer = tk.Frame(content, bg=panel, height=6)
 
         return {
             "frame": card,
@@ -3173,6 +3311,81 @@ class TaskipelagoApp(tk.Tk):
 
         card_dict["sig"] = s["sig"]
 
+    def _toggle_region_progress(self):
+        self._region_progress_expanded = not self._region_progress_expanded
+        if self._region_progress_expanded:
+            self._region_progress_toggle_btn.configure(text="[-] Regions")
+            self._region_progress_inner.pack(fill="x", padx=6, pady=(0, 4))
+        else:
+            self._region_progress_toggle_btn.configure(text="[+] Regions")
+            self._region_progress_inner.pack_forget()
+
+    def _refresh_region_progress(self):
+        for w in self._region_progress_inner.winfo_children():
+            try:
+                w.destroy()
+            except Exception:
+                pass
+
+        regions = list(getattr(self.ctx, "regions", []) or []) if getattr(self, "ctx", None) else []
+        if not regions:
+            self._region_progress_outer.pack_forget()
+            return
+
+        self._region_progress_outer.pack(fill="x", before=self.play_tasks_scroll)
+
+        if not self._region_progress_expanded:
+            return
+
+        colors_list = list(getattr(self.ctx, "region_colors", []) or [])
+        task_region = list(getattr(self.ctx, "task_region", []) or [])
+        checked = set(getattr(self.ctx, "checked_locations_set", set()) or set())
+        base_complete = getattr(self.ctx, "base_complete_location_id", None)
+
+        bg = self.colors.get("bg", "#1e1e1e")
+        border = self.colors.get("border", "#3a3a3a")
+        fg = self.colors.get("fg", "#e6e6e6")
+        muted = self.colors.get("muted", "#bdbdbd")
+
+        for ri, rname in enumerate(regions):
+            color = colors_list[ri] if ri < len(colors_list) and colors_list[ri] else "#808080"
+            indices = [i for i, r in enumerate(task_region) if r == rname]
+            total = len(indices)
+            if base_complete is not None:
+                done = sum(1 for i in indices if (base_complete + i) in checked)
+            else:
+                done = 0
+            pct = done / total if total > 0 else 0
+
+            row = tk.Frame(self._region_progress_inner, bg=bg)
+            row.pack(fill="x", pady=1)
+
+            name_lbl = tk.Label(row, text=rname, bg=bg, fg=fg,
+                                width=14, anchor="w", font=("Segoe UI", 10))
+            name_lbl.pack(side="left", padx=(2, 6))
+
+            bar_outer = tk.Frame(row, bg=border, height=12)
+            bar_outer.pack(side="left", fill="x", expand=True, pady=3)
+            bar_outer.pack_propagate(False)
+
+            bar_canvas = tk.Canvas(bar_outer, bg=border, highlightthickness=0)
+            bar_canvas.pack(fill="both", expand=True)
+
+            def _draw(event, canvas=bar_canvas, p=pct, c=color, bc=border):
+                canvas.delete("all")
+                w = event.width
+                h = event.height
+                fill_w = max(0, int(w * p))
+                if fill_w > 0:
+                    canvas.create_rectangle(0, 0, fill_w, h, fill=c, outline="")
+                if fill_w < w:
+                    canvas.create_rectangle(fill_w, 0, w, h, fill=bc, outline="")
+            bar_canvas.bind("<Configure>", _draw)
+
+            count_lbl = tk.Label(row, text=f"{done}/{total}", bg=bg, fg=muted,
+                                 width=6, anchor="e", font=("Segoe UI", 10))
+            count_lbl.pack(side="left", padx=(6, 4))
+
     def refresh_play_tab(self):
         self._refresh_after_id = None
 
@@ -3214,12 +3427,14 @@ class TaskipelagoApp(tk.Tk):
 
         if not connected:
             _clear_task_cards()
+            self._region_progress_outer.pack_forget()
             self.play_bingo_frame.pack_forget()
             self.play_tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
             return
 
         if bingo_mode:
             _clear_task_cards()
+            self._region_progress_outer.pack_forget()
             self.play_tasks_scroll.pack_forget()
             self.play_bingo_frame.pack(fill="both", expand=True, padx=10, pady=10)
             self._render_bingo_board()
@@ -3227,6 +3442,8 @@ class TaskipelagoApp(tk.Tk):
         else:
             self.play_bingo_frame.pack_forget()
             self.play_tasks_scroll.pack(fill="both", expand=True, padx=10, pady=10)
+
+        self._refresh_region_progress()
 
         fg = self.colors.get("fg", "#e6e6e6")
         muted = self.colors.get("muted", "#bdbdbd")
@@ -3238,6 +3455,15 @@ class TaskipelagoApp(tk.Tk):
         show_locked = self._show_locked_var.get()
         hide_completed = self._hide_completed_var.get()
         cost_amounts = list(getattr(self.ctx, "task_cost_amounts", []) or [])
+
+        _ctx_regions = list(getattr(self.ctx, "regions", []) or [])
+        _ctx_region_colors = list(getattr(self.ctx, "region_colors", []) or [])
+        _region_color_map = {
+            _ctx_regions[i]: _ctx_region_colors[i]
+            for i in range(min(len(_ctx_regions), len(_ctx_region_colors)))
+            if _ctx_region_colors[i]
+        }
+        _task_region_list = list(getattr(self.ctx, "task_region", []) or [])
 
         new_visible: list = []  # [(task_idx, s_dict), ...]
 
@@ -3351,6 +3577,9 @@ class TaskipelagoApp(tk.Tk):
             can_complete = not (effective_lock and (not other_prereqs_ok or not cost_paid))
             show_purchase = cost_only_locked and effective_lock
 
+            task_region_name = _task_region_list[i] if i < len(_task_region_list) else ""
+            bar_color = _region_color_map.get(task_region_name, "") if task_region_name else ""
+
             sig = (label_text, label_color, can_complete, show_purchase, can_make_change, *hint_texts)
             new_visible.append((i, {
                 "label_text": label_text,
@@ -3360,6 +3589,7 @@ class TaskipelagoApp(tk.Tk):
                 "show_purchase": show_purchase,
                 "can_make_change": can_make_change,
                 "hint_texts": hint_texts,
+                "bar_color": bar_color,
                 "sig": sig,
             }))
 
@@ -3379,7 +3609,7 @@ class TaskipelagoApp(tk.Tk):
         for task_idx, s in new_visible:
             if task_idx not in self._task_cards:
                 self._task_cards[task_idx] = self._build_task_card(
-                    self.play_tasks_scroll.inner, task_idx
+                    self.play_tasks_scroll.inner, task_idx, bar_color=s.get("bar_color", "")
                 )
             card_dict = self._task_cards[task_idx]
             if card_dict["sig"] != s["sig"]:
