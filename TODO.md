@@ -5,6 +5,7 @@ what are you gonna do about it?
 take that Jira.
 
 ### High Prio:
+* Color-coded regions
 * Pomodoro-sanity
 * Region requirements
 * Change percentage of region
