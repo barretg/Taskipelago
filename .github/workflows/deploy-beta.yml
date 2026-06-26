@@ -18,9 +18,18 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Deploy to beta
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./web-client
-          destination_dir: beta
-          keep_files: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin gh-pages 2>/dev/null && git worktree add gh-pages-out gh-pages || \
+            (git worktree add --detach gh-pages-out && git -C gh-pages-out checkout --orphan gh-pages && git -C gh-pages-out rm -rf . 2>/dev/null || true)
+
+          mkdir -p gh-pages-out/beta
+          rsync -a --delete web-client/ gh-pages-out/beta/
+
+          cd gh-pages-out
+          git add -A
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "Deploy beta [skip ci]"
+          git push origin gh-pages
