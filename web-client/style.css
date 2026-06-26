@@ -1,0 +1,632 @@
+/* =============================================================
+   Taskipelago Web Client - Dark Theme
+   ============================================================= */
+
+:root {
+  --bg:           #1e1e1e;
+  --panel:        #252526;
+  --field:        #2d2d30;
+  --fg:           #e6e6e6;
+  --muted:        #bdbdbd;
+  --border:       #3a3a3a;
+  --tab-bg:       #3a3a3a;
+  --tab-active:   #4a4a4a;
+  --btn-bg:       #3a3a3a;
+  --btn-hover:    #484848;
+  --warning:      #e07070;
+  --bingo-line:   #1a4a1a;
+  --bingo-done:   #4a3a00;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Desktop: fill the viewport */
+@media (min-width: 768px) {
+  html, body { height: 100%; overflow: hidden; }
+  #app { height: 100vh; overflow: hidden; }
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* =============================================================
+   Main tabs
+   ============================================================= */
+#main-tabs {
+  display: flex;
+  background: var(--tab-bg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#main-tabs .tab-btn {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #dddddd;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+#main-tabs .tab-btn:hover { background: rgba(255,255,255,0.06); }
+#main-tabs .tab-btn.active {
+  background: var(--tab-active);
+  color: #fff;
+  border-bottom-color: #888;
+}
+
+/* =============================================================
+   Tab panes
+   ============================================================= */
+.tab-pane { display: none; }
+
+.tab-pane.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+@media (min-width: 768px) {
+  .tab-pane.active { overflow: hidden; }
+}
+
+/* =============================================================
+   Play layout (two columns on desktop, stacked on mobile)
+   ============================================================= */
+.play-layout {
+  display: flex;
+  flex: 1;
+  gap: 10px;
+  padding: 10px;
+}
+
+@media (min-width: 768px) {
+  .play-layout { overflow: hidden; }
+
+  .play-main {
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .play-side {
+    flex: 1;
+    min-width: 210px;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 767px) {
+  .play-layout { flex-direction: column; }
+  .play-main { display: flex; flex-direction: column; gap: 6px; }
+  .play-side { display: flex; flex-direction: column; }
+}
+
+/* =============================================================
+   Panels (fieldset)
+   ============================================================= */
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px 10px;
+  background: var(--bg);
+  margin: 0;
+}
+
+.panel legend {
+  color: var(--muted);
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+/* Tasks panel: grows to fill column on desktop */
+.tasks-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .tasks-panel { flex: 1; overflow: hidden; }
+}
+
+/* =============================================================
+   Connection form
+   ============================================================= */
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.field-row label {
+  flex: 0 0 128px;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+}
+
+.field-row input {
+  flex: 1;
+  min-width: 0;
+  background: var(--field);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--fg);
+  padding: 5px 8px;
+  font-size: 13px;
+}
+
+.field-row input:focus { outline: 1px solid #666; }
+
+@media (max-width: 420px) {
+  .field-row { flex-direction: column; align-items: flex-start; }
+  .field-row label { flex: none; text-align: left; }
+  .field-row input { width: 100%; }
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* Generic button */
+button {
+  background: var(--btn-bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--fg);
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+
+button:hover:not(:disabled) { background: var(--btn-hover); }
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.status-text {
+  margin-top: 7px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* =============================================================
+   Option bars (enforce / show-locked)
+   ============================================================= */
+.option-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.muted-text { color: var(--muted); }
+
+/* =============================================================
+   Scroll areas
+   ============================================================= */
+.scroll-area {
+  overflow-y: auto;
+  padding: 2px 4px;
+}
+
+@media (min-width: 768px) {
+  .tasks-panel .scroll-area,
+  .tasks-panel .bingo-wrapper { flex: 1; overflow-y: auto; }
+}
+
+@media (max-width: 767px) {
+  .tasks-panel .scroll-area,
+  .tasks-panel .bingo-wrapper { max-height: 55vh; overflow-y: auto; }
+}
+
+/* =============================================================
+   Task cards
+   ============================================================= */
+.task-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin: 5px 2px;
+  overflow: hidden;
+}
+
+.task-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px 6px;
+}
+
+.task-name {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.task-name.completed { color: var(--muted); }
+.task-name.locked    { color: var(--muted); font-style: italic; }
+
+.task-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.task-hint {
+  padding: 0 28px 7px;
+  font-size: 11px;
+  color: var(--muted);
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+/* =============================================================
+   Bingo board
+   ============================================================= */
+.bingo-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.bingo-counter {
+  padding: 5px 4px 3px;
+  font-size: 12px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+#bingo-grid {
+  display: grid;
+  gap: 3px;
+  padding: 4px 2px;
+  flex: 1;
+}
+
+.bingo-cell {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 4px 4px;
+  text-align: center;
+  overflow: hidden;
+  word-break: break-word;
+  min-height: 70px;
+  gap: 3px;
+}
+
+.bingo-cell.has-bingo { background: var(--bingo-line); }
+.bingo-cell.is-done   { background: var(--bingo-done); }
+
+.bingo-cell .cell-text {
+  flex: 1;
+  font-size: clamp(8px, 1.4vw, 12px);
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bingo-cell button {
+  font-size: 10px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+}
+
+/* =============================================================
+   Side panel (sub-tabs)
+   ============================================================= */
+.sub-tabs {
+  display: flex;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sub-tabs .tab-btn {
+  flex: 1;
+  padding: 7px 4px;
+  font-size: 11px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: center;
+}
+
+.sub-tabs .tab-btn.active {
+  color: var(--fg);
+  border-bottom-color: var(--tab-active);
+  background: rgba(255,255,255,0.04);
+}
+
+.subtab-pane {
+  display: none;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  background: var(--bg);
+}
+
+.subtab-pane.active {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .subtab-pane.active { flex: 1; overflow: hidden; }
+  .subtab-pane.active .scroll-area { flex: 1; }
+}
+
+@media (max-width: 767px) {
+  .subtab-pane.active .scroll-area { max-height: 35vh; }
+}
+
+.subtab-toolbar {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.hint-text {
+  margin: 5px 8px 2px;
+  font-size: 11px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* Notification cards */
+.notif-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin: 5px 4px;
+  padding: 8px 10px;
+}
+
+.notif-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.notif-title {
+  font-weight: bold;
+  font-size: 13px;
+  word-break: break-word;
+  flex: 1;
+}
+
+.notif-dismiss {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.notif-meta {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.notif-body {
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+/* Items received list */
+.item-entry {
+  padding: 2px 8px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.item-entry:last-child { border-bottom: none; }
+
+/* Group summary (top of Items tab) */
+.group-row {
+  padding: 3px 8px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+.group-row:last-of-type { border-bottom: none; }
+.group-row-count { color: var(--muted); }
+.group-summary-divider {
+  border: none;
+  border-top: 5px solid var(--border);
+  margin: 10px 0;
+}
+
+/* Consumables list */
+.consumable-entry {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.consumable-entry span { flex: 1; }
+.consumable-entry:last-child { border-bottom: none; }
+.consumable-warning { color: var(--warning); }
+
+.consumable-manual-btn {
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.consumable-manual-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* =============================================================
+   Text console
+   ============================================================= */
+.console-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 8px;
+  gap: 6px;
+  overflow: hidden;
+}
+
+@media (max-width: 767px) {
+  .console-layout { min-height: 60vh; }
+}
+
+.console-output {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--bg);
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 4px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  min-height: 200px;
+}
+
+.console-input-bar {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.console-input-bar input {
+  flex: 1;
+  min-width: 0;
+  background: var(--field);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--fg);
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.console-input-bar input:disabled { color: var(--muted); }
+.console-input-bar input:focus { outline: 1px solid #666; }
+
+/* =============================================================
+   Modal overlay
+   ============================================================= */
+#modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 900;
+}
+
+#modal-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 18px 22px;
+  max-width: 400px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-title {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.modal-desc {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 14px;
+  white-space: pre-wrap;
+}
+
+.modal-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.modal-btns button {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+}
+
+.modal-cancel {
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* =============================================================
+   Utility
+   ============================================================= */
+.hidden { display: none !important; }
