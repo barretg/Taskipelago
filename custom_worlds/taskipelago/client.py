@@ -8,7 +8,6 @@ import re
 import threading
 import time
 from tkinter import filedialog, messagebox
-import tkinter.colorchooser as colorchooser
 import tkinter as tk
 from tkinter import ttk
 
@@ -1965,15 +1964,84 @@ class TaskipelagoApp(tk.Tk):
 
     def _pick_region_color(self, row_data: dict):
         name = row_data["committed_name"]
-        current = self.region_colors.get(name, "#808080")
-        result = colorchooser.askcolor(color=current, title=f"Region Color: {name}")
-        if result and result[1]:
-            new_color = result[1].lower()
+        current = self.region_colors.get(name, REGION_COLOR_PALETTE[0])
+        border = self.colors.get("border", "#3a3a3a")
+        bg = self.colors.get("bg", "#1e1e1e")
+        fg = self.colors.get("fg", "#e6e6e6")
+        panel = self.colors.get("panel", "#252526")
+
+        win = tk.Toplevel(self)
+        win.title(f"Region Color: {name}")
+        win.resizable(False, False)
+        win.configure(bg=bg)
+        win.grab_set()
+
+        selected = [current]
+
+        tk.Label(win, text="Preset colors:", bg=bg, fg=fg,
+                 font=("Segoe UI", 10)).pack(padx=10, pady=(10, 4), anchor="w")
+
+        palette_frame = tk.Frame(win, bg=bg)
+        palette_frame.pack(padx=10, pady=(0, 8))
+
+        preview_var = [None]
+
+        def pick_preset(color):
+            selected[0] = color
+            hex_var.set(color)
+            try:
+                preview_var[0].configure(bg=color)
+            except Exception:
+                pass
+
+        for idx, color in enumerate(REGION_COLOR_PALETTE):
+            c = tk.Canvas(palette_frame, width=24, height=24, bg=color,
+                          highlightthickness=2,
+                          highlightbackground="#ffffff" if color == current else border,
+                          cursor="hand2")
+            c.grid(row=idx // 6, column=idx % 6, padx=2, pady=2)
+            c.bind("<Button-1>", lambda e, col=color: pick_preset(col))
+
+        tk.Label(win, text="Hex code:", bg=bg, fg=fg,
+                 font=("Segoe UI", 10)).pack(padx=10, pady=(0, 2), anchor="w")
+        hex_var = tk.StringVar(value=current)
+        hex_entry = tk.Entry(win, textvariable=hex_var, width=10, bg=panel, fg=fg,
+                             insertbackground=fg, relief="flat",
+                             highlightthickness=1, highlightbackground=border)
+        hex_entry.pack(padx=10, pady=(0, 6), anchor="w")
+
+        preview = tk.Canvas(win, width=40, height=24, bg=current,
+                            highlightthickness=1, highlightbackground=border)
+        preview.pack(padx=10, pady=(0, 8))
+        preview_var[0] = preview
+
+        def on_hex_change(*_):
+            val = hex_var.get().strip()
+            if not val.startswith("#"):
+                val = "#" + val
+            try:
+                win.winfo_rgb(val)
+                selected[0] = val
+                preview.configure(bg=val)
+            except Exception:
+                pass
+
+        hex_var.trace_add("write", on_hex_change)
+
+        btn_row = tk.Frame(win, bg=bg)
+        btn_row.pack(padx=10, pady=(0, 10), fill="x")
+
+        def on_ok():
+            new_color = selected[0]
             self.region_colors[name] = new_color
             try:
                 row_data["swatch"].configure(bg=new_color)
             except Exception:
                 pass
+            win.destroy()
+
+        ttk.Button(btn_row, text="Cancel", command=win.destroy).pack(side="right", padx=(4, 0))
+        ttk.Button(btn_row, text="OK", command=on_ok).pack(side="right")
 
     def _commit_region_rename(self, row_data: dict):
         old_name = row_data["committed_name"]
