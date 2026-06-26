@@ -33,6 +33,7 @@ const state = {
   itemConsumable: [],
   regions: [],
   regionDefaultPcts: {},
+  regionColors: [],
   taskRegion: [],
   taskRegionReqs: [],
   bingoMode: false,
@@ -449,6 +450,7 @@ function applySlotData(sd) {
   state.itemConsumable      = sd.item_consumable || [];
   state.regions             = sd.regions || [];
   state.regionDefaultPcts   = sd.region_default_pcts || {};
+  state.regionColors        = sd.region_colors || [];
   state.taskRegion          = sd.task_region || [];
   state.taskRegionReqs      = sd.task_region_reqs || [];
   state.bingoMode           = !!sd.bingo_mode;
@@ -687,26 +689,54 @@ function startDisconnect() {
 }
 
 function clearPlayState() {
+  // Slot data
+  state.tasks = [];
+  state.items = [];
+  state.taskPrereqs = [];
+  state.itemPrereqs = [];
+  state.lockPrereqs = false;
+  state.hideUnreachable = true;
+  state.goalExpression = '';
+  state.baseCompleteId = state.baseRewardId = state.baseItemId = state.baseTokenId = null;
+  state.deathLinkPool = [];
+  state.deathLinkWeights = [];
+  state.deathLinkAmnesty = 0;
+  state.deathLinkEnabled = false;
+  state.sentItemNames = [];
+  state.sentPlayerNames = [];
+  state.progressiveGroups = [];
+  state.rewardProgressiveGroup = [];
+  state.taskProgressiveReqs = [];
+  state.taskCostAmounts = [];
+  state.itemConsumable = [];
+  state.regions = [];
+  state.regionDefaultPcts = {};
+  state.regionColors = [];
+  state.taskRegion = [];
+  state.taskRegionReqs = [];
+  state.bingoMode = false;
+  state.bingoDimX = 5;
+  state.bingoDimY = 5;
+  state.bingoal = 3;
+  // Runtime
+  state.checkedLocations = new Set();
   state.pendingLocations = new Set();
   state.taskPurchases    = {};
   state.manualConsumptions = {};
-  state.sentGoal         = false;
   state.notifications    = [];
+  state.sentGoal         = false;
+  state.deathLinkAmnestyLeft = 0;
+  state.lastItemIndex    = 0;
+  state.notifyIndexLoaded = false;
+  state.pendingNotifyIndex = null;
+  // UI toggles
   state.localEnforce     = false;
   state.showLocked       = false;
   state.hideCompleted    = false;
   els.enforceCb.checked  = false;
   els.showLockedCb.checked = false;
   els.hideCompletedCb.checked = false;
-  state.tasks = [];
-  state.checkedLocations = new Set();
-  state.baseCompleteId = state.baseRewardId = state.baseItemId = state.baseTokenId = null;
-  state.items = [];
-  state.progressiveGroups = [];
-  state.rewardProgressiveGroup = [];
-  state.itemConsumable = [];
-  state.deathLinkEnabled = false;
-  state.bingoMode = false;
+  // AP client received items
   ap.itemsReceived = [];
 }
 
@@ -898,10 +928,80 @@ function showItemNotification(it) {
 }
 
 // =============================================================
+// Region helpers
+// =============================================================
+let regionProgressExpanded = true;
+
+function buildRegionColorMap() {
+  const m = {};
+  for (let i = 0; i < state.regions.length; i++) {
+    const c = state.regionColors[i];
+    if (c) m[state.regions[i]] = c;
+  }
+  return m;
+}
+
+function renderRegionProgress() {
+  const section = $('region-progress-section');
+  if (!section) return;
+  const connected = state.connState === 'connected' && state.regions.length > 0;
+  if (!connected) {
+    section.classList.add('hidden');
+    return;
+  }
+  section.classList.remove('hidden');
+
+  const list = $('region-progress-list');
+  if (!regionProgressExpanded) return;
+
+  const checked = allChecked();
+  const rColors = buildRegionColorMap();
+  const frag = document.createDocumentFragment();
+
+  for (const rname of state.regions) {
+    const color = rColors[rname] || '#808080';
+    const indices = state.taskRegion.map((r, i) => r === rname ? i : -1).filter(i => i >= 0);
+    const total = indices.length;
+    const done = state.baseCompleteId !== null
+      ? indices.filter(i => checked.has(state.baseCompleteId + i)).length
+      : 0;
+    const pct = total > 0 ? done / total : 0;
+
+    const row = document.createElement('div');
+    row.className = 'region-progress-row';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'region-progress-name';
+    nameEl.textContent = rname;
+    row.appendChild(nameEl);
+
+    const barOuter = document.createElement('div');
+    barOuter.className = 'region-progress-bar-outer';
+    const barInner = document.createElement('div');
+    barInner.className = 'region-progress-bar-inner';
+    barInner.style.width = `${Math.round(pct * 100)}%`;
+    barInner.style.backgroundColor = color;
+    barOuter.appendChild(barInner);
+    row.appendChild(barOuter);
+
+    const countEl = document.createElement('span');
+    countEl.className = 'region-progress-count';
+    countEl.textContent = `${done}/${total}`;
+    row.appendChild(countEl);
+
+    frag.appendChild(row);
+  }
+
+  list.innerHTML = '';
+  list.appendChild(frag);
+}
+
+// =============================================================
 // Rendering: all panels
 // =============================================================
 function renderAll() {
   renderTasks();
+  renderRegionProgress();
   renderNotifications();
   renderItems();
   renderConsumables();
@@ -1034,6 +1134,10 @@ function renderTasks() {
 
     const card = document.createElement('div');
     card.className = 'task-card';
+    const _rColors = buildRegionColorMap();
+    const _taskReg = state.taskRegion[i] || '';
+    const _barColor = _taskReg ? (_rColors[_taskReg] || '') : '';
+    card.style.borderLeft = _barColor ? `4px solid ${_barColor}` : '';
 
     const top = document.createElement('div');
     top.className = 'task-top';
@@ -1639,6 +1743,23 @@ els.showLockedCb.addEventListener('change', () => {
 els.hideCompletedCb.addEventListener('change', () => {
   state.hideCompleted = els.hideCompletedCb.checked;
   renderTasks();
+});
+
+// =============================================================
+// Region progress toggle
+// =============================================================
+$('region-progress-toggle').addEventListener('click', () => {
+  regionProgressExpanded = !regionProgressExpanded;
+  const list = $('region-progress-list');
+  const btn = $('region-progress-toggle');
+  if (regionProgressExpanded) {
+    list.classList.remove('hidden');
+    btn.textContent = '▼ Regions';
+    renderRegionProgress();
+  } else {
+    list.classList.add('hidden');
+    btn.textContent = '▶ Regions';
+  }
 });
 
 // =============================================================

@@ -265,6 +265,72 @@ button:disabled {
 }
 
 /* =============================================================
+   Region progress section
+   ============================================================= */
+.region-progress-section {
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.region-progress-header {
+  padding: 2px 4px 0;
+}
+
+.region-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 3px 6px;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+}
+
+.region-toggle-btn:hover:not(:disabled) {
+  background: transparent;
+  color: var(--fg);
+}
+
+.region-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 8px 3px;
+  font-size: 12px;
+}
+
+.region-progress-name {
+  width: 110px;
+  flex-shrink: 0;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.region-progress-bar-outer {
+  flex: 1;
+  height: 10px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.region-progress-bar-inner {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.2s;
+  min-width: 0;
+}
+
+.region-progress-count {
+  width: 40px;
+  text-align: right;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* =============================================================
    Task cards
    ============================================================= */
 .task-card {

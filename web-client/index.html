@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Taskipelago Web Client</title>
-  <link rel="stylesheet" href="style.css?v=2">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
   <div id="app">
@@ -60,6 +60,12 @@
 
           <fieldset class="panel tasks-panel">
             <legend>Tasks</legend>
+            <div id="region-progress-section" class="hidden region-progress-section">
+              <div class="region-progress-header">
+                <button id="region-progress-toggle" class="region-toggle-btn">&#9660; Regions</button>
+              </div>
+              <div id="region-progress-list"></div>
+            </div>
             <div id="tasks-list" class="scroll-area"></div>
             <div id="bingo-section" class="hidden bingo-wrapper">
               <div id="bingo-counter" class="bingo-counter"></div>
@@ -117,6 +123,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js?v=2"></script>
+  <script type="module" src="js/app.js?v=3"></script>
 </body>
 </html>
