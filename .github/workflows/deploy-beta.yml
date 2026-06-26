@@ -1,0 +1,25 @@
+name: Deploy Beta
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "web-client/**"
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to beta
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./web-client
+          destination_dir: beta
+          keep_files: true
