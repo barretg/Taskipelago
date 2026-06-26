@@ -1326,7 +1326,7 @@ class TaskipelagoApp(tk.Tk):
 
         # ======== REGIONS section (collapsible, row 1, expanded by default) ========
         _regions_cs = CollapsibleSection(self.editor_tab, "Regions", row=1,
-                                         expanded=True, min_height=80, colors=self.colors)
+                                         expanded=False, min_height=150, colors=self.colors)
         _regions_cs.outer.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 2))
         regions_body = _regions_cs.body
         regions_body.grid_columnconfigure(0, weight=1)
@@ -1934,8 +1934,11 @@ class TaskipelagoApp(tk.Tk):
         if not name:
             messagebox.showerror("Error", "Region name cannot be empty.")
             return
-        if re.search(r'\d', name):
-            messagebox.showerror("Error", f"Region name '{name}' must not contain digits.")
+        if not re.match(r'^[a-zA-Z_][a-zA-Z_-]*$', name) or re.search(r'\d', name) or name.endswith('-'):
+            messagebox.showerror("Error",
+                f"Region name '{name}' is invalid.\n"
+                "Names must start and end with a letter or underscore, "
+                "may contain hyphens in the middle, and must not contain digits.")
             return
         if name in self.regions:
             messagebox.showerror("Error", f"Region '{name}' already exists.")
@@ -2051,8 +2054,11 @@ class TaskipelagoApp(tk.Tk):
         if not new_name:
             row_data["name_var"].set(old_name)
             return
-        if re.search(r'\d', new_name):
-            messagebox.showerror("Error", f"Region name '{new_name}' must not contain digits.")
+        if not re.match(r'^[a-zA-Z_][a-zA-Z_-]*$', new_name) or re.search(r'\d', new_name) or new_name.endswith('-'):
+            messagebox.showerror("Error",
+                f"Region name '{new_name}' is invalid.\n"
+                "Names must start and end with a letter or underscore, "
+                "may contain hyphens in the middle, and must not contain digits.")
             row_data["name_var"].set(old_name)
             return
         if new_name in self.regions:
