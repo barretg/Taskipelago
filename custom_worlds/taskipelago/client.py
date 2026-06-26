@@ -2308,12 +2308,21 @@ class TaskipelagoApp(tk.Tk):
             itm, filler, itype, pgrp, consumable, count = r.get_data()
             raw_item_names.append(itm)
             is_filler_row = filler or not itm
-            items.append(_random_filler() if is_filler_row else itm)
-            item_types.append("junk" if is_filler_row else (itype or "junk"))
-            item_fillers.append(bool(is_filler_row))
-            item_prog_groups.append(pgrp if not is_filler_row else "")
-            item_consumables.append(consumable if not is_filler_row else False)
-            item_counts.append(count)
+            if is_filler_row and count > 1:
+                for _ in range(count):
+                    items.append(_random_filler())
+                    item_types.append("junk")
+                    item_fillers.append(True)
+                    item_prog_groups.append("")
+                    item_consumables.append(False)
+                    item_counts.append(1)
+            else:
+                items.append(_random_filler() if is_filler_row else itm)
+                item_types.append("junk" if is_filler_row else (itype or "junk"))
+                item_fillers.append(bool(is_filler_row))
+                item_prog_groups.append(pgrp if not is_filler_row else "")
+                item_consumables.append(consumable if not is_filler_row else False)
+                item_counts.append(count)
 
         # Duplicate item name check (non-filler items only)
         _seen_items = {}
@@ -2650,18 +2659,51 @@ class TaskipelagoApp(tk.Tk):
         # --------- Crunch or parse item counts ---------
         if item_count_raw is not None:
             item_count_list = [item_count_raw] if not isinstance(item_count_raw, list) else list(item_count_raw)
-            items = [_str(t) for t in items_raw]
-            item_types = [_str(item_types_raw[i], "useful") if i < len(item_types_raw) else "useful" for i in range(len(items))]
-            item_fillers = [item_fillers_raw[i] if i < len(item_fillers_raw) else None for i in range(len(items))]
-            item_prog_groups = [_str(item_prog_group_raw[i]) if i < len(item_prog_group_raw) else "" for i in range(len(items))]
-            item_consumables = [_str(item_consumable_raw[i]).lower() == "true" if i < len(item_consumable_raw) else False for i in range(len(items))]
-            item_counts = []
-            for i in range(len(items)):
+            _items_flat = [_str(t) for t in items_raw]
+            _types_flat = [_str(item_types_raw[i], "useful") if i < len(item_types_raw) else "useful" for i in range(len(_items_flat))]
+            _fillers_flat = [item_fillers_raw[i] if i < len(item_fillers_raw) else None for i in range(len(_items_flat))]
+            _pgroups_flat = [_str(item_prog_group_raw[i]) if i < len(item_prog_group_raw) else "" for i in range(len(_items_flat))]
+            _cons_flat = [_str(item_consumable_raw[i]).lower() == "true" if i < len(item_consumable_raw) else False for i in range(len(_items_flat))]
+            _counts_flat = []
+            for i in range(len(_items_flat)):
                 try:
                     c = max(1, int(item_count_list[i])) if i < len(item_count_list) else 1
                 except (ValueError, TypeError):
                     c = 1
-                item_counts.append(c)
+                _counts_flat.append(c)
+
+            # Collapse consecutive filler entries (from expanded export) into one row
+            items, item_types, item_fillers, item_prog_groups, item_consumables, item_counts = [], [], [], [], [], []
+            i = 0
+            while i < len(_items_flat):
+                fi = _fillers_flat[i]
+                is_f = fi is True or (fi is None and _is_filler(_items_flat[i]))
+                if is_f:
+                    total = _counts_flat[i]
+                    j = i + 1
+                    while j < len(_items_flat):
+                        fj = _fillers_flat[j]
+                        is_fj = fj is True or (fj is None and _is_filler(_items_flat[j]))
+                        if is_fj:
+                            total += _counts_flat[j]
+                            j += 1
+                        else:
+                            break
+                    items.append(_items_flat[i])
+                    item_types.append(_types_flat[i])
+                    item_fillers.append(True)
+                    item_prog_groups.append("")
+                    item_consumables.append(False)
+                    item_counts.append(total)
+                    i = j
+                else:
+                    items.append(_items_flat[i])
+                    item_types.append(_types_flat[i])
+                    item_fillers.append(fi)
+                    item_prog_groups.append(_pgroups_flat[i])
+                    item_consumables.append(_cons_flat[i])
+                    item_counts.append(_counts_flat[i])
+                    i += 1
         else:
             # Crunch consecutive identical item names
             items, item_types, item_fillers, item_prog_groups, item_consumables, item_counts = [], [], [], [], [], []
