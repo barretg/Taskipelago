@@ -2753,7 +2753,7 @@ class TaskipelagoApp(tk.Tk):
             ),
             (
                 "Tasks -- What They Are",
-                "The Tasks section (top portion of the generator) is the heart of your game.\n\n"
+                "The Tasks section is the heart of your game.\n\n"
                 "Each task you add becomes a location in the multiworld -- a place where an item can "
                 "be hidden. When you complete that task in real life and check it off in the app, you "
                 "\"find\" whatever item was placed there for one of your teammates.\n\n"
@@ -2827,14 +2827,25 @@ class TaskipelagoApp(tk.Tk):
             ),
             (
                 "Regions",
-                "Regions let you group related tasks together under a shared label.\n\n"
+                "Regions let you group related tasks together under a shared label and color.\n\n"
+                "The Regions section sits above Tasks in the generator. Expand it to manage your regions.\n\n"
                 "Creating a region:\n"
-                "In the Regions panel (inside the Tasks section), type a name in \"New region "
-                "name\" and click \"Add Region\". Names can only use letters, underscores, and "
-                "hyphens -- no spaces or digits.\n\n"
+                "Type a name in \"New region name\", optionally set a Default %, and click "
+                "\"Add Region\". Names can only use letters, underscores, and hyphens -- no "
+                "spaces or digits.\n\n"
+                "Editing a region:\n"
+                "Each region appears as a row. Click the name field to rename it inline. "
+                "Click the % field to change the default completion percentage. Press Enter "
+                "or click away to confirm changes.\n\n"
+                "Region colors:\n"
+                "Each new region is automatically assigned a color from a preset palette. "
+                "Click the color swatch on the left of any region row to open the color picker "
+                "and choose a different color. In the play view, tasks belonging to a region "
+                "show a colored bar on their left edge, and a collapsible Regions panel above "
+                "the task list shows a progress bar for each region.\n\n"
                 "Default %:\n"
-                "When another task references this region without a specific number, this is the "
-                "percentage of the region's tasks that must be done. Default is 100%.\n\n"
+                "When a task prereq references this region without an explicit number, this "
+                "percentage of the region's tasks must be complete. Default is 100%.\n\n"
                 "Assigning tasks to a region:\n"
                 "Use the \"Region\" column in the task table to assign each task to a region.\n\n"
                 "Referencing a region in Task Prereqs:\n"
