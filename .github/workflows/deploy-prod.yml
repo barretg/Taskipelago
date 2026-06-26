@@ -20,7 +20,7 @@ jobs:
           git fetch origin gh-pages 2>/dev/null && git worktree add gh-pages-out gh-pages || \
             (git worktree add --detach gh-pages-out && git -C gh-pages-out checkout --orphan gh-pages && git -C gh-pages-out rm -rf . 2>/dev/null || true)
 
-          rsync -a --delete --exclude=beta web-client/ gh-pages-out/
+          rsync -a --delete web-client/ gh-pages-out/web-client/
 
           cd gh-pages-out
           git add -A
