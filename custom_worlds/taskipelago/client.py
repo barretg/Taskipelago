@@ -2410,6 +2410,58 @@ class TaskipelagoApp(tk.Tk):
 
         goal_tasks_raw = self.goal_tasks_var.get().strip()
 
+        # --- Prereq / cost expression validation ---
+        try:
+            from .prereq_parser import parse_prereq, parse_cost_expr
+        except ImportError:
+            parse_prereq = None
+            parse_cost_expr = None
+
+        if parse_prereq is not None:
+            region_set = set(self.regions)
+            group_set = set(self.prog_groups)
+            consumable_set = {
+                nm for nm, cons in zip(raw_item_names, item_consumables) if cons and nm
+            }
+            n = len(tasks)
+            n_items = len(items)
+            expr_errors = []
+
+            for i, tpr in enumerate(task_prereqs):
+                if tpr:
+                    try:
+                        parse_prereq(tpr, n, i, "task prereq", known_groups=group_set, known_regions=region_set)
+                    except Exception as e:
+                        expr_errors.append(str(e))
+
+            for i, ipr in enumerate(item_prereqs_raw):
+                if ipr:
+                    try:
+                        parse_prereq(ipr, n_items, i, "item prereq", known_groups=group_set)
+                    except Exception as e:
+                        expr_errors.append(str(e))
+
+            for i, cost in enumerate(task_costs):
+                if cost:
+                    try:
+                        parse_cost_expr(cost, consumable_set, raw_item_names)
+                    except Exception as e:
+                        expr_errors.append(f"Task {i + 1} cost: {e}")
+
+            if goal_tasks_raw:
+                try:
+                    parse_prereq(goal_tasks_raw, n, 0, "goal tasks")
+                except Exception as e:
+                    expr_errors.append(f"Goal tasks: {e}")
+
+            if expr_errors:
+                messagebox.showerror(
+                    "Invalid Expressions",
+                    "The following expressions could not be parsed and must be fixed before exporting:\n\n"
+                    + "\n".join(expr_errors)
+                )
+                return
+
         data = {
             "name": player_name,
             "game": "Taskipelago",
