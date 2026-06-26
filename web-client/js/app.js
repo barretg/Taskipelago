@@ -689,26 +689,54 @@ function startDisconnect() {
 }
 
 function clearPlayState() {
+  // Slot data
+  state.tasks = [];
+  state.items = [];
+  state.taskPrereqs = [];
+  state.itemPrereqs = [];
+  state.lockPrereqs = false;
+  state.hideUnreachable = true;
+  state.goalExpression = '';
+  state.baseCompleteId = state.baseRewardId = state.baseItemId = state.baseTokenId = null;
+  state.deathLinkPool = [];
+  state.deathLinkWeights = [];
+  state.deathLinkAmnesty = 0;
+  state.deathLinkEnabled = false;
+  state.sentItemNames = [];
+  state.sentPlayerNames = [];
+  state.progressiveGroups = [];
+  state.rewardProgressiveGroup = [];
+  state.taskProgressiveReqs = [];
+  state.taskCostAmounts = [];
+  state.itemConsumable = [];
+  state.regions = [];
+  state.regionDefaultPcts = {};
+  state.regionColors = [];
+  state.taskRegion = [];
+  state.taskRegionReqs = [];
+  state.bingoMode = false;
+  state.bingoDimX = 5;
+  state.bingoDimY = 5;
+  state.bingoal = 3;
+  // Runtime
+  state.checkedLocations = new Set();
   state.pendingLocations = new Set();
   state.taskPurchases    = {};
   state.manualConsumptions = {};
-  state.sentGoal         = false;
   state.notifications    = [];
+  state.sentGoal         = false;
+  state.deathLinkAmnestyLeft = 0;
+  state.lastItemIndex    = 0;
+  state.notifyIndexLoaded = false;
+  state.pendingNotifyIndex = null;
+  // UI toggles
   state.localEnforce     = false;
   state.showLocked       = false;
   state.hideCompleted    = false;
   els.enforceCb.checked  = false;
   els.showLockedCb.checked = false;
   els.hideCompletedCb.checked = false;
-  state.tasks = [];
-  state.checkedLocations = new Set();
-  state.baseCompleteId = state.baseRewardId = state.baseItemId = state.baseTokenId = null;
-  state.items = [];
-  state.progressiveGroups = [];
-  state.rewardProgressiveGroup = [];
-  state.itemConsumable = [];
-  state.deathLinkEnabled = false;
-  state.bingoMode = false;
+  // AP client received items
   ap.itemsReceived = [];
 }
 

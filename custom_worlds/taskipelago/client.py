@@ -3292,12 +3292,16 @@ class TaskipelagoApp(tk.Tk):
             self.ctx.task_progressive_reqs = []
             self.ctx.regions = []
             self.ctx.region_default_pcts = {}
+            self.ctx.region_colors = []
             self.ctx.task_region = []
             self.ctx.task_region_reqs = []
             self.ctx.bingo_mode = False
             self.ctx.bingo_dimension_x = 5
             self.ctx.bingo_dimension_y = 5
             self.ctx.bingoal = 3
+            for attr in ("items_received", "received_items"):
+                if hasattr(self.ctx, attr) and isinstance(getattr(self.ctx, attr), list):
+                    getattr(self.ctx, attr).clear()
         self.refresh_play_tab()
 
     # ---------------- Notifications stuff ----------------
