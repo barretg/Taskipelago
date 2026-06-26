@@ -250,6 +250,15 @@ def apply_dark_theme(root: tk.Tk):
 # ----------------------------
 # Scrollable container (auto-hide scrollbar)
 # ----------------------------
+class NoScrollSpinbox(ttk.Spinbox):
+    """Spinbox that ignores mouse-wheel events so scrolling never changes the value."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.bind("<MouseWheel>", lambda e: "break")
+        self.bind("<Button-4>", lambda e: "break")
+        self.bind("<Button-5>", lambda e: "break")
+
+
 class ScrollableFrame(ttk.Frame):
     def __init__(self, parent, colors=None):
         super().__init__(parent)
@@ -486,7 +495,7 @@ class TaskRow:
             values=[""] + list(regions or []),
             state="readonly", width=12,
         )
-        self.count_spinbox = ttk.Spinbox(parent, from_=1, to=999, textvariable=self.count_var, width=5)
+        self.count_spinbox = NoScrollSpinbox(parent, from_=1, to=999, textvariable=self.count_var, width=5)
         self.remove_btn = ttk.Button(parent, text="Remove", width=8, command=self.remove)
 
         self._grid()
@@ -576,7 +585,7 @@ class ItemRow:
             parent, text="Consumable", variable=self.consumable_var,
             command=self.on_consumable_toggle,
         )
-        self.count_spinbox = ttk.Spinbox(parent, from_=1, to=999, textvariable=self.count_var, width=5)
+        self.count_spinbox = NoScrollSpinbox(parent, from_=1, to=999, textvariable=self.count_var, width=5)
         self.remove_btn = ttk.Button(parent, text="Remove", width=8, command=self.remove)
 
         self._grid()
@@ -1346,7 +1355,7 @@ class TaskipelagoApp(tk.Tk):
         _nr_entry.bind("<Return>", lambda _: self._add_region())
         ttk.Label(rg_add_row, text="Default %:").pack(side="left", padx=(0, 4))
         self.new_region_pct_var = tk.IntVar(value=100)
-        ttk.Spinbox(rg_add_row, from_=0, to=100, textvariable=self.new_region_pct_var, width=5).pack(side="left", padx=(0, 6))
+        NoScrollSpinbox(rg_add_row, from_=0, to=100, textvariable=self.new_region_pct_var, width=5).pack(side="left", padx=(0, 6))
         ttk.Button(rg_add_row, text="Add Region", command=self._add_region).pack(side="left")
         _rg_hint = ttk.Label(
             rg_add_row, text="(letters, underscores, hyphens - no digits)",
@@ -1508,7 +1517,7 @@ class TaskipelagoApp(tk.Tk):
 
         ttk.Label(item_settings, text="Progression Balancing (0-99):").pack(side="left", padx=(0, 4))
         self.progression_var = tk.IntVar(value=50)
-        ttk.Spinbox(item_settings, from_=0, to=99, textvariable=self.progression_var, width=5).pack(side="left")
+        NoScrollSpinbox(item_settings, from_=0, to=99, textvariable=self.progression_var, width=5).pack(side="left")
 
         ttk.Label(item_settings, text="Accessibility:").pack(side="left", padx=(16, 4))
         self.accessibility_var = tk.StringVar(value="full")
@@ -1647,7 +1656,7 @@ class TaskipelagoApp(tk.Tk):
 
         ttk.Label(dl_settings, text="Amnesty:").pack(side="left", padx=(16, 4))
         self.deathlink_amnesty_var = tk.IntVar(value=0)
-        ttk.Spinbox(dl_settings, from_=0, to=999, textvariable=self.deathlink_amnesty_var, width=5).pack(side="left")
+        NoScrollSpinbox(dl_settings, from_=0, to=999, textvariable=self.deathlink_amnesty_var, width=5).pack(side="left")
 
         self.dl_scroll = ScrollableFrame(dl, colors=self.colors)
         self.dl_scroll.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 0))
@@ -2134,7 +2143,7 @@ class TaskipelagoApp(tk.Tk):
             name_entry.bind("<Return>", lambda e, rd=row_data: self._commit_region_rename(rd))
 
             ttk.Label(row, text="Default %:").pack(side="left", padx=(0, 4))
-            pct_spin = ttk.Spinbox(row, from_=0, to=100, textvariable=row_data["pct_var"], width=5)
+            pct_spin = NoScrollSpinbox(row, from_=0, to=100, textvariable=row_data["pct_var"], width=5)
             pct_spin.pack(side="left", padx=(0, 8))
             pct_spin.bind("<FocusOut>", lambda e, rd=row_data: self._commit_region_pct(rd))
             pct_spin.bind("<Return>", lambda e, rd=row_data: self._commit_region_pct(rd))
@@ -2438,15 +2447,17 @@ class TaskipelagoApp(tk.Tk):
 
             for i, tpr in enumerate(task_prereqs):
                 if tpr:
+                    resolved, _ = self._resolve_name_refs(tpr, tasks)
                     try:
-                        parse_prereq(tpr, n, i, "task prereq", known_groups=group_set, known_regions=region_set)
+                        parse_prereq(resolved, n, i, "task prereq", known_groups=group_set, known_regions=region_set)
                     except Exception as e:
                         expr_errors.append(str(e))
 
             for i, ipr in enumerate(item_prereqs_raw):
                 if ipr:
+                    resolved, _ = self._resolve_name_refs(ipr, raw_item_names)
                     try:
-                        parse_prereq(ipr, n_items, i, "item prereq", known_groups=group_set)
+                        parse_prereq(resolved, n_items, i, "item prereq", known_groups=group_set)
                     except Exception as e:
                         expr_errors.append(str(e))
 
@@ -4543,27 +4554,27 @@ class TaskipelagoApp(tk.Tk):
 
         ttk.Label(settings_row, text="Columns (X):").grid(row=0, column=0, sticky="w")
         self.bingo_x_var = tk.IntVar(value=5)
-        ttk.Spinbox(settings_row, from_=1, to=20, textvariable=self.bingo_x_var, width=4).grid(
+        NoScrollSpinbox(settings_row, from_=1, to=20, textvariable=self.bingo_x_var, width=4).grid(
             row=0, column=1, padx=(4, 16), sticky="w"
         )
         self.bingo_x_var.trace_add("write", lambda *_: self._update_bingo_counts())
 
         ttk.Label(settings_row, text="Rows (Y):").grid(row=0, column=2, sticky="w")
         self.bingo_y_var = tk.IntVar(value=5)
-        ttk.Spinbox(settings_row, from_=1, to=20, textvariable=self.bingo_y_var, width=4).grid(
+        NoScrollSpinbox(settings_row, from_=1, to=20, textvariable=self.bingo_y_var, width=4).grid(
             row=0, column=3, padx=(4, 16), sticky="w"
         )
         self.bingo_y_var.trace_add("write", lambda *_: self._update_bingo_counts())
 
         ttk.Label(settings_row, text="Bingos to goal:").grid(row=0, column=4, sticky="w")
         self.bingo_goal_var = tk.IntVar(value=3)
-        ttk.Spinbox(settings_row, from_=1, to=100, textvariable=self.bingo_goal_var, width=4).grid(
+        NoScrollSpinbox(settings_row, from_=1, to=100, textvariable=self.bingo_goal_var, width=4).grid(
             row=0, column=5, padx=(4, 16), sticky="w"
         )
 
         ttk.Label(settings_row, text="Prog. Balancing:").grid(row=0, column=6, sticky="w")
         self.bingo_prog_var = tk.IntVar(value=50)
-        ttk.Spinbox(settings_row, from_=0, to=99, textvariable=self.bingo_prog_var, width=5).grid(
+        NoScrollSpinbox(settings_row, from_=0, to=99, textvariable=self.bingo_prog_var, width=5).grid(
             row=0, column=7, padx=(4, 16), sticky="w"
         )
 
@@ -4640,7 +4651,7 @@ class TaskipelagoApp(tk.Tk):
         )
         ttk.Label(dl_top, text="Amnesty:").pack(side="left", padx=(20, 4))
         self.bingo_deathlink_amnesty_var = tk.IntVar(value=0)
-        ttk.Spinbox(dl_top, from_=0, to=999, textvariable=self.bingo_deathlink_amnesty_var, width=5).pack(
+        NoScrollSpinbox(dl_top, from_=0, to=999, textvariable=self.bingo_deathlink_amnesty_var, width=5).pack(
             side="left"
         )
 
