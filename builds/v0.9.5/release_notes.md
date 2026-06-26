@@ -9,4 +9,4 @@
 
 ## Bug Fixes
 * Fixed a bug with filler population in world gen
-* Fixed a bug with the items section on the local client
+* Fixed a bug with stale play state sometimes persisting on reconnect
