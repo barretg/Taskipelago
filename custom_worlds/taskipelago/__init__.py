@@ -18,6 +18,9 @@ from .items import (
     BASE_TOKEN_ID,
     TaskipelagoItem,
     get_item_classification,
+    build_item_editor_rows,
+    expand_rows,
+    pad_or_trim_names,
 )
 from .locations import (
     LOCATION_NAME_TO_ID,
@@ -89,22 +92,7 @@ class TaskipelagoWorld(World):
     _consumable_groups: Dict[str, List[int]]   # name -> [0-based item indices]
 
     def generate_early(self) -> None:
-        import random as _random
         import sys as _sys
-
-        _FILLER_ITEMS = [
-            "Several pats on the back",
-            "A big thumbs up",
-            "Free dopamine",
-            "One (1) sense of accomplishment",
-            "Mildly increased self-esteem",
-            "A crisp high five",
-            "A firm handshake",
-            "A tiny mental victory parade",
-            "Temporary immunity to self-criticism",
-            "An imaginary star sticker",
-            "A nod of respect",
-        ]
 
         # ------------------------------------------------------------------ #
         # 1. Read raw option lists (pre-expansion, editor-indexed)            #
@@ -112,8 +100,8 @@ class TaskipelagoWorld(World):
         tasks_raw = [str(t).strip() for t in self.options.tasks.value if str(t).strip()]
         items_raw_input = [str(r).strip() for r in self.options.items.value]
 
-        item_types_raw = [str(x).strip().lower() for x in self.options.item_types.value if str(x).strip()]
-        item_consumable_raw = [str(x).strip().lower() for x in (self.options.item_consumable.value or [])]
+        item_types_raw = [str(x).strip() for x in self.options.item_types.value]
+        item_consumable_raw = [str(x).strip() for x in (self.options.item_consumable.value or [])]
         item_count_raw = [str(x).strip() for x in (self.options.item_count.value or [])]
         task_count_raw = [str(x).strip() for x in (self.options.task_count.value or [])]
         task_cost_raw = [str(x).strip() for x in (self.options.task_cost.value or [])]
@@ -148,7 +136,7 @@ class TaskipelagoWorld(World):
             )
 
         n_editor_tasks = len(tasks_raw)
-        n_editor_items = len([x for x in items_raw_input if x])
+        n_editor_items = len(items_raw_input)
 
         if n_editor_tasks > MAX_TASKS:
             raise Exception(
@@ -167,17 +155,15 @@ class TaskipelagoWorld(World):
             for i in range(n_editor_tasks)
         ]
 
-        # Pad items_raw_input to editor task count, then normalize
-        allowed_types = {"trap", "junk", "useful", "progression"}
-
         _n_yaml_tasks_expected = sum(task_counts_editor)
 
-        # Compute expanded item count from defined items before any padding
-        _item_counts_defined = [
-            _parse_count(item_count_raw[i] if i < len(item_count_raw) else "")
-            for i in range(n_editor_items)
-        ]
-        _n_defined_expanded = sum(_item_counts_defined)
+        # Items are an independent editor list from tasks (their own rows/counts);
+        # only the summed totals need to match, so this is built without regard
+        # to n_editor_tasks.
+        items_raw_editor, item_types_editor, item_consumable_editor, item_counts_editor = (
+            build_item_editor_rows(items_raw_input, item_types_raw, item_consumable_raw, item_count_raw)
+        )
+        _n_defined_expanded = sum(item_counts_editor)
 
         # Warn using expanded counts, not editor slot counts
         if _n_defined_expanded != _n_yaml_tasks_expected:
@@ -186,26 +172,6 @@ class TaskipelagoWorld(World):
                 f"Tasks: {_n_yaml_tasks_expected}, Items: {_n_defined_expanded}.",
                 file=_sys.stderr,
             )
-        if len(items_raw_input) < n_editor_tasks:
-            items_raw_input += [_random.choice(_FILLER_ITEMS) for _ in range(n_editor_tasks - len(items_raw_input))]
-        items_raw_input = items_raw_input[:n_editor_tasks]
-        items_raw_editor = [x if x else _random.choice(_FILLER_ITEMS) for x in items_raw_input]
-
-        # Normalize item_types and item_consumable to editor task count
-        if len(item_types_raw) < n_editor_tasks:
-            item_types_raw += ["junk"] * (n_editor_tasks - len(item_types_raw))
-        item_types_editor = [rt if rt in allowed_types else "junk" for rt in item_types_raw[:n_editor_tasks]]
-
-        if len(item_consumable_raw) < n_editor_tasks:
-            item_consumable_raw += ["false"] * (n_editor_tasks - len(item_consumable_raw))
-        item_consumable_editor = [s == "true" for s in item_consumable_raw[:n_editor_tasks]]
-
-        # Padded filler slots (indices >= n_editor_items) only fill remaining item slots
-        _remaining_slots = max(0, _n_yaml_tasks_expected - _n_defined_expanded)
-        item_counts_editor = _item_counts_defined + [
-            1 if i < _remaining_slots else 0
-            for i in range(n_editor_tasks - n_editor_items)
-        ]
 
         # ------------------------------------------------------------------ #
         # 2. Build editor -> YAML index mappings                              #
@@ -234,26 +200,19 @@ class TaskipelagoWorld(World):
         # ------------------------------------------------------------------ #
         # 3. Expand all parallel lists to YAML size                          #
         # ------------------------------------------------------------------ #
-        tasks: List[str] = []
-        items_raw: List[str] = []
-        item_types: List[str] = []
-        item_consumable: List[bool] = []
+        tasks: List[str] = expand_rows(tasks_raw, task_counts_editor)
 
-        for i in range(n_editor_tasks):
-            for _ in range(task_counts_editor[i]):
-                tasks.append(tasks_raw[i])
-            for _ in range(item_counts_editor[i]):
-                items_raw.append(items_raw_editor[i])
-                item_types.append(item_types_editor[i])
-                item_consumable.append(item_consumable_editor[i])
+        items_raw = expand_rows(items_raw_editor, item_counts_editor)
+        item_types = expand_rows(item_types_editor, item_counts_editor)
+        item_consumable = expand_rows(item_consumable_editor, item_counts_editor)
 
         # Pad/trim items to n_yaml_tasks
-        if len(items_raw) < n_yaml_tasks:
-            items_raw += [_random.choice(_FILLER_ITEMS) for _ in range(n_yaml_tasks - len(items_raw))]
+        items_raw = pad_or_trim_names(items_raw, n_yaml_tasks)
+        if len(item_types) < n_yaml_tasks:
             item_types += ["junk"] * (n_yaml_tasks - len(item_types))
-            item_consumable += [False] * (n_yaml_tasks - len(item_consumable))
-        items_raw = items_raw[:n_yaml_tasks]
         item_types = item_types[:n_yaml_tasks]
+        if len(item_consumable) < n_yaml_tasks:
+            item_consumable += [False] * (n_yaml_tasks - len(item_consumable))
         item_consumable = item_consumable[:n_yaml_tasks]
         rewards = list(items_raw)
 
@@ -436,16 +395,14 @@ class TaskipelagoWorld(World):
             raise Exception("Taskipelago: duplicate progressive group names.")
         prog_group_set = set(raw_prog_groups)
 
-        # Expand item progressive groups in parallel with items
+        # Expand item progressive groups in parallel with items (own row count,
+        # decoupled from task rows, same as items/item_types/item_consumable).
         raw_ipg_editor = [str(x).strip() for x in (self.options.item_progressive_group.value or [])]
-        if len(raw_ipg_editor) < n_editor_tasks:
-            raw_ipg_editor += [""] * (n_editor_tasks - len(raw_ipg_editor))
-        raw_ipg_editor = raw_ipg_editor[:n_editor_tasks]
+        if len(raw_ipg_editor) < n_editor_items:
+            raw_ipg_editor += [""] * (n_editor_items - len(raw_ipg_editor))
+        raw_ipg_editor = raw_ipg_editor[:n_editor_items]
 
-        raw_rpg: List[str] = []
-        for i in range(n_editor_tasks):
-            for _ in range(item_counts_editor[i]):
-                raw_rpg.append(raw_ipg_editor[i])
+        raw_rpg: List[str] = expand_rows(raw_ipg_editor, item_counts_editor)
         if len(raw_rpg) < n:
             raw_rpg += [""] * (n - len(raw_rpg))
         raw_rpg = raw_rpg[:n]
@@ -883,37 +840,35 @@ class TaskipelagoWorld(World):
         item_name_to_id: Dict[str, int] = {}
         location_name_to_id: Dict[str, int] = {}
 
+        def _pc(s):
+            try: return max(1, int(s)) if s else 1
+            except ValueError: return 1
+
         for world in task_worlds:
             p = world.player
             player_name = multiworld.player_name[p]
             prefix = f"[{player_name}] " if multi_slot else ""
 
             tasks = [str(t).strip() for t in world.options.tasks.value if str(t).strip()]
-            items_raw = [str(r).strip() for r in world.options.items.value]
+            items_raw_input = [str(r).strip() for r in world.options.items.value]
 
             # Compute expanded count to size the ID allocation correctly
             task_count_raw = [str(x).strip() for x in (world.options.task_count.value or [])]
             item_count_raw = [str(x).strip() for x in (world.options.item_count.value or [])]
 
-            def _pc(s):
-                try: return max(1, int(s)) if s else 1
-                except ValueError: return 1
-
             task_counts = [_pc(task_count_raw[i] if i < len(task_count_raw) else "") for i in range(len(tasks))]
-            item_counts = [_pc(item_count_raw[i] if i < len(item_count_raw) else "") for i in range(len(tasks))]
             n_tasks = min(sum(task_counts), MAX_TASKS)
 
-            # Expand items_raw to match the expanded task count
-            expanded_items: List[str] = []
-            for i in range(len(tasks)):
-                reward_text = items_raw[i] if i < len(items_raw) else ""
-                for _ in range(item_counts[i]):
-                    expanded_items.append(reward_text)
-            if len(expanded_items) < n_tasks:
-                expanded_items += [""] * (n_tasks - len(expanded_items))
+            # Items are an independent editor list from tasks (their own rows/counts),
+            # matching how generate_early expands them.
+            items_raw_editor, _, _, item_counts_editor = build_item_editor_rows(
+                items_raw_input, [], [], item_count_raw
+            )
+            expanded_items = expand_rows(items_raw_editor, item_counts_editor)
+            expanded_items = pad_or_trim_names(expanded_items, n_tasks)
 
             for i in range(n_tasks):
-                reward_text = expanded_items[i] if i < len(expanded_items) else ""
+                reward_text = expanded_items[i]
                 item_name = (
                     f"{prefix}Item {i + 1}: {reward_text}"
                     if reward_text
@@ -989,28 +944,22 @@ class TaskipelagoWorld(World):
             )
 
         if self._goal_ast is not None:
-            complete_names = self._complete_location_names
-            complete_locs = {
-                i: self.multiworld.get_location(complete_names[i], self.player)
-                for i in collect_leaves(self._goal_ast)
-            }
-            def goal_condition(state, ast=self._goal_ast, locs=complete_locs):
-                def loc_checked(node):
+            token_names = self._token_item_names
+            def goal_condition(state, ast=self._goal_ast, tn=token_names, p=self.player):
+                def item_owned(node):
                     if isinstance(node, int):
-                        return locs[node] in state.locations_checked
+                        return state.has(tn[node], p)
                     op, children = node
                     if op == "and":
-                        return all(loc_checked(c) for c in children)
-                    return any(loc_checked(c) for c in children)
-                return loc_checked(ast)
+                        return all(item_owned(c) for c in children)
+                    return any(item_owned(c) for c in children)
+                return item_owned(ast)
             self.multiworld.completion_condition[self.player] = goal_condition
         else:
-            reward_locs = [
-                self.multiworld.get_location(name, self.player)
-                for name in self._reward_location_names
-            ]
-            self.multiworld.completion_condition[self.player] = lambda state: all(
-                loc in state.locations_checked for loc in reward_locs
+            reward_tokens = list(self._token_item_names)
+            player = self.player
+            self.multiworld.completion_condition[self.player] = lambda state: state.has_all(
+                reward_tokens, player
             )
 
     def fill_slot_data(self) -> Dict[str, Any]:
