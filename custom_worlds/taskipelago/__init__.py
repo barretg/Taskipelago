@@ -249,11 +249,18 @@ class TaskipelagoWorld(World):
             task_cost_editor += [""] * (n_editor_tasks - len(task_cost_editor))
         task_cost_editor = task_cost_editor[:n_editor_tasks]
 
+        task_priority_raw = [str(x).strip() for x in (self.options.task_priority.value or [])]
+        task_priority_editor = [
+            (i < len(task_priority_raw) and task_priority_raw[i].lower() == "true")
+            for i in range(n_editor_tasks)
+        ]
+
         # Expand parallel task lists by count, translating indices in prereq strings
         raw_prereqs_input: List[str] = []
         raw_reward_prereqs_input: List[str] = []
         raw_task_region: List[str] = []
         raw_costs_input: List[str] = []
+        raw_task_priority: List[bool] = []
 
         for i in range(n_editor_tasks):
             count = task_counts_editor[i]
@@ -269,6 +276,7 @@ class TaskipelagoWorld(World):
                 raw_reward_prereqs_input.append(translated_ip)
                 raw_task_region.append(task_region_editor[i])
                 raw_costs_input.append(task_cost_editor[i])
+                raw_task_priority.append(task_priority_editor[i])
 
         # ------------------------------------------------------------------ #
         # 5. Resolve quoted names in task/item prereqs                       #
@@ -829,6 +837,11 @@ class TaskipelagoWorld(World):
 
         self._reward_location_names = [f"{prefix}Task {i + 1} (Reward)" for i in range(n)]
         self._complete_location_names = [f"{prefix}Task {i + 1} (Complete)" for i in range(n)]
+
+        self._task_priority = list(raw_task_priority)
+        for i, is_priority in enumerate(raw_task_priority):
+            if is_priority:
+                self.options.priority_locations.value.add(self._reward_location_names[i])
         self._reward_item_names = [
             f"{prefix}Item {i + 1}: {rewards[i]}" if rewards[i].strip() else f"{prefix}Item {i + 1}"
             for i in range(n)

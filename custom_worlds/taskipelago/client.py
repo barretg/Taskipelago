@@ -483,6 +483,7 @@ class TaskRow:
         self.item_prereq_var = tk.StringVar()
         self.cost_var = tk.StringVar()
         self.region_var = tk.StringVar(value="")
+        self.priority_var = tk.BooleanVar(value=False)
         self.count_var = tk.IntVar(value=1)
 
         self.num_label = ttk.Label(parent, text=str(index), width=3)
@@ -495,6 +496,7 @@ class TaskRow:
             values=[""] + list(regions or []),
             state="readonly", width=12,
         )
+        self.priority_cb = ttk.Checkbutton(parent, variable=self.priority_var)
         self.count_spinbox = NoScrollSpinbox(parent, from_=1, to=999, textvariable=self.count_var, width=5)
         self.remove_btn = ttk.Button(parent, text="Remove", width=8, command=self.remove)
 
@@ -508,13 +510,14 @@ class TaskRow:
         self.item_prereq_entry.grid(row=r, column=3, sticky="ew", padx=(0, 8), pady=4)
         self.cost_entry.grid(row=r, column=4, sticky="ew", padx=(0, 8), pady=4)
         self.region_cb.grid(row=r, column=5, sticky="w", padx=(0, 8), pady=4)
-        self.count_spinbox.grid(row=r, column=6, sticky="w", padx=(0, 8), pady=4)
-        self.remove_btn.grid(row=r, column=7, padx=(0, 0), pady=4)
+        self.priority_cb.grid(row=r, column=6, padx=(0, 8), pady=4)
+        self.count_spinbox.grid(row=r, column=7, sticky="w", padx=(0, 8), pady=4)
+        self.remove_btn.grid(row=r, column=8, padx=(0, 0), pady=4)
 
     def remove(self):
         for w in (self.num_label, self.task_entry, self.prereq_entry,
                   self.item_prereq_entry, self.cost_entry, self.region_cb,
-                  self.count_spinbox, self.remove_btn):
+                  self.priority_cb, self.count_spinbox, self.remove_btn):
             try:
                 w.destroy()
             except Exception:
@@ -539,6 +542,7 @@ class TaskRow:
             self.item_prereq_var.get().strip(),
             self.cost_var.get().strip(),
             self.region_var.get().strip(),
+            bool(self.priority_var.get()),
             count,
         )
 
@@ -1431,8 +1435,9 @@ class TaskipelagoApp(tk.Tk):
         t_tbl.grid_columnconfigure(3, weight=2)   # Item prereqs
         t_tbl.grid_columnconfigure(4, weight=2)   # Cost
         t_tbl.grid_columnconfigure(5, weight=1)   # Region
-        t_tbl.grid_columnconfigure(6, weight=0)   # Count
-        t_tbl.grid_columnconfigure(7, weight=0)   # Remove
+        t_tbl.grid_columnconfigure(6, weight=0)   # Priority
+        t_tbl.grid_columnconfigure(7, weight=0)   # Count
+        t_tbl.grid_columnconfigure(8, weight=0)   # Remove
 
         ttk.Label(t_tbl, text="#").grid(row=0, column=0, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text="Task").grid(row=0, column=1, sticky="w", padx=(0, 8))
@@ -1493,12 +1498,19 @@ class TaskipelagoApp(tk.Tk):
             "A prereq referencing this task requires ALL copies to be completed.\n"
             "Consecutive duplicate task rows are crunched into one row on import."
         )
+        _priority_col_tip = (
+            "Marks this task's reward location as an Archipelago priority location.\n\n"
+            "Archipelago will try to place a progression or otherwise important item there "
+            "instead of junk/filler.\n\n"
+            "Uses Archipelago's built-in priority_locations mechanism -- no extra setup needed."
+        )
         _make_tip_header(t_tbl, "Task prereqs", _task_prereq_tip).grid(row=0, column=2, sticky="w", padx=(0, 8))
         _make_tip_header(t_tbl, "Item prereqs", _item_prereq_tip).grid(row=0, column=3, sticky="w", padx=(0, 8))
         _make_tip_header(t_tbl, "Cost",         _cost_col_tip).grid(row=0, column=4, sticky="w", padx=(0, 8))
         _make_tip_header(t_tbl, "Region",       _region_col_tip).grid(row=0, column=5, sticky="w", padx=(0, 8))
-        _make_tip_header(t_tbl, "Count",        _count_task_tip).grid(row=0, column=6, sticky="w", padx=(0, 8))
-        ttk.Label(t_tbl, text="").grid(row=0, column=7, sticky="w")
+        _make_tip_header(t_tbl, "Priority",     _priority_col_tip).grid(row=0, column=6, sticky="w", padx=(0, 8))
+        _make_tip_header(t_tbl, "Count",        _count_task_tip).grid(row=0, column=7, sticky="w", padx=(0, 8))
+        ttk.Label(t_tbl, text="").grid(row=0, column=8, sticky="w")
 
         ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=0, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text="Location", style="Muted.TLabel").grid(row=1, column=1, sticky="w", padx=(0, 8))
@@ -1507,7 +1519,8 @@ class TaskipelagoApp(tk.Tk):
         ttk.Label(t_tbl, text='"ItemName"*N', style="Muted.TLabel").grid(row=1, column=4, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=5, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=6, sticky="w", padx=(0, 8))
-        ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=7, sticky="w")
+        ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=7, sticky="w", padx=(0, 8))
+        ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=8, sticky="w")
 
         tasks_btn_row = ttk.Frame(tasks_lf)
         tasks_btn_row.grid(row=2, column=0, sticky="ew", padx=10, pady=(4, 8))
@@ -2295,9 +2308,9 @@ class TaskipelagoApp(tk.Tk):
             messagebox.showerror("Error", "Player name is required.")
             return
 
-        tasks, task_prereqs, item_prereqs_raw, task_costs, task_region_list, task_counts = [], [], [], [], [], []
+        tasks, task_prereqs, item_prereqs_raw, task_costs, task_region_list, task_priority_list, task_counts = [], [], [], [], [], [], []
         for r in self.task_rows:
-            t, tpr, ipr, cost, treg, count = r.get_data()
+            t, tpr, ipr, cost, treg, priority, count = r.get_data()
             if not t:
                 continue
             tasks.append(t)
@@ -2305,6 +2318,7 @@ class TaskipelagoApp(tk.Tk):
             item_prereqs_raw.append(ipr or "")
             task_costs.append(cost or "")
             task_region_list.append(treg or "")
+            task_priority_list.append(priority)
             task_counts.append(count)
 
         if not tasks:
@@ -2515,6 +2529,7 @@ class TaskipelagoApp(tk.Tk):
                 "region_default_pcts": [self.region_default_pcts.get(r, 100) for r in self.regions],
                 "region_colors": [self.region_colors.get(r, "") for r in self.regions],
                 "task_region": task_region_list,
+                "task_priority": ["true" if p else "false" for p in task_priority_list],
 
                 "tasks": tasks,
                 "task_count": [str(c) for c in task_counts],
@@ -2633,6 +2648,7 @@ class TaskipelagoApp(tk.Tk):
         tasks_raw = list(block.get("tasks", []) or [])
         prereqs_raw = list(block.get("task_prereqs", []) or [])
         task_regions_raw = list(block.get("task_region", []) or [])
+        task_priority_raw = list(block.get("task_priority", []) or [])
         task_costs_raw = list(block.get("task_cost", []) or [])
         item_prereqs_raw = list(block.get("item_prereqs", block.get("reward_prereqs", [])) or [])
         task_count_raw = block.get("task_count", None)
@@ -2661,11 +2677,12 @@ class TaskipelagoApp(tk.Tk):
                 task_counts.append(c)
             prereqs = [_str(prereqs_raw[i]) if i < len(prereqs_raw) else "" for i in range(len(tasks))]
             task_regions = [_str(task_regions_raw[i]) if i < len(task_regions_raw) else "" for i in range(len(tasks))]
+            task_priority = [_str(task_priority_raw[i]).lower() == "true" if i < len(task_priority_raw) else False for i in range(len(tasks))]
             task_costs = [_str(task_costs_raw[i]) if i < len(task_costs_raw) else "" for i in range(len(tasks))]
             item_prereqs = [_str(item_prereqs_raw[i]) if i < len(item_prereqs_raw) else "" for i in range(len(tasks))]
         else:
             # Crunch consecutive identical task names into single rows with count
-            tasks, prereqs, task_regions, task_costs, item_prereqs, task_counts = [], [], [], [], [], []
+            tasks, prereqs, task_regions, task_priority, task_costs, item_prereqs, task_counts = [], [], [], [], [], [], []
             i = 0
             while i < len(tasks_raw):
                 name = _str(tasks_raw[i])
@@ -2677,6 +2694,7 @@ class TaskipelagoApp(tk.Tk):
                 tasks.append(name)
                 prereqs.append(_str(prereqs_raw[i]) if i < len(prereqs_raw) else "")
                 task_regions.append(_str(task_regions_raw[i]) if i < len(task_regions_raw) else "")
+                task_priority.append(_str(task_priority_raw[i]).lower() == "true" if i < len(task_priority_raw) else False)
                 task_costs.append(_str(task_costs_raw[i]) if i < len(task_costs_raw) else "")
                 item_prereqs.append(_str(item_prereqs_raw[i]) if i < len(item_prereqs_raw) else "")
                 task_counts.append(count)
@@ -2777,6 +2795,7 @@ class TaskipelagoApp(tk.Tk):
             task_row.prereq_var.set(prereqs[i])
             task_row.item_prereq_var.set(item_prereqs[i])
             task_row.cost_var.set(task_costs[i])
+            task_row.priority_var.set(bool(task_priority[i]))
             task_row.count_var.set(task_counts[i])
             if task_regions[i] in self.regions:
                 task_row.region_var.set(task_regions[i])
@@ -3008,6 +3027,16 @@ class TaskipelagoApp(tk.Tk):
                 "before that other task unlocks.\n\n"
                 "When you import a YAML file, consecutive duplicate task rows are automatically "
                 "collapsed back into a single row with the correct count."
+            ),
+            (
+                "Task Priority (Priority column)",
+                "The \"Priority\" checkbox in the task table marks a task's reward location as an "
+                "Archipelago priority location.\n\n"
+                "Archipelago will try to place a progression or otherwise important item there "
+                "instead of junk/filler -- useful for guaranteeing an early, impactful pickup on "
+                "a task you expect to complete quickly.\n\n"
+                "This uses Archipelago's built-in priority_locations mechanism directly, so it "
+                "works the same way it does for every other game."
             ),
             (
                 "Items -- What They Are",

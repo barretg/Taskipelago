@@ -108,6 +108,18 @@ class DeathLinkAmnesty(Range):
     default = 0
 
 
+class TaskPriority(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with tasks. Each entry is 'true' or 'false' (default 'false').
+    Tasks marked 'true' have their reward location added to Archipelago's built-in
+    priority_locations, making it more likely to receive a progression or otherwise
+    important item instead of junk/filler.
+    """
+    display_name = "Task Priority"
+    default: List[str] = []
+
+
 class GoalTasks(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -284,6 +296,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     task_prereqs: TaskPrereqs
     item_prereqs: ItemPrereqs
     lock_prereqs: LockPreqreqs
+    task_priority: TaskPriority
     goal_tasks: GoalTasks
     hide_unreachable_tasks: HideUnreachableTasks
     death_link: DeathLink
