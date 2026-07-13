@@ -37,7 +37,9 @@ class TaskPrereqs(OptionList):
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
     Parallel list aligned with tasks. Each entry is a boolean expression of 1-based task
     indices that must be completed before this task is accessible.
-    Supports &&, ||, (), and quoted task names (e.g. "My Task").
+    Supports &&, ||, (), quoted task names (e.g. "My Task"), and region references
+    (e.g. 'chores' for the region's default percentage, 'chores-75' for exactly 75%,
+    'chores*5' for an absolute count of 5 tasks).
     Example: '1 && (2 || 3)' requires task 1 and either task 2 or task 3.
     """
     display_name = "Task Prereqs"
@@ -110,6 +112,8 @@ class GoalTasks(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
     Boolean expression of 1-based task indices whose completion triggers game completion.
+    Uses the same syntax as task_prereqs: &&, ||, (), quoted task names (e.g. "My Task"),
+    and region references (e.g. 'chores', 'chores-75', 'chores*5').
     If empty, all tasks must be completed (default behaviour).
     """
     display_name = "Goal Tasks"

@@ -16,6 +16,7 @@ const state = {
   lockPrereqs: false,
   hideUnreachable: true,
   goalExpression: '',
+  goalRegionReqs: [],
   baseRewardId: null,
   baseCompleteId: null,
   baseItemId: null,
@@ -432,6 +433,7 @@ function applySlotData(sd) {
   state.lockPrereqs         = !!sd.lock_prereqs;
   state.hideUnreachable     = sd.hide_unreachable_tasks !== false;
   state.goalExpression      = sd.goal_expression || '';
+  state.goalRegionReqs      = sd.goal_region_reqs || [];
   state.baseRewardId        = sd.base_reward_location_id ?? null;
   state.baseCompleteId      = sd.base_complete_location_id ?? null;
   state.baseItemId          = sd.base_item_id ?? null;
@@ -472,6 +474,14 @@ function maybeSendGoal() {
     done = evalPrereqExpr(state.goalExpression, idx1 =>
       checked.has(state.baseCompleteId + idx1 - 1)
     );
+    for (const req of (state.goalRegionReqs || [])) {
+      const r = req.region ?? req[0];
+      const abs = req.abs_count ?? null;
+      const pct = req.pct ?? req[1] ?? 100;
+      done = done && (abs !== null
+        ? regionReqSatisfiedAbs(r, abs, checked)
+        : regionReqSatisfied(r, pct, checked));
+    }
   } else {
     done = state.tasks.every((_, i) => checked.has(state.baseCompleteId + i));
   }
@@ -697,6 +707,7 @@ function clearPlayState() {
   state.lockPrereqs = false;
   state.hideUnreachable = true;
   state.goalExpression = '';
+  state.goalRegionReqs = [];
   state.baseCompleteId = state.baseRewardId = state.baseItemId = state.baseTokenId = null;
   state.deathLinkPool = [];
   state.deathLinkWeights = [];

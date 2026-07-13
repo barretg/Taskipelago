@@ -773,6 +773,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.hide_unreachable_tasks = True
         self.goal_indices = []
         self.goal_expression = ""
+        self.goal_region_reqs = []
 
         self.base_reward_location_id = None
         self.base_complete_location_id = None
@@ -838,6 +839,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.hide_unreachable_tasks = bool(self.slot_data.get("hide_unreachable_tasks", True))
         self.goal_indices = list(self.slot_data.get("goal_indices", []) or [])
         self.goal_expression = str(self.slot_data.get("goal_expression", "") or "")
+        self.goal_region_reqs = list(self.slot_data.get("goal_region_reqs", []) or [])
 
         self.base_reward_location_id = self.slot_data.get("base_reward_location_id")
         self.base_complete_location_id = self.slot_data.get("base_complete_location_id")
@@ -1402,7 +1404,18 @@ class TaskipelagoApp(tk.Tk):
             variable=self.hide_unreachable_tasks,
         ).pack(side="left", padx=(16, 0))
 
-        ttk.Label(task_settings, text="Goal task(s):").pack(side="left", padx=(16, 4))
+        _goal_tasks_tip = (
+            "The task(s) that win the game when completed. Blank = ALL tasks required.\n\n"
+            "Same syntax as Task prereqs: task numbers, quoted task names, boolean logic,\n"
+            "and region refs:\n"
+            "  5                     ->  task 5\n"
+            "  5, 8                  ->  tasks 5 AND 8\n"
+            "  5 || 8                ->  task 5 OR task 8\n"
+            '  "Finish the project"  ->  task named exactly "Finish the project"\n'
+            "  myregion-75           ->  75% of that region's tasks completed\n\n"
+            "Quoted names resolve to the first matching task number at export."
+        )
+        _make_tip_header(task_settings, "Goal task(s):", _goal_tasks_tip).pack(side="left", padx=(16, 4))
         self.goal_tasks_var = tk.StringVar()
         ttk.Entry(task_settings, textvariable=self.goal_tasks_var, width=16).pack(side="left")
         ttk.Label(task_settings, text="(blank = all)", style="Muted.TLabel").pack(side="left", padx=(4, 0))
@@ -2469,10 +2482,14 @@ class TaskipelagoApp(tk.Tk):
                         expr_errors.append(f"Task {i + 1} cost: {e}")
 
             if goal_tasks_raw:
-                try:
-                    parse_prereq(goal_tasks_raw, n, 0, "goal tasks")
-                except Exception as e:
-                    expr_errors.append(f"Goal tasks: {e}")
+                resolved_goal, goal_name_errs = self._resolve_name_refs(goal_tasks_raw, tasks)
+                if goal_name_errs:
+                    expr_errors.append("Goal tasks: " + "; ".join(goal_name_errs))
+                else:
+                    try:
+                        parse_prereq(resolved_goal, n, 0, "goal tasks", known_regions=region_set)
+                    except Exception as e:
+                        expr_errors.append(f"Goal tasks: {e}")
 
             if expr_errors:
                 messagebox.showerror(
@@ -2898,9 +2915,10 @@ class TaskipelagoApp(tk.Tk):
                 "When checked, tasks whose prerequisites are not yet met are hidden from the play "
                 "screen, keeping it clean and focused on what is currently available.\n\n"
                 "\"Goal task(s)\"\n"
-                "The task or tasks that win the game for you when completed. Enter a task number "
-                "(e.g. 5), a quoted task name (e.g. \"Finish the project\"), or multiple separated "
-                "by commas. Leave blank to require ALL tasks to be completed."
+                "The task or tasks that win the game for you when completed. Uses the same "
+                "expression syntax as Task Prereqs: a task number (e.g. 5), a quoted task name "
+                "(e.g. \"Finish the project\"), &&/||/() boolean logic, and region references "
+                "(covered later). Leave blank to require ALL tasks to be completed."
             ),
             (
                 "Task Dependencies (Task Prereqs column)",
@@ -5516,6 +5534,13 @@ class TaskipelagoApp(tk.Tk):
                     self.ctx.goal_expression,
                     lambda idx_1: (self.ctx.base_complete_location_id + idx_1 - 1) in checked
                 )
+                for req in (self.ctx.goal_region_reqs or []):
+                    r = req.get("region", "")
+                    abs_count = req.get("abs_count")
+                    if abs_count is not None:
+                        done = done and self._region_req_satisfied_abs(r, abs_count)
+                    else:
+                        done = done and self._region_req_satisfied(r, req.get("pct", 100))
             except Exception:
                 done = False
         else:

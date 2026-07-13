@@ -735,9 +735,48 @@ class TaskipelagoWorld(World):
         # ------------------------------------------------------------------ #
         raw_goal_parts = [str(x).strip() for x in list(self.options.goal_tasks.value or []) if str(x).strip()]
         raw_goal = ", ".join(raw_goal_parts)
-        goal_ast = parse_prereq(raw_goal, n, 0, "goal_tasks") if raw_goal else None
+
+        _goal_resolved, _goal_errs = _resolve_quoted_names(raw_goal, tasks)
+        if _goal_errs:
+            raise Exception(
+                "Taskipelago: goal_tasks references unknown task name(s): " + "; ".join(_goal_errs)
+            )
+        raw_goal = _goal_resolved
+
+        goal_ast_unresolved = parse_prereq(raw_goal, n, 0, "goal_tasks", known_regions=region_set) if raw_goal else None
+
+        goal_region_reqs: List[dict] = []
+        if goal_ast_unresolved is not None:
+            for rname, pct_val in collect_region_refs(goal_ast_unresolved):
+                pct = pct_val if pct_val is not None else region_default_pcts.get(rname, 100)
+                if pct < 0 or pct > 100:
+                    raise Exception(
+                        f"Taskipelago: goal_tasks region prereq '{rname}' percentage {pct} must be 0-100."
+                    )
+                if not region_to_task_indices.get(rname):
+                    raise Exception(
+                        f"Taskipelago: goal_tasks references region '{rname}' which has no tasks assigned."
+                    )
+                goal_region_reqs.append({"region": rname, "pct": pct})
+            for rname, abs_n in collect_region_abs_refs(goal_ast_unresolved):
+                region_size = len(region_to_task_indices.get(rname, []))
+                if region_size == 0:
+                    raise Exception(
+                        f"Taskipelago: goal_tasks references region '{rname}' which has no tasks assigned."
+                    )
+                if abs_n < 1 or abs_n > region_size:
+                    raise Exception(
+                        f"Taskipelago: goal_tasks uses '{rname}*{abs_n}' but region "
+                        f"'{rname}' only has {region_size} task(s)."
+                    )
+                goal_region_reqs.append({"region": rname, "abs_count": abs_n})
+
+        goal_region_pct = {req["region"]: req["pct"] for req in goal_region_reqs if "pct" in req}
+        goal_ast = resolve_ast_refs(goal_ast_unresolved, {}, goal_region_pct)
+
         self._raw_goal = raw_goal
         self._goal_ast = goal_ast
+        self._goal_region_reqs = goal_region_reqs
         self._goal_indices = sorted(set(collect_leaves(goal_ast))) if goal_ast else []
 
         # ------------------------------------------------------------------ #
@@ -944,16 +983,10 @@ class TaskipelagoWorld(World):
             )
 
         if self._goal_ast is not None:
-            token_names = self._token_item_names
-            def goal_condition(state, ast=self._goal_ast, tn=token_names, p=self.player):
-                def item_owned(node):
-                    if isinstance(node, int):
-                        return state.has(tn[node], p)
-                    op, children = node
-                    if op == "and":
-                        return all(item_owned(c) for c in children)
-                    return any(item_owned(c) for c in children)
-                return item_owned(ast)
+            def goal_condition(state, ast=self._goal_ast, p=self.player,
+                                tn=self._token_item_names, gi=self._group_item_display_names,
+                                rt=self._region_token_names):
+                return eval_node(ast, state, p, tn, gi, rt)
             self.multiworld.completion_condition[self.player] = goal_condition
         else:
             reward_tokens = list(self._token_item_names)
@@ -1011,6 +1044,7 @@ class TaskipelagoWorld(World):
             "sent_player_names": sent_player_names,
             "goal_indices": sorted(self._goal_indices),
             "goal_expression": self._raw_goal,
+            "goal_region_reqs": list(self._goal_region_reqs),
             "progressive_groups": list(self._progressive_groups),
             "item_progressive_group": list(self._reward_to_group),
             "task_progressive_reqs": [
