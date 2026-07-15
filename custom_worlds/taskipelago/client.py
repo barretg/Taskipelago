@@ -2091,6 +2091,7 @@ class TaskipelagoApp(tk.Tk):
         ttk.Button(btn_row, text="OK", command=on_ok).pack(side="right")
 
     def _commit_region_rename(self, row_data: dict):
+        from .prereq_parser import RESERVED_WORDS
         old_name = row_data["committed_name"]
         new_name = row_data["name_var"].get().strip()
         if new_name == old_name:
@@ -2103,6 +2104,10 @@ class TaskipelagoApp(tk.Tk):
                 f"Region name '{new_name}' is invalid.\n"
                 "Names must start and end with a letter or underscore, "
                 "may contain hyphens in the middle, and must not contain spaces or digits.")
+            row_data["name_var"].set(old_name)
+            return
+        if new_name.lower() in RESERVED_WORDS:
+            messagebox.showerror("Error", f"Region name '{new_name}' is a reserved word.")
             row_data["name_var"].set(old_name)
             return
         if new_name in self.regions:
