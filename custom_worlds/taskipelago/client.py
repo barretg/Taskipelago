@@ -1417,7 +1417,8 @@ class TaskipelagoApp(tk.Tk):
             "  5 || 8                ->  task 5 OR task 8\n"
             '  "Finish the project"  ->  task named exactly "Finish the project"\n'
             "  myregion-75           ->  75% of that region's tasks completed\n\n"
-            "Quoted names resolve to the first matching task number at export."
+            "Quoted names resolve to the first matching task number at export.\n"
+            "The 'prev' and 'sequential' keywords are not available here (Task prereqs only)."
         )
         _make_tip_header(task_settings, "Goal task(s):", _goal_tasks_tip).pack(side="left", padx=(16, 4))
         self.goal_tasks_var = tk.StringVar()
@@ -1453,9 +1454,14 @@ class TaskipelagoApp(tk.Tk):
             "  myregion      ->  region's default % of tasks must be completed\n"
             "  myregion-75   ->  exactly 75% of that region's tasks must be completed\n"
             "  myregion*5    ->  exactly 5 tasks in that region must be completed\n\n"
+            "Reserved keywords (Task prereqs only, not Item prereqs or Goal Tasks):\n"
+            "  prev                    ->  the task immediately before this one\n"
+            '  sequential && "Chore"   ->  with Count > 1, chains each duplicate to the\n'
+            "                              one before it (first copy just needs \"Chore\")\n\n"
             "Quoted names resolve to the first matching task number at export.\n"
             "Quotation marks are not allowed in task names.\n"
-            "A task cannot depend on its own region."
+            "A task cannot depend on its own region.\n"
+            "'prev' and 'sequential' cannot be used as region or progressive group names."
         )
         _item_prereq_tip = (
             "Which items must be RECEIVED before this task can be checked off.\n\n"
@@ -1496,7 +1502,9 @@ class TaskipelagoApp(tk.Tk):
             "How many times this task is duplicated in the exported YAML.\n\n"
             "All copies are generated with identical configuration.\n"
             "A prereq referencing this task requires ALL copies to be completed.\n"
-            "Consecutive duplicate task rows are crunched into one row on import."
+            "Consecutive duplicate task rows are crunched into one row on import.\n\n"
+            "Add 'sequential' to this task's prereqs to chain the copies in order "
+            "(each copy after the first depends on the one before it)."
         )
         _priority_col_tip = (
             "Marks this task's reward location as an Archipelago priority location.\n\n"
@@ -2969,7 +2977,8 @@ class TaskipelagoApp(tk.Tk):
                 "The task or tasks that win the game for you when completed. Uses the same "
                 "expression syntax as Task Prereqs: a task number (e.g. 5), a quoted task name "
                 "(e.g. \"Finish the project\"), &&/||/() boolean logic, and region references "
-                "(covered later). Leave blank to require ALL tasks to be completed."
+                "(covered later) -- except the 'prev'/'sequential' keywords, which only work in "
+                "Task Prereqs. Leave blank to require ALL tasks to be completed."
             ),
             (
                 "Task Dependencies (Task Prereqs column)",
@@ -2987,6 +2996,10 @@ class TaskipelagoApp(tk.Tk):
                 "  chores            region's default percentage of tasks done\n"
                 "  chores-75         exactly 75% of that region's tasks done\n"
                 "  chores*5          exactly 5 tasks in that region done\n\n"
+                "Two reserved keywords are also available here (Task Prereqs only):\n"
+                "  prev                    the task immediately before this one\n"
+                "  sequential && \"Chore\"   with Count > 1 (see the Task Count step), chains\n"
+                "                          each duplicate to the one before it\n\n"
                 "Hover over the \"Task prereqs\" column header for a quick reference."
             ),
             (
@@ -3057,6 +3070,9 @@ class TaskipelagoApp(tk.Tk):
                 "to the game -- each one is its own location with its own hidden item.\n\n"
                 "If another task has this task in its prerequisites, ALL copies must be completed "
                 "before that other task unlocks.\n\n"
+                "Add 'sequential' to this task's own prereqs (e.g. sequential && \"Chore\") to chain "
+                "the copies in order instead: the first copy only needs \"Chore\", but each copy "
+                "after that also requires the copy before it to be completed first.\n\n"
                 "When you import a YAML file, consecutive duplicate task rows are automatically "
                 "collapsed back into a single row with the correct count."
             ),
