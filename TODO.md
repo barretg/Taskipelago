@@ -9,8 +9,8 @@ take that Jira.
 * Facelift/make purchaseables distinct
 * Submission box and presets for community made yamls
 * Task description text
-* "prev" keyword for task dependencies for easier chaining repeat tasks
-* priority tasks
+* ~~"prev" keyword for task dependencies for easier chaining repeat tasks~~
+* ~~priority tasks~~
 
 ### High Prio:
 * Multi-completion tasks

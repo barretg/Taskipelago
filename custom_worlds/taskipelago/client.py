@@ -1919,12 +1919,16 @@ class TaskipelagoApp(tk.Tk):
 
     # ---------------- Progressive groups management ----------------
     def _add_prog_group(self):
+        from .prereq_parser import RESERVED_WORDS
         name = self.new_group_var.get().strip()
         if not name:
             messagebox.showerror("Error", "Group name cannot be empty.")
             return
         if re.search(r'\d', name):
             messagebox.showerror("Error", f"Group name '{name}' must not contain digits.")
+            return
+        if name.lower() in RESERVED_WORDS:
+            messagebox.showerror("Error", f"Group name '{name}' is a reserved word.")
             return
         if name in self.prog_groups:
             messagebox.showerror("Error", f"Progressive group '{name}' already exists.")
@@ -1966,6 +1970,7 @@ class TaskipelagoApp(tk.Tk):
 
     # ---------------- Region management ----------------
     def _add_region(self):
+        from .prereq_parser import RESERVED_WORDS
         name = self.new_region_var.get().strip()
         if not name:
             messagebox.showerror("Error", "Region name cannot be empty.")
@@ -1975,6 +1980,9 @@ class TaskipelagoApp(tk.Tk):
                 f"Region name '{name}' is invalid.\n"
                 "Names must start and end with a letter or underscore, "
                 "may contain hyphens in the middle, and must not contain spaces or digits.")
+            return
+        if name.lower() in RESERVED_WORDS:
+            messagebox.showerror("Error", f"Region name '{name}' is a reserved word.")
             return
         if name in self.regions:
             messagebox.showerror("Error", f"Region '{name}' already exists.")
@@ -2374,6 +2382,7 @@ class TaskipelagoApp(tk.Tk):
             )
             return
 
+        from .prereq_parser import RESERVED_WORDS
         _bad_regions = [
             r for r in self.regions
             if not re.match(r'^[a-zA-Z_][a-zA-Z_-]*$', r) or re.search(r'\d', r) or r.endswith('-')
@@ -2385,6 +2394,24 @@ class TaskipelagoApp(tk.Tk):
                 "Names must start and end with a letter or underscore, may contain hyphens in the middle, "
                 "and must not contain digits:\n\n"
                 + "\n".join(_bad_regions)
+            )
+            return
+
+        _reserved_regions = [r for r in self.regions if r.lower() in RESERVED_WORDS]
+        if _reserved_regions:
+            messagebox.showerror(
+                "Invalid Region Names",
+                "The following region names are reserved words and cannot be exported:\n\n"
+                + "\n".join(_reserved_regions)
+            )
+            return
+
+        _reserved_groups = [g for g in self.prog_groups if g.lower() in RESERVED_WORDS]
+        if _reserved_groups:
+            messagebox.showerror(
+                "Invalid Progressive Group Names",
+                "The following progressive group names are reserved words and cannot be exported:\n\n"
+                + "\n".join(_reserved_groups)
             )
             return
 

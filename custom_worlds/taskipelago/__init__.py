@@ -34,6 +34,7 @@ from .prereq_parser import (
     collect_region_refs, collect_region_abs_refs,
     collect_cost_groups, collect_cost_groups_per_branch,
     eval_node, parse_prereq, parse_cost_expr, resolve_ast_refs, Node,
+    has_seq_flag, ast_to_text, RESERVED_WORDS,
 )
 from .rules import set_rules as _set_rules
 
@@ -261,6 +262,10 @@ class TaskipelagoWorld(World):
         raw_task_region: List[str] = []
         raw_costs_input: List[str] = []
         raw_task_priority: List[bool] = []
+        # task_seq_prev_idx[j] = 0-based YAML index of the previous duplicate copy
+        # of the same task, or None if j is the first copy (or count == 1).
+        # Used to resolve the "sequential" keyword at generation time.
+        task_seq_prev_idx: List[int | None] = []
 
         for i in range(n_editor_tasks):
             count = task_counts_editor[i]
@@ -271,12 +276,14 @@ class TaskipelagoWorld(World):
             translated_ip = _translate_prereq_indices(
                 raw_item_prereqs_editor[i], editor_to_yaml_item, and_multi=False
             )
-            for _ in range(count):
+            yaml_idxs = editor_to_yaml_task[i]
+            for c in range(count):
                 raw_prereqs_input.append(translated_tp)
                 raw_reward_prereqs_input.append(translated_ip)
                 raw_task_region.append(task_region_editor[i])
                 raw_costs_input.append(task_cost_editor[i])
                 raw_task_priority.append(task_priority_editor[i])
+                task_seq_prev_idx.append(yaml_idxs[c - 1] if c > 0 else None)
 
         # ------------------------------------------------------------------ #
         # 5. Resolve quoted names in task/item prereqs                       #
@@ -348,6 +355,10 @@ class TaskipelagoWorld(World):
                 raise Exception(
                     f"Taskipelago: region name '{rname}' must not contain digits."
                 )
+            if rname.lower() in RESERVED_WORDS:
+                raise Exception(
+                    f"Taskipelago: region name '{rname}' is a reserved word."
+                )
         if len(raw_regions) != len(set(raw_regions)):
             raise Exception("Taskipelago: duplicate region names.")
         region_set = set(raw_regions)
@@ -398,6 +409,10 @@ class TaskipelagoWorld(World):
             if _re.search(r'\d', gname):
                 raise Exception(
                     f"Taskipelago: progressive group name '{gname}' must not contain digits."
+                )
+            if gname.lower() in RESERVED_WORDS:
+                raise Exception(
+                    f"Taskipelago: progressive group name '{gname}' is a reserved word."
                 )
         if len(raw_prog_groups) != len(set(raw_prog_groups)):
             raise Exception("Taskipelago: duplicate progressive group names.")
@@ -549,9 +564,14 @@ class TaskipelagoWorld(World):
         # ------------------------------------------------------------------ #
         parsed_prereqs_unresolved = []
         for i, txt in enumerate(raw_prereqs_input):
-            parsed_prereqs_unresolved.append(
-                parse_prereq(txt, n, i, "task prereq", known_regions=region_set)
-            )
+            ast = parse_prereq(txt, n, i, "task prereq", known_regions=region_set)
+            if ast is not None and has_seq_flag(ast) and task_seq_prev_idx[i] is not None:
+                ast = ("and", [ast, task_seq_prev_idx[i]])
+            # The client-side runtime evaluators don't understand 'prev'/'sequential',
+            # so rewrite their generation-time resolution back into plain text.
+            if ast is not None and (has_seq_flag(ast) or _re.search(r'\bprev\b', txt)):
+                raw_prereqs_input[i] = ast_to_text(ast)
+            parsed_prereqs_unresolved.append(ast)
 
         task_region_reqs: List[List[dict]] = []
         for i, ast in enumerate(parsed_prereqs_unresolved):

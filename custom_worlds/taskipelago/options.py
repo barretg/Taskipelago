@@ -41,6 +41,12 @@ class TaskPrereqs(OptionList):
     (e.g. 'chores' for the region's default percentage, 'chores-75' for exactly 75%,
     'chores*5' for an absolute count of 5 tasks).
     Example: '1 && (2 || 3)' requires task 1 and either task 2 or task 3.
+    Two reserved keywords are also available here (not in item_prereqs or goal_tasks):
+    'prev' resolves to the task immediately before this one. 'sequential', combined
+    with a task's count field, makes every duplicate copy after the first depend on
+    the copy before it (e.g. 'sequential && "Chore"' with count 4 leaves the first
+    copy depending only on "Chore", while the rest also require the prior copy).
+    'prev' and 'sequential' cannot be used as region or progressive group names.
     """
     display_name = "Task Prereqs"
     default: List[str] = []

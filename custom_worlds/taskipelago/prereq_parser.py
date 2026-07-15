@@ -12,6 +12,14 @@ Grammar:
     NAME*N    - group count mode (N items from group) or region absolute count (N tasks)
     NAME-N    - group ordering mode (N-th position) or region percentage (N%)
 
+    "prev" and "sequential" are reserved keywords, valid only in task prereqs
+    (label == "task prereq"):
+      prev       - resolves to the task immediately before this one (this task's
+                   0-based index minus 1).
+      sequential - no-op at evaluation time; marks a task (with count > 1) so that
+                   every duplicate copy after the first automatically depends on
+                   the copy before it, resolved at generation time.
+
 Output AST nodes:
     int                         - leaf: task/item index (0-based)
     ("and", [node, ...])        - all children must be satisfied
@@ -22,6 +30,7 @@ Output AST nodes:
     ("region_abs", name, n)     - region absolute count ref; n is required task count
     ("group", name, count)      - resolved ordering group ref (count is threshold int)
     ("region", name, pct)       - resolved region percentage ref (pct is int)
+    ("seq_flag",)               - "sequential" marker; always true, carries no dependency
 
 group_count and region_abs nodes are already resolved (count embedded) and pass through
 resolve_ast_refs unchanged.
@@ -35,6 +44,9 @@ from typing import List, Tuple, Union
 
 # AST node type
 Node = Union[int, Tuple]
+
+# Bare words that cannot be used as region or progressive group names.
+RESERVED_WORDS = {"prev", "sequential"}
 
 
 def parse_prereq(
@@ -117,6 +129,20 @@ def parse_prereq(
             return idx_1 - 1  # 0-based
         if isinstance(tok, str) and tok not in ("&&", "||", "(", ")", ","):
             consume()
+            if tok in RESERVED_WORDS:
+                if label != "task prereq":
+                    raise Exception(
+                        f"Taskipelago: '{tok}' can only be used in task prereqs "
+                        f"(used in {label} on task {task_index + 1})."
+                    )
+                if tok == "prev":
+                    if task_index < 1:
+                        raise Exception(
+                            f"Taskipelago: 'prev' used on task {task_index + 1} "
+                            f"but there is no previous task."
+                        )
+                    return task_index - 1
+                return ("seq_flag",)
             m_dash = _re.match(r'^(.+[a-zA-Z_])-(\d+)$', tok)
             m_star = _re.match(r'^(.+[a-zA-Z_])\*(\d+)$', tok)
             if m_dash:
@@ -162,8 +188,8 @@ def resolve_ast_refs(node: Node | None, group_thresh: dict, region_pct: dict) ->
     if op == "region_ref":
         _, name, _ = node
         return ("region", name, region_pct[name])
-    if op in ("group_count", "region_abs"):
-        return node  # already resolved, count embedded
+    if op in ("group_count", "region_abs", "seq_flag"):
+        return node  # already resolved / no children
     tag, children = node
     return (tag, [resolve_ast_refs(c, group_thresh, region_pct) for c in children])
 
@@ -172,6 +198,54 @@ def _simplify(op: str, nodes: list) -> Node:
     if len(nodes) == 1:
         return nodes[0]
     return (op, nodes)
+
+
+def ast_to_text(node: Node | None) -> str:
+    """
+    Serialize an unresolved task-prereq AST (as produced by parse_prereq before
+    resolve_ast_refs) back into expression text using only tokens every prereq
+    parser understands (integers, NAME/NAME-N/NAME*N, &&, ||, parens). Used to
+    rewrite 'prev'/'sequential' keyword usage into plain text, since the
+    client-side runtime evaluators don't know those keywords.
+    seq_flag nodes are constant-true and are folded away.
+    """
+    kind, text = _fold_to_text(node)
+    return "" if kind == "true" else text
+
+
+def _fold_to_text(node: Node | None) -> Tuple[str, str]:
+    """Return (kind, text). kind is 'true', 'and', 'or', or 'atom'."""
+    if node is None:
+        return ("true", "")
+    if isinstance(node, int):
+        return ("atom", str(node + 1))
+    op = node[0]
+    if op == "seq_flag":
+        return ("true", "")
+    if op == "and":
+        parts = [p for p in (_fold_to_text(c) for c in node[1]) if p[0] != "true"]
+        if not parts:
+            return ("true", "")
+        rendered = [f"({t})" if k == "or" else t for k, t in parts]
+        return ("and", " && ".join(rendered))
+    if op == "or":
+        parts = [_fold_to_text(c) for c in node[1]]
+        if any(k == "true" for k, _ in parts):
+            return ("true", "")
+        return ("or", " || ".join(t for _, t in parts))
+    if op == "group_ref":
+        _, name, n = node
+        return ("atom", f"{name}-{n}" if n is not None else name)
+    if op == "group_count":
+        _, name, n = node
+        return ("atom", f"{name}*{n}")
+    if op == "region_ref":
+        _, name, pct = node
+        return ("atom", f"{name}-{pct}" if pct is not None else name)
+    if op == "region_abs":
+        _, name, n = node
+        return ("atom", f"{name}*{n}")
+    raise ValueError(f"Cannot serialize AST op: {op}")
 
 
 def _tokenize(text: str, task_index: int, label: str) -> list:
@@ -238,13 +312,26 @@ def collect_leaves(node: Node | None) -> List[int]:
     if isinstance(node, int):
         return [node]
     op = node[0]
-    if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region"):
+    if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region", "seq_flag"):
         return []
     _, children = node
     result = []
     for child in children:
         result.extend(collect_leaves(child))
     return result
+
+
+def has_seq_flag(node: Node | None) -> bool:
+    """Return True if a 'sequential' keyword marker exists anywhere in the AST."""
+    if node is None or isinstance(node, int):
+        return False
+    op = node[0]
+    if op == "seq_flag":
+        return True
+    if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region"):
+        return False
+    _, children = node
+    return any(has_seq_flag(child) for child in children)
 
 
 def collect_group_refs(node: Node | None) -> List[Tuple]:
@@ -254,7 +341,7 @@ def collect_group_refs(node: Node | None) -> List[Tuple]:
     op = node[0]
     if op == "group_ref":
         return [(node[1], node[2])]
-    if op in ("group", "group_count", "region_ref", "region_abs", "region"):
+    if op in ("group", "group_count", "region_ref", "region_abs", "region", "seq_flag"):
         return []
     _, children = node
     result = []
@@ -270,7 +357,7 @@ def collect_group_count_refs(node: Node | None) -> List[Tuple]:
     op = node[0]
     if op == "group_count":
         return [(node[1], node[2])]
-    if op in ("group", "group_ref", "region_ref", "region_abs", "region"):
+    if op in ("group", "group_ref", "region_ref", "region_abs", "region", "seq_flag"):
         return []
     _, children = node
     result = []
@@ -286,7 +373,7 @@ def collect_region_refs(node: Node | None) -> List[Tuple]:
     op = node[0]
     if op == "region_ref":
         return [(node[1], node[2])]
-    if op in ("region", "region_abs", "group_ref", "group_count", "group"):
+    if op in ("region", "region_abs", "group_ref", "group_count", "group", "seq_flag"):
         return []
     _, children = node
     result = []
@@ -302,7 +389,7 @@ def collect_region_abs_refs(node: Node | None) -> List[Tuple]:
     op = node[0]
     if op == "region_abs":
         return [(node[1], node[2])]
-    if op in ("region", "region_ref", "group_ref", "group_count", "group"):
+    if op in ("region", "region_ref", "group_ref", "group_count", "group", "seq_flag"):
         return []
     _, children = node
     result = []
@@ -348,6 +435,8 @@ def eval_node(
         _, name, n = node
         tokens = region_tokens[name]
         return state.has_from_list(tokens, player, n)
+    if op == "seq_flag":
+        return True
     raise ValueError(f"Unknown AST op: {op}")
 
 
@@ -618,7 +707,7 @@ def _has_or(node: Node | None) -> bool:
     if node is None or isinstance(node, int):
         return False
     op = node[0]
-    if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region"):
+    if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region", "seq_flag"):
         return False
     if op == "or":
         return True
