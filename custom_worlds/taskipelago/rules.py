@@ -1,6 +1,14 @@
 from __future__ import annotations
+import logging
+import os as _os
 from typing import TYPE_CHECKING, List
 from .prereq_parser import Node, eval_node, _has_or, collect_leaves
+
+logger = logging.getLogger("Taskipelago")
+
+# Mirrors the flag in __init__.py: set TASKIPELAGO_DEBUG=1 to enable the
+# per-task rule dump below. Off by default so normal generation stays quiet.
+DEBUG_LOGGING = _os.environ.get("TASKIPELAGO_DEBUG", "").strip().lower() in ("1", "true", "yes")
 
 try:
     from RuleBuilder import RuleBuilder as _RuleBuilder
@@ -16,6 +24,21 @@ if TYPE_CHECKING:
 def set_rules(world: "TaskipelagoWorld") -> None:
     player = world.player
     n = len(world._tasks)
+    if DEBUG_LOGGING:
+        logger.info("=== Taskipelago set_rules ===")
+        logger.info("rule engine: %s", "RuleBuilder" if _HAS_RULE_BUILDER else "lambda")
+        for i in range(n):
+            token_names = [world._token_item_names[j] for j in collect_leaves(world._parsed_prereqs[i])]
+            reward_names = [world._reward_display_names[j] for j in collect_leaves(world._parsed_reward_prereqs[i])]
+            cost_reqs = world._task_cost_reqs[i]
+            region_reqs = world._task_region_reqs[i]
+            prog_reqs = world._task_progressive_reqs[i]
+            logger.info(
+                "Task %d (%s): requires_tasks=%s requires_items=%s cost_branches=%s "
+                "region_reqs=%s progressive_reqs=%s",
+                i + 1, world._tasks[i], token_names, reward_names, cost_reqs, region_reqs, prog_reqs,
+            )
+        logger.info("=== end set_rules (rule build follows) ===")
     if _HAS_RULE_BUILDER:
         _set_rules_builder(world, player, n)
     else:

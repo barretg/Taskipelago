@@ -7,4 +7,4 @@ This is the first pre-release build of 1.0! From this point forward I'll be rele
 
 ## Bug Fixes
 * Fixed a bug with the way goal state is detected
-* 
+* Added a check to prevent yaml generation when the yaml would have no location available at multiworld start to prevent location starvation
