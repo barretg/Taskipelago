@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os as _os
 import re as _re
 from typing import Any, Dict, List, Tuple
 
@@ -11,11 +10,6 @@ from worlds.AutoWorld import WebWorld, World
 
 logger = logging.getLogger("Taskipelago")
 from worlds.LauncherComponents import Component, Type, components, launch_subprocess
-
-# Verbose generation-time diagnostics (task/item/rule wiring dumps) are gated
-# behind this flag since they're only useful while debugging a generation
-# failure, not on every normal run. Set TASKIPELAGO_DEBUG=1 to enable.
-DEBUG_LOGGING = _os.environ.get("TASKIPELAGO_DEBUG", "").strip().lower() in ("1", "true", "yes")
 
 from .items import (
     ITEM_NAME_TO_ID,
@@ -909,25 +903,25 @@ class TaskipelagoWorld(World):
         }
 
         # ------------------------------------------------------------------ #
-        # DEBUG LOGGING (set TASKIPELAGO_DEBUG=1 to enable)                    #
+        # DEBUG LOGGING (set host.yaml loglevel: "debug" to enable)            #
         # ------------------------------------------------------------------ #
-        if DEBUG_LOGGING:
-            logger.info("=== Taskipelago generate_early ===")
-            logger.info("n_yaml_tasks=%d  n_yaml_items=%d", n, n_yaml_items)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("=== Taskipelago generate_early ===")
+            logger.debug("n_yaml_tasks=%d  n_yaml_items=%d", n, n_yaml_items)
             for gname, idxs in group_to_reward_indices.items():
                 names = [f"Item {idx+1}: {rewards[idx]}" for idx in idxs]
-                logger.info("group '%s' -> indices %s -> %s", gname, idxs, names)
+                logger.debug("group '%s' -> indices %s -> %s", gname, idxs, names)
             for ti, reqs in enumerate(task_progressive_reqs):
                 if reqs:
-                    logger.info("Task %d (%s) progressive reqs: %s", ti + 1, tasks[ti], reqs)
+                    logger.debug("Task %d (%s) progressive reqs: %s", ti + 1, tasks[ti], reqs)
             for ti, txt in enumerate(raw_reward_prereqs_input):
                 if txt:
-                    logger.info("Task %d raw item prereq: %r", ti + 1, txt)
+                    logger.debug("Task %d raw item prereq: %r", ti + 1, txt)
             for ti, ast in enumerate(parsed_reward_prereqs):
                 if ast is not None:
-                    logger.info("Task %d (%s) parsed reward prereq AST: %s", ti + 1, tasks[ti], ast)
-            logger.info("forced_progression_rewards (0-based): %s", sorted(forced_prog))
-            logger.info("=== end generate_early ===")
+                    logger.debug("Task %d (%s) parsed reward prereq AST: %s", ti + 1, tasks[ti], ast)
+            logger.debug("forced_progression_rewards (0-based): %s", sorted(forced_prog))
+            logger.debug("=== end generate_early ===")
 
     @classmethod
     def stage_generate_early(cls, multiworld) -> None:
@@ -1011,22 +1005,22 @@ class TaskipelagoWorld(World):
         for region in [fallback] + list(ap_region_map.values()):
             menu.connect(region)
 
-        if DEBUG_LOGGING:
-            logger.info("=== Taskipelago create_regions ===")
-            logger.info(
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("=== Taskipelago create_regions ===")
+            logger.debug(
                 "created %d AP regions: %s",
                 len(all_regions), [r.name for r in all_regions],
             )
             for region in [fallback] + list(ap_region_map.values()):
-                logger.info(
+                logger.debug(
                     "region '%s' locations (%d): %s",
                     region.name, len(region.locations), [loc.name for loc in region.locations],
                 )
-            logger.info("=== end create_regions ===")
+            logger.debug("=== end create_regions ===")
 
     def create_items(self) -> None:
-        if DEBUG_LOGGING:
-            logger.info("=== Taskipelago create_items ===")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("=== Taskipelago create_items ===")
         for i, name in enumerate(self._reward_item_names):
             rt = self._reward_types[i] if i < len(self._reward_types) else "junk"
             forced = i in self._forced_progression_rewards
@@ -1040,21 +1034,21 @@ class TaskipelagoWorld(World):
                     self.player,
                 )
             )
-            if DEBUG_LOGGING:
-                logger.info(
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
                     "Item %d: name=%r type=%s forced_progression=%s classification=%s id=%s",
                     i + 1, name, rt, forced, cls, self.item_name_to_id[name],
                 )
-        if DEBUG_LOGGING:
-            logger.info("itempool size=%d", len(self.multiworld.itempool))
-            logger.info("=== end create_items ===")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("itempool size=%d", len(self.multiworld.itempool))
+            logger.debug("=== end create_items ===")
 
     def set_rules(self) -> None:
         _set_rules(self)
 
     def generate_basic(self) -> None:
-        if DEBUG_LOGGING:
-            logger.info("=== Taskipelago generate_basic ===")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("=== Taskipelago generate_basic ===")
         for i, cname in enumerate(self._complete_location_names):
             token_name = self._token_item_names[i]
             complete_loc = self.multiworld.get_location(cname, self.player)
@@ -1066,8 +1060,8 @@ class TaskipelagoWorld(World):
                     self.player,
                 )
             )
-            if DEBUG_LOGGING:
-                logger.info("locked token %r at location %r", token_name, cname)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("locked token %r at location %r", token_name, cname)
 
         if self._goal_ast is not None:
             def goal_condition(state, ast=self._goal_ast, p=self.player,
@@ -1075,18 +1069,18 @@ class TaskipelagoWorld(World):
                                 rt=self._region_token_names):
                 return eval_node(ast, state, p, tn, gi, rt)
             self.multiworld.completion_condition[self.player] = goal_condition
-            if DEBUG_LOGGING:
-                logger.info("goal condition: custom AST = %s", self._goal_ast)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("goal condition: custom AST = %s", self._goal_ast)
         else:
             reward_tokens = list(self._token_item_names)
             player = self.player
             self.multiworld.completion_condition[self.player] = lambda state: state.has_all(
                 reward_tokens, player
             )
-            if DEBUG_LOGGING:
-                logger.info("goal condition: all %d task tokens required", len(reward_tokens))
-        if DEBUG_LOGGING:
-            logger.info("=== end generate_basic ===")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("goal condition: all %d task tokens required", len(reward_tokens))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("=== end generate_basic ===")
 
     def fill_slot_data(self) -> Dict[str, Any]:
         sent_item_names: List[str] = []
