@@ -872,8 +872,8 @@ class TaskipelagoWorld(World):
         _pname = self.multiworld.player_name[self.player]
         prefix = f"[{_pname}] " if multi_slot else ""
 
-        self._reward_location_names = [f"{prefix}Task {i + 1} (Reward)" for i in range(n)]
-        self._complete_location_names = [f"{prefix}Task {i + 1} (Complete)" for i in range(n)]
+        self._reward_location_names = [f"{prefix}Task {i + 1} (Reward): {tasks[i]}" for i in range(n)]
+        self._complete_location_names = [f"{prefix}Task {i + 1} (Complete): {tasks[i]}" for i in range(n)]
 
         for i, is_priority in enumerate(raw_task_priority):
             if is_priority:
@@ -934,17 +934,19 @@ class TaskipelagoWorld(World):
             )
             expanded_items = expand_rows(items_raw_editor, item_counts_editor)
             expanded_items = pad_or_trim_names(expanded_items, n_tasks)
+            expanded_tasks = expand_rows(tasks, task_counts)[:n_tasks]
 
             for i in range(n_tasks):
                 reward_text = expanded_items[i]
+                task_text = expanded_tasks[i]
                 item_name = (
                     f"{prefix}Item {i + 1}: {reward_text}"
                     if reward_text
                     else f"{prefix}Item {i + 1}"
                 )
                 token_name = f"{prefix}Task {i + 1} Complete"
-                reward_loc_name = f"{prefix}Task {i + 1} (Reward)"
-                complete_loc_name = f"{prefix}Task {i + 1} (Complete)"
+                reward_loc_name = f"{prefix}Task {i + 1} (Reward): {task_text}"
+                complete_loc_name = f"{prefix}Task {i + 1} (Complete): {task_text}"
 
                 item_name_to_id[item_name] = BASE_ITEM_ID + (p - 1) * MAX_TASKS + i
                 item_name_to_id[token_name] = BASE_TOKEN_ID + (p - 1) * MAX_TASKS + i

@@ -1,5 +1,4 @@
 # Taskipelago/Taskipelabingo Version 0.9.6
-*The "wow I should probably fix that" update*
 
 ## New Features
 * "Priority" option added for tasks to be in priority locations
