@@ -99,6 +99,7 @@ class TaskipelagoWorld(World):
         items_raw_input = [str(r).strip() for r in self.options.items.value]
 
         item_types_raw = [str(x).strip() for x in self.options.item_types.value]
+        item_fillers_raw = [str(x).strip() for x in (self.options.item_fillers.value or [])]
         item_consumable_raw = [str(x).strip() for x in (self.options.item_consumable.value or [])]
         item_count_raw = [str(x).strip() for x in (self.options.item_count.value or [])]
         task_count_raw = [str(x).strip() for x in (self.options.task_count.value or [])]
@@ -122,10 +123,13 @@ class TaskipelagoWorld(World):
 
         _item_name_seen: set = set()
         _item_name_dups: set = set()
-        for _in in items_raw_input:
-            if _in and _in in _item_name_seen:
+        for _i, _in in enumerate(items_raw_input):
+            _is_filler_item = _i < len(item_fillers_raw) and item_fillers_raw[_i].lower() == "true"
+            if not _in or _is_filler_item:
+                continue
+            if _in in _item_name_seen:
                 _item_name_dups.add(_in)
-            elif _in:
+            else:
                 _item_name_seen.add(_in)
         if _item_name_dups:
             raise Exception(

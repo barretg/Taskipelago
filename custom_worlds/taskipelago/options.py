@@ -205,6 +205,18 @@ class TaskRegion(OptionList):
     default: List[str] = []
 
 
+class ItemFillers(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with items.
+    Each entry is 'true' or 'false' (default 'false').
+    Items marked as filler are exempt from the duplicate item name check, since filler
+    flavor text is expected to repeat across items.
+    """
+    display_name = "Item Fillers"
+    default: List[str] = []
+
+
 class ItemConsumable(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -296,6 +308,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     tasks: Tasks
     items: Items
     item_types: ItemTypes
+    item_fillers: ItemFillers
     item_consumable: ItemConsumable
     item_count: ItemCount
     task_count: TaskCount
