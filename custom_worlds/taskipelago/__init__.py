@@ -29,7 +29,7 @@ from .options import TaskipelagoOptions
 from .prereq_parser import (
     collect_leaves, collect_group_refs, collect_group_count_refs,
     collect_region_refs, collect_region_abs_refs,
-    collect_cost_groups, collect_cost_groups_per_branch,
+    collect_cost_groups_per_branch,
     eval_node, parse_prereq, parse_cost_expr, resolve_ast_refs, Node,
     has_seq_flag, ast_to_text, RESERVED_WORDS,
 )
@@ -875,7 +875,6 @@ class TaskipelagoWorld(World):
         self._reward_location_names = [f"{prefix}Task {i + 1} (Reward)" for i in range(n)]
         self._complete_location_names = [f"{prefix}Task {i + 1} (Complete)" for i in range(n)]
 
-        self._task_priority = list(raw_task_priority)
         for i, is_priority in enumerate(raw_task_priority):
             if is_priority:
                 self.options.priority_locations.value.add(self._reward_location_names[i])
@@ -1225,32 +1224,6 @@ def _compute_topo_depths(parsed_prereqs: list, n: int) -> List[int]:
     for i in range(n):
         depth(i)
     return depths
-
-
-def _parse_prereq_list(txt: str, task_index: int, n: int, label: str) -> List[int]:
-    """Parse a comma-separated prereq string into a deduplicated list of 0-based indices."""
-    if not txt:
-        return []
-    parts = [p.strip() for p in txt.split(",") if p.strip()]
-    reqs: List[int] = []
-    seen: set = set()
-    for p in parts:
-        try:
-            idx_1 = int(p)
-        except ValueError:
-            raise Exception(
-                f"Taskipelago: invalid {label} '{p}' on task {task_index + 1}. "
-                f"Use comma-separated integers like '1,2'."
-            )
-        if idx_1 < 1 or idx_1 > n:
-            raise Exception(
-                f"Taskipelago: {label} '{idx_1}' on task {task_index + 1} is out of range (1..{n})."
-            )
-        idx_0 = idx_1 - 1
-        if idx_0 not in seen:
-            seen.add(idx_0)
-            reqs.append(idx_0)
-    return reqs
 
 
 def _assert_no_cycles(parsed_prereqs: list, n: int) -> None:
