@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import List
 
-from Options import PerGameCommonOptions, DeathLink, OptionList, Toggle, Range
+from Options import PerGameCommonOptions, OptionList, Toggle, Range
+from Options import DeathLink as APDeathLink
 
 class Tasks(OptionList):
     """
@@ -80,7 +81,7 @@ class HideUnreachableTasks(Toggle):
     default = 1
 
 
-class DeathLink(Toggle):
+class DeathLink(APDeathLink):
     """
     If enabled, receiving deathlinks trigger a weighted random deathlink task from the user supplied deathlink task pool.
     """

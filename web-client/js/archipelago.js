@@ -223,6 +223,15 @@ export class ArchipelagoClient {
     this._wsEstablished = false;
   }
 
+  /** Resolve a slot number to a display name: playerNames, then slotInfo, then "Player N". */
+  resolvePlayerName(slot) {
+    if (slot == null) return null;
+    if (this.playerNames[slot]) return this.playerNames[slot];
+    const info = this.slotInfo[slot];
+    if (info && info.name) return info.name;
+    return `Player ${slot}`;
+  }
+
   // ---- Outgoing helpers ----
 
   sendLocationChecks(locations) {

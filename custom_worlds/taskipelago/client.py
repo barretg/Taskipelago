@@ -866,10 +866,8 @@ class TaskipelagoContext(CommonClient.CommonContext):
         )
         self.task_progressive_reqs = list(self.slot_data.get("task_progressive_reqs", []) or [])
 
-        self.task_costs = list(self.slot_data.get("task_costs", []) or [])
         self.task_cost_amounts = list(self.slot_data.get("task_cost_amounts", []) or [])
         self.item_consumable = list(self.slot_data.get("item_consumable", []) or [])
-        self.consumable_groups = dict(self.slot_data.get("consumable_groups", {}) or {})
 
         self.regions = list(self.slot_data.get("regions", []) or [])
         self.region_default_pcts = dict(self.slot_data.get("region_default_pcts", {}) or {})
@@ -1222,14 +1220,8 @@ async def server_loop(ctx: TaskipelagoContext, address: str):
             print(f"[Taskipelago] Connection failed for {url}: {e!r}")
             traceback.print_exc()
 
-    # If we tried all candidates and failed, stash a human-readable reason for UI
-    try:
-        ctx._last_disconnect_reason = f"{type(last_err).__name__}: {last_err}" if last_err else "Unknown error"
-    except Exception:
-        pass
-    finally:
-        if hasattr(ctx, "on_disconnected") and callable(ctx.on_disconnected):
-            ctx.on_disconnected()
+    if hasattr(ctx, "on_disconnected") and callable(ctx.on_disconnected):
+        ctx.on_disconnected()
 
 @dataclass
 class Notification:
@@ -1734,7 +1726,6 @@ class TaskipelagoApp(tk.Tk):
 
         conn_frame = ttk.LabelFrame(play_root, text="Connection")
         conn_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10), padx=(0, 10))
-        # conn_frame.pack(fill="x", pady=(0, 10))
 
         last = self._load_last_connection()
         server_default = str(last.get("server") or "archipelago.gg")
@@ -1768,7 +1759,6 @@ class TaskipelagoApp(tk.Tk):
         # shown only when connected with deathlink enabled
 
         self.connect_status = tk.StringVar(value="Not connected.")
-        # ttk.Label(play_root, textvariable=self.connect_status).pack(anchor="w")
         ttk.Label(play_root, textvariable=self.connect_status).grid(row=1, column=0, sticky="w", padx=(0, 10))
 
         tasks_frame = ttk.LabelFrame(play_root, text="Tasks")
@@ -5073,20 +5063,6 @@ class TaskipelagoApp(tk.Tk):
         self._update_bingo_counts()
         messagebox.showinfo("Loaded", f"Bingo settings loaded from:\n{path}")
 
-    def _import_bingo_yaml(self):
-        path = filedialog.askopenfilename(
-            filetypes=[("YAML Files", "*.yaml *.yml"), ("All Files", "*.*")]
-        )
-        if not path:
-            return
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                doc = yaml.safe_load(f)
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to read YAML:\n{e}")
-            return
-        self._load_bingo_yaml_doc(doc, path)
-
     def _load_bingo_yaml_doc(self, doc, path: str):
         player_name, block = self._extract_taskipelago_block(doc)
         if not isinstance(block, dict):
@@ -5293,30 +5269,6 @@ class TaskipelagoApp(tk.Tk):
 
         return ", ".join(names)
         
-    def _slot_name_from_id(self, slot_id):
-        """Best-effort slot-id -> slot name."""
-        if slot_id is None:
-            return "Unknown"
-        try:
-            ctx = getattr(self, "ctx", None)
-            slot_info = getattr(ctx, "slot_info", None) if ctx else None
-
-            # Archipelago commonly provides slot_info as dict[int, dict-like]
-            if isinstance(slot_info, dict) and slot_id in slot_info:
-                v = slot_info.get(slot_id)
-                if isinstance(v, dict):
-                    name = v.get("name") or v.get("slot_name") or v.get("player_name")
-                    if isinstance(name, str) and name.strip():
-                        return name.strip()
-                else:
-                    name = getattr(v, "name", None) or getattr(v, "slot_name", None)
-                    if isinstance(name, str) and name.strip():
-                        return name.strip()
-        except Exception:
-            pass
-
-        return f"Player {slot_id}"
-    
     def _get_sent_notification_info(self, task_index: int):
         ctx = getattr(self, "ctx", None)
         if not ctx:
@@ -5342,193 +5294,6 @@ class TaskipelagoApp(tk.Tk):
             recipient_name = str(sent_player_names[task_index]).strip() or "Unknown"
 
         return item_name, recipient_name
-    
-    def _resolve_location_item_and_player(self, location_id: int):
-        """
-        Resolve (item_id, player_id) for a location using the best available source.
-
-        Order:
-        1) existing local/cache-based lookup
-        2) authoritative ctx.locations_info mapping if available
-        """
-        item_id, player_id = self._get_location_item_and_player(location_id)
-        if item_id is not None and player_id is not None:
-            return item_id, player_id
-
-        ctx = getattr(self, "ctx", None)
-        if not ctx:
-            return item_id, player_id
-
-        try:
-            locations_info = getattr(ctx, "locations_info", None)
-            if locations_info is not None:
-                li = None
-
-                if isinstance(locations_info, dict):
-                    li = locations_info.get(location_id)
-                elif hasattr(locations_info, "get"):
-                    li = locations_info.get(location_id)
-
-                if li is not None:
-                    # tuple/list
-                    if isinstance(li, (tuple, list)) and len(li) >= 2:
-                        item_id = li[0] if item_id is None else item_id
-                        player_id = li[1] if player_id is None else player_id
-                        return item_id, player_id
-
-                    # dict
-                    if isinstance(li, dict):
-                        if item_id is None:
-                            item_id = li.get("item")
-                        if player_id is None:
-                            player_id = li.get("player")
-                        return item_id, player_id
-
-                    # object
-                    if item_id is None:
-                        item_id = getattr(li, "item", None)
-                    if player_id is None:
-                        player_id = getattr(li, "player", None)
-                    return item_id, player_id
-        except Exception:
-            pass
-
-        return item_id, player_id
-    
-    def _resolve_player_name(self, player_id) -> str:
-        ctx = getattr(self, "ctx", None)
-        if ctx is None or player_id is None:
-            return "Unknown"
-
-        # 1) direct player_names map
-        try:
-            player_names = getattr(ctx, "player_names", None)
-            if isinstance(player_names, dict):
-                name = player_names.get(player_id)
-                if name:
-                    return str(name)
-            elif hasattr(player_names, "get"):
-                name = player_names.get(player_id)
-                if name:
-                    return str(name)
-        except Exception:
-            pass
-
-        # 2) slot_info map
-        try:
-            slot_info = getattr(ctx, "slot_info", None)
-            if isinstance(slot_info, dict):
-                info = slot_info.get(player_id)
-            elif hasattr(slot_info, "get"):
-                info = slot_info.get(player_id)
-            else:
-                info = None
-
-            if info is not None:
-                name = getattr(info, "name", None)
-                if name:
-                    return str(name)
-
-                if isinstance(info, dict):
-                    name = info.get("name")
-                    if name:
-                        return str(name)
-        except Exception:
-            pass
-
-        return "Unknown"
-
-    def _get_location_item_and_player(self, loc_id: int):
-        """
-        Best-effort read of scouted location info from context.
-        Returns: (item_id|None, player_id|None)
-        """
-        ctx = getattr(self, "ctx", None)
-        if not ctx:
-            return None, None
-
-        # Different AP clients / versions store this differently.
-        candidates = [
-            "location_info",
-            "locations_info",
-            "locations_info_cache",
-            "location_infos",
-            "scouted_locations",
-        ]
-
-        for attr in candidates:
-            try:
-                m = getattr(ctx, attr, None)
-                if isinstance(m, dict) and loc_id in m:
-                    li = m.get(loc_id)
-
-                    # tuple/list form: (item, player, flags?) or similar
-                    if isinstance(li, (tuple, list)) and len(li) >= 2:
-                        return li[0], li[1]
-
-                    # dict form
-                    if isinstance(li, dict):
-                        return li.get("item"), li.get("player")
-
-                    # object form (NetUtils.LocationInfo-like)
-                    item = getattr(li, "item", None)
-                    player = getattr(li, "player", None)
-                    return item, player
-            except Exception:
-                continue
-
-        return None, None
-
-    def _resolve_item_name_for_sent(self, item_id, task_index: int):
-        """
-        Resolve an item name similar to your received-item popup logic:
-        - Prefer ctx.item_names map (multiworld items)
-        - If it's a Taskipelago Reward item id, use YAML reward text
-        - Otherwise fallback to YAML reward text for this task (best-effort)
-        """
-        ctx = getattr(self, "ctx", None)
-        if not ctx:
-            return None
-
-        resolved = None
-
-        # 1) global item name map
-        try:
-            item_names = getattr(ctx, "item_names", None)
-            if isinstance(item_names, dict):
-                resolved = item_names.get(item_id)
-            elif hasattr(item_names, "get"):
-                resolved = item_names.get(item_id)
-        except Exception:
-            resolved = None
-
-        # 2) Taskipelago item range -> YAML item text
-        try:
-            base_reward_item = getattr(ctx, "base_item_id", None)
-            items_text = list(getattr(ctx, "items", getattr(ctx, "rewards", [])) or [])
-            if isinstance(base_reward_item, int) and isinstance(item_id, int) and items_text:
-                idx = item_id - base_reward_item
-                if 0 <= idx < len(items_text):
-                    resolved = items_text[idx]
-        except Exception:
-            pass
-
-        # 3) fallback: YAML item text by task index (even if item_id unknown)
-        if (not resolved) and task_index is not None:
-            try:
-                items_text = list(getattr(ctx, "items", getattr(ctx, "rewards", [])) or [])
-                if 0 <= task_index < len(items_text):
-                    resolved = items_text[task_index]
-            except Exception:
-                pass
-
-        if resolved is None:
-            return None
-
-        resolved = str(resolved).strip()
-        if not resolved:
-            return None
-        return resolved
 
     def complete_task(self, task_index: int):
         if not getattr(self, "ctx", None):
