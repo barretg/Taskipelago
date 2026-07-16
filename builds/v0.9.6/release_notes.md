@@ -11,3 +11,6 @@
 * Fixed another filler generation bug
 * 
 * General clean-up
+
+## Known Issues
+* Universal Tracker is unhappy with the structure of the datapackage, this is aimed to be resolved in a future patch.
