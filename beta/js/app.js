@@ -33,7 +33,6 @@ const state = {
   taskCostAmounts: [],
   itemConsumable: [],
   regions: [],
-  regionDefaultPcts: {},
   regionColors: [],
   taskRegion: [],
   taskRegionReqs: [],
@@ -451,7 +450,6 @@ function applySlotData(sd) {
   state.taskCostAmounts     = sd.task_cost_amounts || [];
   state.itemConsumable      = sd.item_consumable || [];
   state.regions             = sd.regions || [];
-  state.regionDefaultPcts   = sd.region_default_pcts || {};
   state.regionColors        = sd.region_colors || [];
   state.taskRegion          = sd.task_region || [];
   state.taskRegionReqs      = sd.task_region_reqs || [];
@@ -721,7 +719,6 @@ function clearPlayState() {
   state.taskCostAmounts = [];
   state.itemConsumable = [];
   state.regions = [];
-  state.regionDefaultPcts = {};
   state.regionColors = [];
   state.taskRegion = [];
   state.taskRegionReqs = [];
@@ -929,7 +926,7 @@ function showItemNotification(it) {
 
   // Sender
   let sender = '';
-  if (it.player != null) sender = ap.playerNames[it.player] || `Player ${it.player}`;
+  if (it.player != null) sender = ap.resolvePlayerName(it.player);
 
   enqueueNotification({
     kind:  'reward',
@@ -1461,7 +1458,7 @@ function renderItems() {
     }
 
     const sender = it.player != null
-      ? ap.playerNames[it.player] || `Player ${it.player}`
+      ? ap.resolvePlayerName(it.player)
       : null;
 
     const row = document.createElement('div');
@@ -1655,7 +1652,7 @@ function printJsonToHTML(parts, senderSlot) {
     let displayText = part.text || '';
     if (type === 'player_id') {
       const slot = parseInt(displayText);
-      displayText = ap.playerNames[slot] || displayText;
+      displayText = ap.resolvePlayerName(slot) || displayText;
     } else if (type === 'item_id') {
       displayText = resolveItemName(parseInt(displayText));
     } else if (type === 'location_id') {
