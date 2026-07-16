@@ -1,9 +1,6 @@
 from __future__ import annotations
-import logging
 from typing import TYPE_CHECKING, List
 from .prereq_parser import Node, eval_node, _has_or, collect_leaves
-
-logger = logging.getLogger("Taskipelago")
 
 try:
     from RuleBuilder import RuleBuilder as _RuleBuilder
@@ -19,21 +16,6 @@ if TYPE_CHECKING:
 def set_rules(world: "TaskipelagoWorld") -> None:
     player = world.player
     n = len(world._tasks)
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug("=== Taskipelago set_rules ===")
-        logger.debug("rule engine: %s", "RuleBuilder" if _HAS_RULE_BUILDER else "lambda")
-        for i in range(n):
-            token_names = [world._token_item_names[j] for j in collect_leaves(world._parsed_prereqs[i])]
-            reward_names = [world._reward_display_names[j] for j in collect_leaves(world._parsed_reward_prereqs[i])]
-            cost_reqs = world._task_cost_reqs[i]
-            region_reqs = world._task_region_reqs[i]
-            prog_reqs = world._task_progressive_reqs[i]
-            logger.debug(
-                "Task %d (%s): requires_tasks=%s requires_items=%s cost_branches=%s "
-                "region_reqs=%s progressive_reqs=%s",
-                i + 1, world._tasks[i], token_names, reward_names, cost_reqs, region_reqs, prog_reqs,
-            )
-        logger.debug("=== end set_rules (rule build follows) ===")
     if _HAS_RULE_BUILDER:
         _set_rules_builder(world, player, n)
     else:
