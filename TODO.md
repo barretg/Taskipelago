@@ -9,7 +9,7 @@ take that Jira.
 * Facelift/make purchaseables distinct
 * Submission box and presets for community made yamls
 * Task description text
-* Task names visible server-side
+* ~~Task names visible server-side~~
 * ~~"prev" keyword for task dependencies for easier chaining repeat tasks~~
 * ~~priority tasks~~
 
