@@ -16,6 +16,7 @@ const state = {
   lockPrereqs: false,
   hideUnreachable: true,
   goalExpression: '',
+  goalRegionReqs: [],
   baseRewardId: null,
   baseCompleteId: null,
   baseItemId: null,
@@ -32,7 +33,6 @@ const state = {
   taskCostAmounts: [],
   itemConsumable: [],
   regions: [],
-  regionDefaultPcts: {},
   regionColors: [],
   taskRegion: [],
   taskRegionReqs: [],
@@ -432,6 +432,7 @@ function applySlotData(sd) {
   state.lockPrereqs         = !!sd.lock_prereqs;
   state.hideUnreachable     = sd.hide_unreachable_tasks !== false;
   state.goalExpression      = sd.goal_expression || '';
+  state.goalRegionReqs      = sd.goal_region_reqs || [];
   state.baseRewardId        = sd.base_reward_location_id ?? null;
   state.baseCompleteId      = sd.base_complete_location_id ?? null;
   state.baseItemId          = sd.base_item_id ?? null;
@@ -449,7 +450,6 @@ function applySlotData(sd) {
   state.taskCostAmounts     = sd.task_cost_amounts || [];
   state.itemConsumable      = sd.item_consumable || [];
   state.regions             = sd.regions || [];
-  state.regionDefaultPcts   = sd.region_default_pcts || {};
   state.regionColors        = sd.region_colors || [];
   state.taskRegion          = sd.task_region || [];
   state.taskRegionReqs      = sd.task_region_reqs || [];
@@ -472,6 +472,14 @@ function maybeSendGoal() {
     done = evalPrereqExpr(state.goalExpression, idx1 =>
       checked.has(state.baseCompleteId + idx1 - 1)
     );
+    for (const req of (state.goalRegionReqs || [])) {
+      const r = req.region ?? req[0];
+      const abs = req.abs_count ?? null;
+      const pct = req.pct ?? req[1] ?? 100;
+      done = done && (abs !== null
+        ? regionReqSatisfiedAbs(r, abs, checked)
+        : regionReqSatisfied(r, pct, checked));
+    }
   } else {
     done = state.tasks.every((_, i) => checked.has(state.baseCompleteId + i));
   }
@@ -697,6 +705,7 @@ function clearPlayState() {
   state.lockPrereqs = false;
   state.hideUnreachable = true;
   state.goalExpression = '';
+  state.goalRegionReqs = [];
   state.baseCompleteId = state.baseRewardId = state.baseItemId = state.baseTokenId = null;
   state.deathLinkPool = [];
   state.deathLinkWeights = [];
@@ -710,7 +719,6 @@ function clearPlayState() {
   state.taskCostAmounts = [];
   state.itemConsumable = [];
   state.regions = [];
-  state.regionDefaultPcts = {};
   state.regionColors = [];
   state.taskRegion = [];
   state.taskRegionReqs = [];
@@ -918,7 +926,7 @@ function showItemNotification(it) {
 
   // Sender
   let sender = '';
-  if (it.player != null) sender = ap.playerNames[it.player] || `Player ${it.player}`;
+  if (it.player != null) sender = ap.resolvePlayerName(it.player);
 
   enqueueNotification({
     kind:  'reward',
@@ -1450,7 +1458,7 @@ function renderItems() {
     }
 
     const sender = it.player != null
-      ? ap.playerNames[it.player] || `Player ${it.player}`
+      ? ap.resolvePlayerName(it.player)
       : null;
 
     const row = document.createElement('div');
@@ -1644,7 +1652,7 @@ function printJsonToHTML(parts, senderSlot) {
     let displayText = part.text || '';
     if (type === 'player_id') {
       const slot = parseInt(displayText);
-      displayText = ap.playerNames[slot] || displayText;
+      displayText = ap.resolvePlayerName(slot) || displayText;
     } else if (type === 'item_id') {
       displayText = resolveItemName(parseInt(displayText));
     } else if (type === 'location_id') {
