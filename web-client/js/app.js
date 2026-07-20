@@ -36,6 +36,7 @@ const state = {
   regionColors: [],
   taskRegion: [],
   taskRegionReqs: [],
+  taskDescriptions: [],
   bingoMode: false,
   bingoDimX: 5,
   bingoDimY: 5,
@@ -453,6 +454,7 @@ function applySlotData(sd) {
   state.regionColors        = sd.region_colors || [];
   state.taskRegion          = sd.task_region || [];
   state.taskRegionReqs      = sd.task_region_reqs || [];
+  state.taskDescriptions    = sd.task_description || [];
   state.bingoMode           = !!sd.bingo_mode;
   state.bingoDimX           = parseInt(sd.bingo_dimension_x || 5);
   state.bingoDimY           = parseInt(sd.bingo_dimension_y || 5);
@@ -722,6 +724,7 @@ function clearPlayState() {
   state.regionColors = [];
   state.taskRegion = [];
   state.taskRegionReqs = [];
+  state.taskDescriptions = [];
   state.bingoMode = false;
   state.bingoDimX = 5;
   state.bingoDimY = 5;
@@ -1202,6 +1205,15 @@ function renderTasks() {
 
     top.appendChild(actions);
     card.appendChild(top);
+
+    // Description
+    const descText = !showAsLocked ? (state.taskDescriptions[i] || '') : '';
+    if (descText) {
+      const descEl = document.createElement('div');
+      descEl.className = 'task-description';
+      descEl.textContent = descText;
+      card.appendChild(descEl);
+    }
 
     // Hint lines
     if (!completed && taskPrereqText && !taskPrereqOk) {

@@ -23,6 +23,8 @@ import copy
 import CommonClient
 from NetUtils import Endpoint, decode
 
+MAX_TASK_DESCRIPTION_LEN = 100
+
 REGION_COLOR_PALETTE = [
     "#e05c5c", "#e0955c", "#e0d45c", "#8de05c",
     "#5ce09a", "#5cd4e0", "#5c8de0", "#7b5ce0",
@@ -201,6 +203,7 @@ def apply_dark_theme(root: tk.Tk):
     field = "#2d2d30"
     fg = "#e6e6e6"
     muted = "#bdbdbd"
+    desc = "#d4d4d4"
     border = "#3a3a3a"
 
     root.configure(bg=bg)
@@ -244,7 +247,7 @@ def apply_dark_theme(root: tk.Tk):
     style.configure("TNotebook.Tab", padding=(14, 6), background="#3a3a3a", foreground="#dddddd", borderwidth=0)
     style.map("TNotebook.Tab", background=[("selected", "#4a4a4a")], foreground=[("selected", "#ffffff")])
 
-    return {"bg": bg, "panel": panel, "border": border, "fg": fg, "muted": muted}
+    return {"bg": bg, "panel": panel, "border": border, "fg": fg, "muted": muted, "desc": desc}
 
 
 # ----------------------------
@@ -473,10 +476,11 @@ class CollapsibleSection:
 # Rows (YAML Generator)
 # ----------------------------
 class TaskRow:
-    def __init__(self, parent, index: int, on_remove, regions=None):
+    def __init__(self, parent, index: int, on_remove, regions=None, colors=None):
         self.parent = parent
         self.index = index
         self._on_remove = on_remove
+        self.colors = colors or {}
 
         self.task_var = tk.StringVar()
         self.prereq_var = tk.StringVar()
@@ -485,9 +489,18 @@ class TaskRow:
         self.region_var = tk.StringVar(value="")
         self.priority_var = tk.BooleanVar(value=False)
         self.count_var = tk.IntVar(value=1)
+        self.desc_var = tk.StringVar(value="")
 
         self.num_label = ttk.Label(parent, text=str(index), width=3)
-        self.task_entry = ttk.Entry(parent, textvariable=self.task_var)
+
+        self.task_cell = ttk.Frame(parent)
+        self.task_entry = ttk.Entry(self.task_cell, textvariable=self.task_var)
+        self.task_entry.pack(side="left", fill="x", expand=True)
+        self.desc_btn = ttk.Button(self.task_cell, text="Desc", width=5, command=self._edit_description)
+        self.desc_btn.pack(side="left", padx=(4, 0))
+        self.desc_var.trace_add("write", lambda *_: self._refresh_desc_btn())
+        self._refresh_desc_btn()
+
         self.prereq_entry = ttk.Entry(parent, textvariable=self.prereq_var)
         self.item_prereq_entry = ttk.Entry(parent, textvariable=self.item_prereq_var)
         self.cost_entry = ttk.Entry(parent, textvariable=self.cost_var)
@@ -502,10 +515,66 @@ class TaskRow:
 
         self._grid()
 
+    def _refresh_desc_btn(self):
+        self.desc_btn.configure(text="Desc*" if self.desc_var.get().strip() else "Desc")
+
+    def _edit_description(self):
+        bg = self.colors.get("bg", "#1e1e1e")
+        fg = self.colors.get("fg", "#e6e6e6")
+        panel = self.colors.get("panel", "#252526")
+        border = self.colors.get("border", "#3a3a3a")
+
+        win = tk.Toplevel(self.parent)
+        win.title("Task Description")
+        win.resizable(False, False)
+        win.configure(bg=bg)
+        win.grab_set()
+
+        tk.Label(
+            win, text=f"Optional flavor text shown under the task name in-game (max {MAX_TASK_DESCRIPTION_LEN} chars):",
+            bg=bg, fg=fg, font=("Segoe UI", 9), wraplength=360, justify="left",
+        ).pack(padx=10, pady=(10, 6), anchor="w")
+
+        text = tk.Text(
+            win, width=44, height=4, wrap="word", bg=panel, fg=fg,
+            insertbackground=fg, relief="flat",
+            highlightthickness=1, highlightbackground=border, font=("Segoe UI", 10),
+        )
+        text.pack(padx=10, pady=(0, 4))
+        text.insert("1.0", self.desc_var.get())
+
+        counter_var = tk.StringVar()
+
+        def _update_counter(*_):
+            counter_var.set(f"{len(text.get('1.0', 'end-1c'))}/{MAX_TASK_DESCRIPTION_LEN}")
+
+        def _on_key(event=None):
+            content = text.get("1.0", "end-1c")
+            if len(content) > MAX_TASK_DESCRIPTION_LEN:
+                text.delete("1.0", "end")
+                text.insert("1.0", content[:MAX_TASK_DESCRIPTION_LEN])
+            _update_counter()
+
+        text.bind("<KeyRelease>", _on_key)
+        _update_counter()
+
+        tk.Label(win, textvariable=counter_var, bg=bg, fg=self.colors.get("muted", "#bdbdbd"),
+                 font=("Segoe UI", 8)).pack(padx=10, anchor="e")
+
+        btn_row = tk.Frame(win, bg=bg)
+        btn_row.pack(padx=10, pady=(4, 10), fill="x")
+
+        def on_ok():
+            self.desc_var.set(text.get("1.0", "end-1c").strip()[:MAX_TASK_DESCRIPTION_LEN])
+            win.destroy()
+
+        ttk.Button(btn_row, text="Cancel", command=win.destroy).pack(side="right", padx=(4, 0))
+        ttk.Button(btn_row, text="OK", command=on_ok).pack(side="right")
+
     def _grid(self):
         r = self.index + 1  # header is row 0, hint row is 1, tasks start at row 2
         self.num_label.grid(row=r, column=0, padx=(0, 8), sticky="w", pady=4)
-        self.task_entry.grid(row=r, column=1, padx=(0, 8), sticky="ew", pady=4)
+        self.task_cell.grid(row=r, column=1, padx=(0, 8), sticky="ew", pady=4)
         self.prereq_entry.grid(row=r, column=2, sticky="ew", padx=(0, 8), pady=4)
         self.item_prereq_entry.grid(row=r, column=3, sticky="ew", padx=(0, 8), pady=4)
         self.cost_entry.grid(row=r, column=4, sticky="ew", padx=(0, 8), pady=4)
@@ -515,7 +584,7 @@ class TaskRow:
         self.remove_btn.grid(row=r, column=8, padx=(0, 0), pady=4)
 
     def remove(self):
-        for w in (self.num_label, self.task_entry, self.prereq_entry,
+        for w in (self.num_label, self.task_cell, self.prereq_entry,
                   self.item_prereq_entry, self.cost_entry, self.region_cb,
                   self.priority_cb, self.count_spinbox, self.remove_btn):
             try:
@@ -544,6 +613,7 @@ class TaskRow:
             self.region_var.get().strip(),
             bool(self.priority_var.get()),
             count,
+            self.desc_var.get().strip(),
         )
 
 
@@ -817,6 +887,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.region_colors = []
         self.task_region = []
         self.task_region_reqs = []
+        self.task_descriptions = []
 
         self.bingo_mode = False
         self.bingo_dimension_x = 5
@@ -874,6 +945,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.region_colors = list(self.slot_data.get("region_colors", []) or [])
         self.task_region = list(self.slot_data.get("task_region", []) or [])
         self.task_region_reqs = list(self.slot_data.get("task_region_reqs", []) or [])
+        self.task_descriptions = list(self.slot_data.get("task_description", []) or [])
 
         self.bingo_mode = bool(self.slot_data.get("bingo_mode", False))
         self.bingo_dimension_x = int(self.slot_data.get("bingo_dimension_x", 5) or 5)
@@ -1876,6 +1948,7 @@ class TaskipelagoApp(tk.Tk):
             len(self.task_rows) + 1,
             self._remove_task_row,
             list(self.regions),
+            colors=self.colors,
         )
         self.task_rows.append(row)
         row.count_var.trace_add("write", lambda *_: self._update_item_counter())
@@ -2319,9 +2392,9 @@ class TaskipelagoApp(tk.Tk):
             messagebox.showerror("Error", "Player name is required.")
             return
 
-        tasks, task_prereqs, item_prereqs_raw, task_costs, task_region_list, task_priority_list, task_counts = [], [], [], [], [], [], []
+        tasks, task_prereqs, item_prereqs_raw, task_costs, task_region_list, task_priority_list, task_counts, task_descriptions = [], [], [], [], [], [], [], []
         for r in self.task_rows:
-            t, tpr, ipr, cost, treg, priority, count = r.get_data()
+            t, tpr, ipr, cost, treg, priority, count, desc = r.get_data()
             if not t:
                 continue
             tasks.append(t)
@@ -2331,6 +2404,7 @@ class TaskipelagoApp(tk.Tk):
             task_region_list.append(treg or "")
             task_priority_list.append(priority)
             task_counts.append(count)
+            task_descriptions.append((desc or "")[:MAX_TASK_DESCRIPTION_LEN])
 
         if not tasks:
             messagebox.showerror("Error", "No tasks defined.")
@@ -2563,6 +2637,7 @@ class TaskipelagoApp(tk.Tk):
 
                 "tasks": tasks,
                 "task_count": [str(c) for c in task_counts],
+                "task_description": task_descriptions,
                 "items": items,
                 "item_types": item_types,
                 "item_fillers": item_fillers,
@@ -2680,6 +2755,7 @@ class TaskipelagoApp(tk.Tk):
         task_regions_raw = list(block.get("task_region", []) or [])
         task_priority_raw = list(block.get("task_priority", []) or [])
         task_costs_raw = list(block.get("task_cost", []) or [])
+        task_descriptions_raw = list(block.get("task_description", []) or [])
         item_prereqs_raw = list(block.get("item_prereqs", block.get("reward_prereqs", [])) or [])
         task_count_raw = block.get("task_count", None)
 
@@ -2709,10 +2785,11 @@ class TaskipelagoApp(tk.Tk):
             task_regions = [_str(task_regions_raw[i]) if i < len(task_regions_raw) else "" for i in range(len(tasks))]
             task_priority = [_str(task_priority_raw[i]).lower() == "true" if i < len(task_priority_raw) else False for i in range(len(tasks))]
             task_costs = [_str(task_costs_raw[i]) if i < len(task_costs_raw) else "" for i in range(len(tasks))]
+            task_descriptions = [_str(task_descriptions_raw[i]) if i < len(task_descriptions_raw) else "" for i in range(len(tasks))]
             item_prereqs = [_str(item_prereqs_raw[i]) if i < len(item_prereqs_raw) else "" for i in range(len(tasks))]
         else:
             # Crunch consecutive identical task names into single rows with count
-            tasks, prereqs, task_regions, task_priority, task_costs, item_prereqs, task_counts = [], [], [], [], [], [], []
+            tasks, prereqs, task_regions, task_priority, task_costs, task_descriptions, item_prereqs, task_counts = [], [], [], [], [], [], [], []
             i = 0
             while i < len(tasks_raw):
                 name = _str(tasks_raw[i])
@@ -2726,6 +2803,7 @@ class TaskipelagoApp(tk.Tk):
                 task_regions.append(_str(task_regions_raw[i]) if i < len(task_regions_raw) else "")
                 task_priority.append(_str(task_priority_raw[i]).lower() == "true" if i < len(task_priority_raw) else False)
                 task_costs.append(_str(task_costs_raw[i]) if i < len(task_costs_raw) else "")
+                task_descriptions.append(_str(task_descriptions_raw[i]) if i < len(task_descriptions_raw) else "")
                 item_prereqs.append(_str(item_prereqs_raw[i]) if i < len(item_prereqs_raw) else "")
                 task_counts.append(count)
                 i = j
@@ -2818,6 +2896,7 @@ class TaskipelagoApp(tk.Tk):
             task_row = TaskRow(
                 self.tasks_scroll.inner, len(self.task_rows) + 1,
                 self._remove_task_row, list(self.regions),
+                colors=self.colors,
             )
             self.task_rows.append(task_row)
             task_row.count_var.trace_add("write", lambda *_: self._update_item_counter())
@@ -2827,6 +2906,7 @@ class TaskipelagoApp(tk.Tk):
             task_row.cost_var.set(task_costs[i])
             task_row.priority_var.set(bool(task_priority[i]))
             task_row.count_var.set(task_counts[i])
+            task_row.desc_var.set(task_descriptions[i])
             if task_regions[i] in self.regions:
                 task_row.region_var.set(task_regions[i])
 
@@ -3380,6 +3460,7 @@ class TaskipelagoApp(tk.Tk):
             self.ctx.region_colors = []
             self.ctx.task_region = []
             self.ctx.task_region_reqs = []
+            self.ctx.task_descriptions = []
             self.ctx.bingo_mode = False
             self.ctx.bingo_dimension_x = 5
             self.ctx.bingo_dimension_y = 5
@@ -3546,6 +3627,11 @@ class TaskipelagoApp(tk.Tk):
             command=lambda idx=task_idx: self._attempt_make_change(idx),
         )
 
+        desc_label = tk.Label(
+            content, text="", bg=panel, fg=self.colors.get("desc", "#d4d4d4"),
+            font=("Segoe UI", 10), anchor="w", justify="left", wraplength=740,
+        )
+
         hints = [
             tk.Label(content, text="", bg=panel, fg=muted,
                      font=("Segoe UI", 10), anchor="w", justify="left", wraplength=740)
@@ -3556,6 +3642,7 @@ class TaskipelagoApp(tk.Tk):
         return {
             "frame": card,
             "label": label,
+            "desc_label": desc_label,
             "complete_btn": complete_btn,
             "purchase_btn": purchase_btn,
             "make_change_btn": mc_btn,
@@ -3566,6 +3653,14 @@ class TaskipelagoApp(tk.Tk):
 
     def _apply_task_card_state(self, card_dict: dict, s: dict) -> None:
         card_dict["label"].config(text=s["label_text"], fg=s["label_color"])
+
+        desc_label = card_dict["desc_label"]
+        desc_text = s.get("description", "")
+        if desc_text:
+            desc_label.config(text=desc_text)
+            desc_label.pack(fill="x", padx=28, pady=(0, 2))
+        else:
+            desc_label.pack_forget()
 
         complete_btn = card_dict["complete_btn"]
         purchase_btn = card_dict["purchase_btn"]
@@ -3759,6 +3854,7 @@ class TaskipelagoApp(tk.Tk):
             if _ctx_region_colors[i]
         }
         _task_region_list = list(getattr(self.ctx, "task_region", []) or [])
+        _task_desc_list = list(getattr(self.ctx, "task_descriptions", []) or [])
 
         new_visible: list = []  # [(task_idx, s_dict), ...]
 
@@ -3875,7 +3971,10 @@ class TaskipelagoApp(tk.Tk):
             task_region_name = _task_region_list[i] if i < len(_task_region_list) else ""
             bar_color = _region_color_map.get(task_region_name, "") if task_region_name else ""
 
-            sig = (label_text, label_color, can_complete, show_purchase, can_make_change, *hint_texts)
+            description = _task_desc_list[i] if i < len(_task_desc_list) else ""
+            description = description if (description and not show_as_locked) else ""
+
+            sig = (label_text, label_color, can_complete, show_purchase, can_make_change, description, *hint_texts)
             new_visible.append((i, {
                 "label_text": label_text,
                 "label_color": label_color,
@@ -3884,6 +3983,7 @@ class TaskipelagoApp(tk.Tk):
                 "show_purchase": show_purchase,
                 "can_make_change": can_make_change,
                 "hint_texts": hint_texts,
+                "description": description,
                 "bar_color": bar_color,
                 "sig": sig,
             }))

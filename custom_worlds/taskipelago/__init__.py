@@ -25,7 +25,7 @@ from .locations import (
     BASE_REWARD_LOC_ID,
     TaskipelagoLocation,
 )
-from .options import TaskipelagoOptions
+from .options import TaskipelagoOptions, MAX_TASK_DESCRIPTION_LEN
 from .prereq_parser import (
     collect_leaves, collect_group_refs, collect_group_count_refs,
     collect_region_refs, collect_region_abs_refs,
@@ -84,6 +84,7 @@ class TaskipelagoWorld(World):
     _regions: List[str]
     _region_default_pcts: Dict[str, int]
     _task_region: List[str]
+    _task_descriptions: List[str]
     _task_region_reqs: List[List[dict]]
     _region_to_task_indices: Dict[str, List[int]]
     _region_token_names: Dict[str, List[str]]
@@ -251,6 +252,13 @@ class TaskipelagoWorld(World):
             task_cost_editor += [""] * (n_editor_tasks - len(task_cost_editor))
         task_cost_editor = task_cost_editor[:n_editor_tasks]
 
+        task_description_editor = [
+            str(x).strip()[:MAX_TASK_DESCRIPTION_LEN] for x in (self.options.task_description.value or [])
+        ]
+        if len(task_description_editor) < n_editor_tasks:
+            task_description_editor += [""] * (n_editor_tasks - len(task_description_editor))
+        task_description_editor = task_description_editor[:n_editor_tasks]
+
         task_priority_raw = [str(x).strip() for x in (self.options.task_priority.value or [])]
         task_priority_editor = [
             (i < len(task_priority_raw) and task_priority_raw[i].lower() == "true")
@@ -261,6 +269,7 @@ class TaskipelagoWorld(World):
         raw_prereqs_input: List[str] = []
         raw_reward_prereqs_input: List[str] = []
         raw_task_region: List[str] = []
+        raw_task_description: List[str] = []
         raw_costs_input: List[str] = []
         raw_task_priority: List[bool] = []
         # task_seq_prev_idx[j] = 0-based YAML index of the previous duplicate copy
@@ -282,6 +291,7 @@ class TaskipelagoWorld(World):
                 raw_prereqs_input.append(translated_tp)
                 raw_reward_prereqs_input.append(translated_ip)
                 raw_task_region.append(task_region_editor[i])
+                raw_task_description.append(task_description_editor[i])
                 raw_costs_input.append(task_cost_editor[i])
                 raw_task_priority.append(task_priority_editor[i])
                 task_seq_prev_idx.append(yaml_idxs[c - 1] if c > 0 else None)
@@ -867,6 +877,7 @@ class TaskipelagoWorld(World):
         self._region_default_pcts = region_default_pcts
         self._region_colors = region_colors
         self._task_region = task_region
+        self._task_descriptions = raw_task_description
         self._task_region_reqs = task_region_reqs
         self._region_to_task_indices = region_to_task_indices
         self._consumable_groups = consumable_groups
@@ -1108,6 +1119,7 @@ class TaskipelagoWorld(World):
             "region_colors": list(self._region_colors),
             "task_region": list(self._task_region),
             "task_region_reqs": [list(reqs) for reqs in self._task_region_reqs],
+            "task_description": list(self._task_descriptions),
             "bingo_mode": bool(self.options.bingo_mode),
             "bingo_dimension_x": int(self.options.bingo_dimension_x),
             "bingo_dimension_y": int(self.options.bingo_dimension_y),

@@ -4,6 +4,8 @@ from typing import List
 from Options import PerGameCommonOptions, OptionList, Toggle, Range
 from Options import DeathLink as APDeathLink
 
+MAX_TASK_DESCRIPTION_LEN = 100
+
 class Tasks(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -193,6 +195,16 @@ class RegionColors(OptionList):
     default: List[str] = []
 
 
+class TaskDescriptions(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with tasks. Each entry is an optional flavor-text description
+    (max 100 characters) shown under the task name in the client. Leave empty for none.
+    """
+    display_name = "Task Descriptions"
+    default: List[str] = []
+
+
 class TaskRegion(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -314,6 +326,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     task_count: TaskCount
     task_cost: TaskCost
     task_prereqs: TaskPrereqs
+    task_description: TaskDescriptions
     item_prereqs: ItemPrereqs
     lock_prereqs: LockPreqreqs
     task_priority: TaskPriority
