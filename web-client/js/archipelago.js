@@ -246,6 +246,10 @@ export class ArchipelagoClient {
     this._send([{ cmd: 'StatusUpdate', status }]);
   }
 
+  sendLocationScouts(locations, createAsHint) {
+    this._send([{ cmd: 'LocationScouts', locations, create_as_hint: createAsHint }]);
+  }
+
   /** Send a DeathLink bounce. */
   sendBounce(tags, data) {
     this._send([{ cmd: 'Bounce', tags, data }]);

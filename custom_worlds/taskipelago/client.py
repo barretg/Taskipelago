@@ -50,6 +50,8 @@ LEGACY_FILLER_TOKEN = "nothing here, get pranked nerd"
 REWARD_TYPE_VALUES = ("junk", "useful", "progression", "trap")
 DEFAULT_REWARD_TYPE = "useful"
 
+TASK_REWARD_PREVIEW_LABELS = ["No Previews", "Scout Previews", "Hint Previews"]
+
 
 def _is_filler(s: str) -> bool:
     return s == LEGACY_FILLER_TOKEN or s in FILLER_ITEMS_SET
@@ -887,6 +889,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
         self.seed_name = ""
         self.sent_item_names = []
         self.sent_player_names = []
+        self.task_reward_previews = 0
 
         self.progressive_groups = []
         self.reward_progressive_group = []
@@ -940,6 +943,7 @@ class TaskipelagoContext(CommonClient.CommonContext):
 
         self.sent_item_names = list(self.slot_data.get("sent_item_names", []))
         self.sent_player_names = list(self.slot_data.get("sent_player_names", []))
+        self.task_reward_previews = int(self.slot_data.get("task_reward_previews", 0) or 0)
 
         self.progressive_groups = list(self.slot_data.get("progressive_groups", []) or [])
         self.reward_progressive_group = list(
@@ -1331,6 +1335,7 @@ class TaskipelagoApp(tk.Tk):
         self.pending_reward_locations = set()  # only track reward loc pending (UI completion)
         self._task_purchases: dict = {}  # {task_idx: {consumable_name: amount_spent}}
         self._manual_consumptions: dict = {}  # {consumable_name: manually consumed count}
+        self._hint_requested_indices: set = set()  # task indices already hinted this session
 
         # Incremental task-card reconciliation state
         self._task_cards: dict = {}          # {task_idx: card_dict}
@@ -1483,6 +1488,26 @@ class TaskipelagoApp(tk.Tk):
             task_settings, text="Hide Unreachable Tasks",
             variable=self.hide_unreachable_tasks,
         ).pack(side="left", padx=(16, 0))
+
+        _reward_preview_tip = (
+            "Controls whether the client shows a preview of a task's reward once that\n"
+            "task becomes available to complete (prereqs met and cost paid, if any).\n\n"
+            "No Previews: default, no network calls.\n"
+            "Scout Previews: shows the already-known reward (item + recipient) once a\n"
+            "task is available. No network calls.\n"
+            "Hint Previews: same as Scout Previews, but also sends a real Archipelago\n"
+            "hint for that task's reward location the first time it becomes available\n"
+            "each session (equivalent to typing !hint)."
+        )
+        _make_tip_header(task_settings, "Reward Previews:", _reward_preview_tip).pack(side="left", padx=(16, 4))
+        self.task_reward_previews_var = tk.StringVar(value=TASK_REWARD_PREVIEW_LABELS[0])
+        ttk.Combobox(
+            task_settings,
+            textvariable=self.task_reward_previews_var,
+            values=TASK_REWARD_PREVIEW_LABELS,
+            state="readonly",
+            width=16,
+        ).pack(side="left")
 
         _goal_tasks_tip = (
             "The task(s) that win the game when completed. Blank = ALL tasks required.\n\n"
@@ -2662,6 +2687,7 @@ class TaskipelagoApp(tk.Tk):
                 "task_cost": task_costs,
                 "lock_prereqs": bool(self.lock_prereqs_var.get()),
                 "hide_unreachable_tasks": bool(self.hide_unreachable_tasks.get()),
+                "task_reward_previews": TASK_REWARD_PREVIEW_LABELS.index(self.task_reward_previews_var.get()),
                 "goal_tasks": [goal_tasks_raw] if goal_tasks_raw else [],
 
                 "death_link_pool": deathlink_pool,
@@ -2736,6 +2762,14 @@ class TaskipelagoApp(tk.Tk):
 
         self.lock_prereqs_var.set(bool(block.get("lock_prereqs", self.lock_prereqs_var.get())))
         self.hide_unreachable_tasks.set(bool(block.get("hide_unreachable_tasks", self.hide_unreachable_tasks.get())))
+
+        try:
+            trp_idx = int(block.get("task_reward_previews", 0) or 0)
+        except (TypeError, ValueError):
+            trp_idx = 0
+        if trp_idx not in (0, 1, 2):
+            trp_idx = 0
+        self.task_reward_previews_var.set(TASK_REWARD_PREVIEW_LABELS[trp_idx])
 
         goal_tasks = list(block.get("goal_tasks", []) or [])
         self.goal_tasks_var.set(", ".join(str(g) for g in goal_tasks))
@@ -2996,6 +3030,7 @@ class TaskipelagoApp(tk.Tk):
         self.deathlink_amnesty_var.set(0)
         self.lock_prereqs_var.set(True)
         self.hide_unreachable_tasks.set(True)
+        self.task_reward_previews_var.set(TASK_REWARD_PREVIEW_LABELS[0])
         self.goal_tasks_var.set("")
 
         self.prog_groups = []
@@ -3443,6 +3478,7 @@ class TaskipelagoApp(tk.Tk):
         self.pending_reward_locations = set()
         self._task_purchases = {}
         self._manual_consumptions = {}
+        self._hint_requested_indices = set()
         if hasattr(self, "_local_enforce_var"):
             self._local_enforce_var.set(False)
         if hasattr(self, "_show_locked_var"):
@@ -3641,6 +3677,11 @@ class TaskipelagoApp(tk.Tk):
             command=lambda idx=task_idx: self._attempt_make_change(idx),
         )
 
+        reward_preview_label = tk.Label(
+            top, text="", bg=panel, fg=muted,
+            font=("Segoe UI", 11, "italic"), anchor="e", justify="right",
+        )
+
         desc_label = tk.Label(
             content, text="", bg=panel, fg=self.colors.get("desc", "#d4d4d4"),
             font=("Segoe UI", 10), anchor="w", justify="left", wraplength=740,
@@ -3660,6 +3701,7 @@ class TaskipelagoApp(tk.Tk):
             "complete_btn": complete_btn,
             "purchase_btn": purchase_btn,
             "make_change_btn": mc_btn,
+            "reward_preview_label": reward_preview_label,
             "hints": hints,
             "spacer": spacer,
             "sig": (),
@@ -3667,6 +3709,7 @@ class TaskipelagoApp(tk.Tk):
 
     def _apply_task_card_state(self, card_dict: dict, s: dict) -> None:
         card_dict["label"].config(text=s["label_text"], fg=s["label_color"])
+        card_dict["reward_preview_label"].config(text=s.get("reward_preview_text", ""))
 
         desc_label = card_dict["desc_label"]
         desc_text = s.get("description", "")
@@ -3679,10 +3722,12 @@ class TaskipelagoApp(tk.Tk):
         complete_btn = card_dict["complete_btn"]
         purchase_btn = card_dict["purchase_btn"]
         mc_btn = card_dict["make_change_btn"]
+        reward_preview_label = card_dict["reward_preview_label"]
 
         complete_btn.pack_forget()
         purchase_btn.pack_forget()
         mc_btn.pack_forget()
+        reward_preview_label.pack_forget()
 
         if s["completed"]:
             if s["can_make_change"]:
@@ -3695,6 +3740,8 @@ class TaskipelagoApp(tk.Tk):
             else:
                 complete_btn.state(["disabled"])
             complete_btn.pack(side="right", padx=(10, 0))
+            if s.get("reward_preview_text"):
+                reward_preview_label.pack(side="right", padx=(10, 0))
             if s["can_make_change"]:
                 mc_btn.pack(side="right", padx=(10, 0))
 
@@ -3855,6 +3902,10 @@ class TaskipelagoApp(tk.Tk):
         checked = set(getattr(self.ctx, "checked_locations_set", set()) or set())
         prereq_list = list(getattr(self.ctx, "task_prereqs", []) or [])
         item_prereq_list = list(getattr(self.ctx, "item_prereqs", []) or [])
+        task_reward_previews_mode = int(getattr(self.ctx, "task_reward_previews", 0) or 0)
+        sent_item_names = list(getattr(self.ctx, "sent_item_names", []) or [])
+        sent_player_names = list(getattr(self.ctx, "sent_player_names", []) or [])
+        _hint_scout_locations: list = []
         effective_lock = yaml_lock or self._local_enforce_var.get()
         show_locked = self._show_locked_var.get()
         hide_completed = self._hide_completed_var.get()
@@ -3988,7 +4039,25 @@ class TaskipelagoApp(tk.Tk):
             description = _task_desc_list[i] if i < len(_task_desc_list) else ""
             description = description if (description and not show_as_locked) else ""
 
-            sig = (label_text, label_color, can_complete, show_purchase, can_make_change, description, *hint_texts)
+            is_available = can_complete and not completed and not show_purchase
+
+            reward_preview_text = ""
+            if is_available and task_reward_previews_mode != 0:
+                r_name = str(sent_item_names[i]).strip() if i < len(sent_item_names) else ""
+                r_player = (str(sent_player_names[i]).strip() if i < len(sent_player_names) else "") or "Unknown"
+                if r_name:
+                    reward_preview_text = f"{r_name} → {r_player}"
+
+            if (
+                is_available
+                and task_reward_previews_mode == 2
+                and i not in self._hint_requested_indices
+            ):
+                self._hint_requested_indices.add(i)
+                _hint_scout_locations.append(self.ctx.base_reward_location_id + i)
+
+            sig = (label_text, label_color, can_complete, show_purchase, can_make_change,
+                   description, reward_preview_text, *hint_texts)
             new_visible.append((i, {
                 "label_text": label_text,
                 "label_color": label_color,
@@ -3998,9 +4067,22 @@ class TaskipelagoApp(tk.Tk):
                 "can_make_change": can_make_change,
                 "hint_texts": hint_texts,
                 "description": description,
+                "reward_preview_text": reward_preview_text,
                 "bar_color": bar_color,
                 "sig": sig,
             }))
+
+        if _hint_scout_locations:
+            locs = list(_hint_scout_locations)
+
+            async def _send_reward_hints(locs=locs):
+                await self.ctx.send_msgs([{
+                    "cmd": "LocationScouts",
+                    "locations": locs,
+                    "create_as_hint": 1,
+                }])
+
+            self.loop.call_soon_threadsafe(lambda: asyncio.create_task(_send_reward_hints()))
 
         new_visible_indices = [idx for idx, _ in new_visible]
         new_visible_set = set(new_visible_indices)

@@ -384,6 +384,15 @@ button:disabled {
   line-height: 1.3;
 }
 
+.task-reward-preview {
+  font-style: italic;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  align-self: center;
+}
+
 /* =============================================================
    Bingo board
    ============================================================= */

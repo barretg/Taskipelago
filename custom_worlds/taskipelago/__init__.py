@@ -1124,6 +1124,7 @@ class TaskipelagoWorld(World):
             "bingo_dimension_x": int(self.options.bingo_dimension_x),
             "bingo_dimension_y": int(self.options.bingo_dimension_y),
             "bingoal": int(self.options.bingoal),
+            "task_reward_previews": int(self.options.task_reward_previews),
         }
 
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 
-from Options import PerGameCommonOptions, OptionList, Toggle, Range
+from Options import PerGameCommonOptions, OptionList, Toggle, Range, Choice
 from Options import DeathLink as APDeathLink
 
 MAX_TASK_DESCRIPTION_LEN = 100
@@ -315,6 +315,26 @@ class Bingoal(Range):
     default = 3
 
 
+class TaskRewardPreviews(Choice):
+    """
+    Controls whether the client shows a preview of a task's reward (item name and recipient
+    player) once that task becomes available to complete (prereqs satisfied and, if it has a
+    cost, the cost already paid).
+
+    'No Previews' (default) shows nothing and makes no network calls - fully backwards compatible.
+    'Scout Previews' shows the reward using data already resolved locally at generation time,
+    with no additional network traffic.
+    'Hint Previews' does the same, but also sends a real Archipelago hint for that task's reward
+    location the first time it becomes available each session (equivalent to typing !hint).
+    This is a real hint subject to the server's hint point economy and is visible to other players.
+    """
+    display_name = "Task Reward Previews"
+    option_no_previews = 0
+    option_scout_previews = 1
+    option_hint_previews = 2
+    default = 0
+
+
 @dataclass
 class TaskipelagoOptions(PerGameCommonOptions):
     tasks: Tasks
@@ -346,3 +366,4 @@ class TaskipelagoOptions(PerGameCommonOptions):
     bingo_dimension_x: BingoDimensionX
     bingo_dimension_y: BingoDimensionY
     bingoal: Bingoal
+    task_reward_previews: TaskRewardPreviews
