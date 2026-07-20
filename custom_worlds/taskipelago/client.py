@@ -496,7 +496,7 @@ class TaskRow:
         self.task_cell = ttk.Frame(parent)
         self.task_entry = ttk.Entry(self.task_cell, textvariable=self.task_var)
         self.task_entry.pack(side="left", fill="x", expand=True)
-        self.desc_btn = ttk.Button(self.task_cell, text="Desc", width=5, command=self._edit_description)
+        self.desc_btn = ttk.Button(self.task_cell, text="Description", width=12, command=self._edit_description)
         self.desc_btn.pack(side="left", padx=(4, 0))
         self.desc_var.trace_add("write", lambda *_: self._refresh_desc_btn())
         self._refresh_desc_btn()
@@ -516,7 +516,7 @@ class TaskRow:
         self._grid()
 
     def _refresh_desc_btn(self):
-        self.desc_btn.configure(text="Desc*" if self.desc_var.get().strip() else "Desc")
+        self.desc_btn.configure(text="Description*" if self.desc_var.get().strip() else "Description")
 
     def _edit_description(self):
         bg = self.colors.get("bg", "#1e1e1e")
@@ -579,7 +579,7 @@ class TaskRow:
         self.item_prereq_entry.grid(row=r, column=3, sticky="ew", padx=(0, 8), pady=4)
         self.cost_entry.grid(row=r, column=4, sticky="ew", padx=(0, 8), pady=4)
         self.region_cb.grid(row=r, column=5, sticky="w", padx=(0, 8), pady=4)
-        self.priority_cb.grid(row=r, column=6, padx=(0, 8), pady=4)
+        self.priority_cb.grid(row=r, column=6, padx=(0, 4), sticky="w", pady=4)
         self.count_spinbox.grid(row=r, column=7, sticky="w", padx=(0, 8), pady=4)
         self.remove_btn.grid(row=r, column=8, padx=(0, 0), pady=4)
 
@@ -1499,7 +1499,7 @@ class TaskipelagoApp(tk.Tk):
         t_tbl.grid_columnconfigure(2, weight=2)   # Task prereqs
         t_tbl.grid_columnconfigure(3, weight=2)   # Item prereqs
         t_tbl.grid_columnconfigure(4, weight=2)   # Cost
-        t_tbl.grid_columnconfigure(5, weight=1)   # Region
+        t_tbl.grid_columnconfigure(5, weight=2)   # Region
         t_tbl.grid_columnconfigure(6, weight=0)   # Priority
         t_tbl.grid_columnconfigure(7, weight=0)   # Count
         t_tbl.grid_columnconfigure(8, weight=0)   # Remove
@@ -1580,7 +1580,7 @@ class TaskipelagoApp(tk.Tk):
         _make_tip_header(t_tbl, "Item prereqs", _item_prereq_tip).grid(row=0, column=3, sticky="w", padx=(0, 8))
         _make_tip_header(t_tbl, "Cost",         _cost_col_tip).grid(row=0, column=4, sticky="w", padx=(0, 8))
         _make_tip_header(t_tbl, "Region",       _region_col_tip).grid(row=0, column=5, sticky="w", padx=(0, 8))
-        _make_tip_header(t_tbl, "Priority",     _priority_col_tip).grid(row=0, column=6, sticky="w", padx=(0, 8))
+        _make_tip_header(t_tbl, "Prio",         _priority_col_tip).grid(row=0, column=6, sticky="w", padx=(0, 4))
         _make_tip_header(t_tbl, "Count",        _count_task_tip).grid(row=0, column=7, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text="").grid(row=0, column=8, sticky="w")
 
@@ -1590,7 +1590,7 @@ class TaskipelagoApp(tk.Tk):
         ttk.Label(t_tbl, text='1  or  "Item Name"', style="Muted.TLabel").grid(row=1, column=3, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text='"ItemName"*N', style="Muted.TLabel").grid(row=1, column=4, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=5, sticky="w", padx=(0, 8))
-        ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=6, sticky="w", padx=(0, 8))
+        ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=6, sticky="w", padx=(0, 4))
         ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=7, sticky="w", padx=(0, 8))
         ttk.Label(t_tbl, text="", style="Muted.TLabel").grid(row=1, column=8, sticky="w")
 
@@ -2424,11 +2424,13 @@ class TaskipelagoApp(tk.Tk):
             return
 
         raw_item_names = []
+        raw_item_consumables = []
         items, item_types, item_fillers, item_prog_groups, item_consumables, item_counts = [], [], [], [], [], []
         for r in self.item_rows:
             itm, filler, itype, pgrp, consumable, count = r.get_data()
             raw_item_names.append(itm)
             is_filler_row = filler or not itm
+            raw_item_consumables.append(consumable if not is_filler_row else False)
             if is_filler_row and count > 1:
                 for _ in range(count):
                     items.append(_random_filler())
@@ -2570,7 +2572,7 @@ class TaskipelagoApp(tk.Tk):
             region_set = set(self.regions)
             group_set = set(self.prog_groups)
             consumable_set = {
-                nm for nm, cons in zip(raw_item_names, item_consumables) if cons and nm
+                nm for nm, cons in zip(raw_item_names, raw_item_consumables) if cons and nm
             }
             n = len(tasks)
             n_items = len(items)
