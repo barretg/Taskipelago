@@ -24,6 +24,7 @@ import CommonClient
 from NetUtils import Endpoint, decode
 
 MAX_TASK_DESCRIPTION_LEN = 100
+MAX_PLAYER_NAME_LEN = 16  # Archipelago's slot name character limit
 
 REGION_COLOR_PALETTE = [
     "#e05c5c", "#e0955c", "#e0d45c", "#8de05c",
@@ -405,6 +406,15 @@ class Tooltip:
         if self._tip:
             self._tip.destroy()
             self._tip = None
+
+
+def _limit_var_length(var: tk.StringVar, max_len: int) -> None:
+    """Truncate a StringVar's value to max_len on every write (covers typing and paste)."""
+    def _on_write(*_):
+        val = var.get()
+        if len(val) > max_len:
+            var.set(val[:max_len])
+    var.trace_add("write", _on_write)
 
 
 def _make_tip_header(parent: tk.Widget, text: str, tip_text: str) -> ttk.Frame:
@@ -1401,7 +1411,9 @@ class TaskipelagoApp(tk.Tk):
         ttk.Button(name_strip, text="Tutorial", command=self._open_tutorial).pack(side="right")
         ttk.Label(name_strip, text="Player Name:").pack(side="left", padx=(0, 6))
         self.player_name_var = tk.StringVar()
+        _limit_var_length(self.player_name_var, MAX_PLAYER_NAME_LEN)
         ttk.Entry(name_strip, textvariable=self.player_name_var, width=28).pack(side="left")
+        ttk.Label(name_strip, text=f"(max {MAX_PLAYER_NAME_LEN} chars)", style="Muted.TLabel").pack(side="left", padx=(6, 0))
 
         # ======== REGIONS section (collapsible, row 1, expanded by default) ========
         _regions_cs = CollapsibleSection(self.editor_tab, "Regions", row=1,
@@ -4736,6 +4748,7 @@ class TaskipelagoApp(tk.Tk):
 
         ttk.Label(meta, text="Player Name:").grid(row=0, column=0, padx=10, pady=8, sticky="w")
         self.bingo_player_var = tk.StringVar()
+        _limit_var_length(self.bingo_player_var, MAX_PLAYER_NAME_LEN)
         ttk.Entry(meta, textvariable=self.bingo_player_var).grid(
             row=0, column=1, sticky="ew", padx=(0, 10), pady=8
         )
