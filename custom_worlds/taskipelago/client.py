@@ -196,20 +196,12 @@ def apply_dark_theme(root: tk.Tk):
     style = ttk.Style(root)
     style.theme_use("clam")
 
-    bg = "#131419"
-    panel = "#1b1d24"
-    panel2 = "#22252e"
-    field = "#21232c"
-    fg = "#edeef2"
-    muted = "#8b8fa0"
-    border = "#2c2f3a"
-    accent = "#6d7cff"
-    accent_hover = "#828eff"
-
-    state_locked = "#f43f5e"
-    state_unlocked = "#eab308"
-    state_purchase = "#f97316"
-    state_complete = "#22c55e"
+    bg = "#1e1e1e"
+    panel = "#252526"
+    field = "#2d2d30"
+    fg = "#e6e6e6"
+    muted = "#bdbdbd"
+    border = "#3a3a3a"
 
     root.configure(bg=bg)
 
@@ -219,27 +211,13 @@ def apply_dark_theme(root: tk.Tk):
     style.configure("TLabelframe.Label", background=bg, foreground=fg)
     style.configure("TLabel", background=bg, foreground=fg)
     style.configure("Muted.TLabel", background=bg, foreground=muted)
-    style.configure("Warning.TLabel", background=bg, foreground=state_locked)
+    style.configure("Warning.TLabel", background=bg, foreground="#e07070")
 
-    style.configure("TButton", background=panel2, foreground=fg, bordercolor=border, padding=(10, 5))
-    style.map("TButton", background=[("active", "#2f333f"), ("disabled", panel)])
+    style.configure("TButton", background=panel, foreground=fg, bordercolor=border)
+    style.map("TButton", background=[("active", "#303030")])
 
-    style.configure("Primary.TButton", background=accent, foreground="#ffffff", bordercolor=accent, padding=(10, 5))
-    style.map("Primary.TButton", background=[("active", accent_hover), ("disabled", panel2)])
-
-    style.configure("Complete.TButton", background=state_unlocked, foreground="#1c1400", bordercolor=state_unlocked, padding=(10, 5))
-    style.map("Complete.TButton", background=[("active", "#f7cb1f"), ("disabled", panel2)],
-              foreground=[("disabled", muted)])
-
-    style.configure("Purchase.TButton", background=state_purchase, foreground="#241000", bordercolor=state_purchase, padding=(10, 5))
-    style.map("Purchase.TButton", background=[("active", "#fb8a3c"), ("disabled", panel2)],
-              foreground=[("disabled", muted)])
-
-    style.configure("MakeChange.TButton", background=panel, foreground=fg, bordercolor=border, padding=(10, 5))
-    style.map("MakeChange.TButton", background=[("active", "#2f333f")])
-
-    style.configure("TEntry", fieldbackground=field, background=field, foreground=fg, insertcolor=fg, bordercolor=border)
-    style.configure("TSpinbox", fieldbackground=field, background=field, foreground=fg, insertcolor=fg, bordercolor=border)
+    style.configure("TEntry", fieldbackground=field, background=field, foreground=fg, insertcolor=fg)
+    style.configure("TSpinbox", fieldbackground=field, background=field, foreground=fg, insertcolor=fg)
 
     style.configure(
         "TCombobox",
@@ -247,7 +225,6 @@ def apply_dark_theme(root: tk.Tk):
         background=field,
         foreground=fg,
         arrowcolor=fg,
-        bordercolor=border,
     )
     style.map(
         "TCombobox",
@@ -263,16 +240,11 @@ def apply_dark_theme(root: tk.Tk):
         foreground=[("active", fg), ("pressed", fg), ("focus", fg), ("selected", fg)],
     )
 
-    style.configure("TNotebook", background=bg, borderwidth=0)
-    style.configure("TNotebook.Tab", padding=(16, 8), background=panel, foreground=muted, borderwidth=0, font=("Segoe UI", 10, "bold"))
-    style.map("TNotebook.Tab", background=[("selected", panel2)], foreground=[("selected", fg)])
+    style.configure("TNotebook", background="#2b2b2b", borderwidth=0)
+    style.configure("TNotebook.Tab", padding=(14, 6), background="#3a3a3a", foreground="#dddddd", borderwidth=0)
+    style.map("TNotebook.Tab", background=[("selected", "#4a4a4a")], foreground=[("selected", "#ffffff")])
 
-    return {
-        "bg": bg, "panel": panel, "panel2": panel2, "border": border, "fg": fg, "muted": muted,
-        "accent": accent, "accent_hover": accent_hover,
-        "state_locked": state_locked, "state_unlocked": state_unlocked,
-        "state_purchase": state_purchase, "state_complete": state_complete,
-    }
+    return {"bg": bg, "panel": panel, "border": border, "fg": fg, "muted": muted}
 
 
 # ----------------------------
@@ -1780,7 +1752,7 @@ class TaskipelagoApp(tk.Tk):
         btns = ttk.Frame(conn_frame)
         btns.grid(row=3, column=0, columnspan=2, sticky="w", padx=5, pady=(8, 0))
 
-        self.connect_button = ttk.Button(btns, text="Connect", style="Primary.TButton", command=self.on_connect_toggle)
+        self.connect_button = ttk.Button(btns, text="Connect", command=self.on_connect_toggle)
         self.connect_button.pack(side="left")
 
         self.send_deathlink_btn = ttk.Button(btns, text="Send Deathlink", command=self._send_deathlink)
@@ -3545,17 +3517,11 @@ class TaskipelagoApp(tk.Tk):
 
         card = tk.Frame(parent, bg=panel, highlightbackground=border, highlightthickness=1)
 
-        region_strip = tk.Frame(card, height=3, bg=bar_color if bar_color else panel)
-        region_strip.pack(side="top", fill="x")
+        bar = tk.Frame(card, width=4, bg=bar_color if bar_color else panel)
+        bar.pack(side="left", fill="y")
+        bar.pack_propagate(False)
 
-        row = tk.Frame(card, bg=panel)
-        row.pack(side="top", fill="both", expand=True)
-
-        state_bar = tk.Frame(row, width=4, bg=border)
-        state_bar.pack(side="left", fill="y")
-        state_bar.pack_propagate(False)
-
-        content = tk.Frame(row, bg=panel)
+        content = tk.Frame(card, bg=panel)
         content.pack(side="left", fill="both", expand=True)
 
         top = tk.Frame(content, bg=panel)
@@ -3568,15 +3534,15 @@ class TaskipelagoApp(tk.Tk):
         label.pack(side="left", fill="x", expand=True)
 
         complete_btn = ttk.Button(
-            top, text="Complete", style="Complete.TButton",
+            top, text="Complete",
             command=lambda idx=task_idx: self.complete_task(idx),
         )
         purchase_btn = ttk.Button(
-            top, text="$ Purchase", style="Purchase.TButton",
+            top, text="Purchase",
             command=lambda idx=task_idx: self._attempt_purchase(idx),
         )
         mc_btn = ttk.Button(
-            top, text="Make Change", style="MakeChange.TButton",
+            top, text="Make Change",
             command=lambda idx=task_idx: self._attempt_make_change(idx),
         )
 
@@ -3589,7 +3555,6 @@ class TaskipelagoApp(tk.Tk):
 
         return {
             "frame": card,
-            "state_bar": state_bar,
             "label": label,
             "complete_btn": complete_btn,
             "purchase_btn": purchase_btn,
@@ -3611,24 +3576,18 @@ class TaskipelagoApp(tk.Tk):
         mc_btn.pack_forget()
 
         if s["completed"]:
-            state_color = self.colors.get("state_complete", "#22c55e")
             if s["can_make_change"]:
                 mc_btn.pack(side="right", padx=(10, 0))
         elif s["show_purchase"]:
-            state_color = self.colors.get("state_purchase", "#f97316")
             purchase_btn.pack(side="right", padx=(10, 0))
         else:
             if s["can_complete"]:
                 complete_btn.state(["!disabled"])
-                state_color = self.colors.get("state_unlocked", "#eab308")
             else:
                 complete_btn.state(["disabled"])
-                state_color = self.colors.get("state_locked", "#f43f5e")
             complete_btn.pack(side="right", padx=(10, 0))
             if s["can_make_change"]:
                 mc_btn.pack(side="right", padx=(10, 0))
-
-        card_dict["state_bar"].config(bg=state_color)
 
         showed = False
         for j, h in enumerate(card_dict["hints"]):
@@ -4050,9 +4009,9 @@ class TaskipelagoApp(tk.Tk):
             y1 = y0 + cell_size
 
             if space_in_bingo[i]:
-                cell_bg = "#2a2f52"
+                cell_bg = "#1a4a1a"
             elif space_completed[i]:
-                cell_bg = "#3d3410"
+                cell_bg = "#4a3a00"
             else:
                 cell_bg = panel
 
@@ -4079,7 +4038,7 @@ class TaskipelagoApp(tk.Tk):
                     width=cell_size - 2 * padding,
                 )
                 btn = ttk.Button(
-                    canvas, text="Complete", style="Complete.TButton",
+                    canvas, text="Complete",
                     command=lambda idx=i: self.complete_task(idx),
                 )
                 canvas.create_window((x0 + x1) // 2, y1 - padding, window=btn, anchor="s")
@@ -4148,7 +4107,7 @@ class TaskipelagoApp(tk.Tk):
         self.console_input_entry.grid(row=0, column=0, sticky="ew", padx=(0, 6))
         self.console_input_entry.bind("<Return>", self._send_console_message)
 
-        ttk.Button(input_frame, text="Send", style="Primary.TButton", command=self._send_console_message).grid(row=0, column=1)
+        ttk.Button(input_frame, text="Send", command=self._send_console_message).grid(row=0, column=1)
 
         self._update_console_connection_state(False)
 

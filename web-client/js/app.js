@@ -1140,31 +1140,15 @@ function renderTasks() {
     if (wouldHide && !showAsLocked) continue;
     if (completed && state.hideCompleted) continue;
 
-    const canCompleteEarly = !(effectiveLock && (!otherPrereqsOk || !costPaid));
-    const state_ = completed
-      ? 'complete'
-      : (costOnlyLocked && effectiveLock)
-        ? 'purchase'
-        : canCompleteEarly
-          ? 'unlocked'
-          : 'locked';
-
     const card = document.createElement('div');
-    card.className = `task-card state-${state_}`;
+    card.className = 'task-card';
     const _rColors = buildRegionColorMap();
     const _taskReg = state.taskRegion[i] || '';
     const _barColor = _taskReg ? (_rColors[_taskReg] || '') : '';
+    card.style.borderLeft = _barColor ? `4px solid ${_barColor}` : '';
 
     const top = document.createElement('div');
     top.className = 'task-top';
-
-    if (_barColor) {
-      const dot = document.createElement('span');
-      dot.className = 'task-region-dot';
-      dot.style.background = _barColor;
-      dot.title = _taskReg;
-      top.appendChild(dot);
-    }
 
     const nameEl = document.createElement('span');
     nameEl.className = 'task-name' +
@@ -1184,35 +1168,31 @@ function renderTasks() {
     if (completed) {
       if (canMakeChange) {
         const mcBtn = document.createElement('button');
-        mcBtn.className = 'btn-make-change';
         mcBtn.textContent = 'Make Change';
         mcBtn.onclick = () => attemptMakeChange(i);
         actions.appendChild(mcBtn);
       }
     } else if (costOnlyLocked && effectiveLock) {
       const pBtn = document.createElement('button');
-      pBtn.className = 'btn-purchase';
-      pBtn.textContent = '$ Purchase';
+      pBtn.textContent = 'Purchase';
       pBtn.onclick = () => attemptPurchase(i);
       actions.appendChild(pBtn);
 
       if (canMakeChange) {
         const mcBtn = document.createElement('button');
-        mcBtn.className = 'btn-make-change';
         mcBtn.textContent = 'Make Change';
         mcBtn.onclick = () => attemptMakeChange(i);
         actions.appendChild(mcBtn);
       }
     } else {
+      const canComplete = !(effectiveLock && (!otherPrereqsOk || !costPaid));
       const cBtn = document.createElement('button');
-      cBtn.className = 'btn-complete';
       cBtn.textContent = 'Complete';
-      cBtn.disabled = !canCompleteEarly;
+      cBtn.disabled = !canComplete;
       cBtn.onclick = () => completeTask(i);
 
       if (canMakeChange) {
         const mcBtn = document.createElement('button');
-        mcBtn.className = 'btn-make-change';
         mcBtn.textContent = 'Make Change';
         mcBtn.onclick = () => attemptMakeChange(i);
         actions.appendChild(mcBtn);
@@ -1346,7 +1326,6 @@ function renderBingo() {
 
     if (spUnlocked[i] && !spDone[i]) {
       const btn = document.createElement('button');
-      btn.className = 'btn-complete';
       btn.textContent = 'Complete';
       btn.onclick = () => completeTask(i);
       cell.appendChild(btn);
