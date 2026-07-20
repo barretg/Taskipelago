@@ -5,10 +5,10 @@ take that Jira.
 
 ## Next major release features
 * Region requirements
-* Visible/hidden task rewards and scout/hint all yaml option
-* Facelift/make purchaseables distinct
 * Submission box and presets for community made yamls
-* Task description text
+* ~~Visible/hidden task rewards and scout/hint all yaml option~~
+* ~~Facelift/make purchaseables distinct~~
+* ~~Task description text~~
 * ~~Task names visible server-side~~
 * ~~"prev" keyword for task dependencies for easier chaining repeat tasks~~
 * ~~priority tasks~~
