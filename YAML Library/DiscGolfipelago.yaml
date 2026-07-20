@@ -1,0 +1,1922 @@
+name: FrisbeeHooligan
+game: Taskipelago
+description: YAML template for Taskipelago
+Taskipelago:
+  progression_balancing: 50
+  accessibility: full
+  death_link:
+    'true': 50
+    'false': 0
+  progressive_groups:
+  - Putter
+  - Midrange
+  - Driver
+  - Throw
+  - Putt
+  item_progressive_group:
+  - Putter
+  - Putter
+  - Putter
+  - Midrange
+  - Midrange
+  - Midrange
+  - Driver
+  - Driver
+  - Driver
+  - Driver
+  - Driver
+  - Driver
+  - Driver
+  - Throw
+  - Throw
+  - Putt
+  - Putt
+  - Throw
+  - Throw
+  - Putt
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  regions:
+  - Red
+  - White
+  - LightBlue
+  - BlueAdvanced
+  - Silver
+  - DarkBlue
+  region_default_pcts:
+  - 100
+  - 100
+  - 100
+  - 100
+  - 100
+  - 100
+  region_colors:
+  - '#e05c5c'
+  - '#e0955c'
+  - '#e0d45c'
+  - '#8de05c'
+  - '#5ce09a'
+  - '#5cd4e0'
+  task_region:
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - Red
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - Silver
+  - Silver
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - White
+  - White
+  - White
+  - White
+  - Silver
+  - Silver
+  - White
+  - White
+  - Silver
+  - Silver
+  - LightBlue
+  - LightBlue
+  - White
+  - White
+  - Silver
+  - Silver
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - BlueAdvanced
+  - BlueAdvanced
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - White
+  - Silver
+  - Silver
+  - Silver
+  - Silver
+  - BlueAdvanced
+  - BlueAdvanced
+  - BlueAdvanced
+  - BlueAdvanced
+  - BlueAdvanced
+  - BlueAdvanced
+  - BlueAdvanced
+  - BlueAdvanced
+  - BlueAdvanced
+  - BlueAdvanced
+  - BlueAdvanced
+  - BlueAdvanced
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - LightBlue
+  - Silver
+  - Silver
+  - BlueAdvanced
+  - BlueAdvanced
+  - BlueAdvanced
+  - BlueAdvanced
+  - DarkBlue
+  - DarkBlue
+  - DarkBlue
+  - DarkBlue
+  - DarkBlue
+  - DarkBlue
+  - ''
+  task_priority:
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'true'
+  tasks:
+  - 'Red: Hole 1 (45m) Par (3)'
+  - 'Red: Hole 1 (45m) Birdie (2)'
+  - 'Red: Hole 2 (34m) Par (3)'
+  - 'Red: Hole 2 (34m) Birdie (2)'
+  - 'Red: Hole 3 (36m) Par (3)'
+  - 'Red: Hole 3 (36m) Birdie (2)'
+  - 'Red: Hole 4 (25m) Par (3)'
+  - 'Red: Hole 4 (25m) Birdie (2)'
+  - 'Red: Hole 5 (33m) Par (3)'
+  - 'Red: Hole 5 (33m) Birdie (2)'
+  - 'Red: Hole 6 (50m) Par (3)'
+  - 'Red: Hole 6 (50m) Birdie (2)'
+  - 'Red: Hole 7 (25m) Par (3)'
+  - 'Red: Hole 7 (25m) Birdie (2)'
+  - 'Red: Hole 8 (29m) Par (3)'
+  - 'Red: Hole 8 (29m) Birdie (2)'
+  - 'Red: Hole 9 (38m) Par (3)'
+  - 'Red: Hole 9 (38m) Birdie (2)'
+  - 'Red: Hole 10 (35m) Par (3)'
+  - 'Red: Hole 10 (35m) Birdie (2)'
+  - 'Red: Hole 11 (42m) Par (3)'
+  - 'Red: Hole 11 (42m) Birdie (2)'
+  - 'Red: Hole 12 (21m) Par (3)'
+  - 'Red: Hole 12 (21m) Birdie (2)'
+  - 'White: Hole 1 (68m) Par (3)'
+  - 'White: Hole 1 (68m) Birdie (2)'
+  - 'White: Hole 2 (63m) Par (3)'
+  - 'White: Hole 2 (63m) Birdie (2)'
+  - 'White: Hole 3 (57m) Par (3)'
+  - 'White: Hole 3 (57m) Birdie (2)'
+  - 'White: Hole 4 (54m) Par (3)'
+  - 'White: Hole 4 (54m) Birdie (2)'
+  - 'White: Hole 8 (65m) Par (3)'
+  - 'White: Hole 8 (65m) Birdie (2)'
+  - 'White: Hole 12 (41m) Par (3)'
+  - 'White: Hole 12 (41m) Birdie (2)'
+  - 'White: Hole 13 (51m) Par (3)'
+  - 'White: Hole 13 (51m) Birdie (2)'
+  - 'White: Hole 15 (56m) Par (3)'
+  - 'White: Hole 15 (56m) Birdie (2)'
+  - 'White: Hole 17 (58m) Par (3)'
+  - 'White: Hole 17 (58m) Birdie (2)'
+  - 'White: Hole 18 (71m) Par (3)'
+  - 'White: Hole 18 (71m) Birdie (2)'
+  - 'Silver: Hole 1 (112m) Par (3)'
+  - 'Silver: Hole 1 (112m) Birdie (2)'
+  - 'Light Blue: Hole 4 (55m) Par (3)'
+  - 'Light Blue: Hole 4 (55m) Birdie (2)'
+  - 'Light Blue: Hole 5 (79m) Par (3)'
+  - 'Light Blue: Hole 5 (79m) Birdie (2)'
+  - 'White: Hole 6 (67m) Par (3)'
+  - 'White: Hole 6 (67m) Birdie (2)'
+  - 'White: Hole 7 (72m) Par (3)'
+  - 'White: Hole 7 (72m) Birdie (2)'
+  - 'Silver: Hole 10 (151m) Par (4)'
+  - 'Silver: Hole 10 (151m) Birdie (3)'
+  - 'White: Hole 10 (72m) Par (3)'
+  - 'White: Hole 10 (72m) Birdie (2)'
+  - 'Silver: Hole 14 (120m) Par (3)'
+  - 'Silver: Hole 14 (120m) Birdie (2)'
+  - 'Light Blue: Hole 2 (135m) Par (4)'
+  - 'Light Blue: Hole 2 (135m) Birdie (3)'
+  - 'White: Hole 14 (100m) Par (4)'
+  - 'White: Hole 14 (100m) Birdie (3)'
+  - 'Silver: Hole 15 (100m) Par (3)'
+  - 'Silver: Hole 15 (100m) Birdie (2)'
+  - 'Light Blue: Hole 15 (61m) Par (3)'
+  - 'Light Blue: Hole 15 (61m) Birdie (2)'
+  - 'Light Blue: Hole 17 (60m) Par (3)'
+  - 'Light Blue: Hole 17 (60m) Birdie (2)'
+  - 'Blue Advanced: Hole 18 (115m) Par (4)'
+  - 'Blue Advanced: Hole 18 (115m) Birdie (3)'
+  - 'White: Hole 5 (43m) Par (3)'
+  - 'White: Hole 5 (43m) Birdie (2)'
+  - 'White: Hole 9 (50m) Par (3)'
+  - 'White: Hole 9 (50m) Birdie (2)'
+  - 'White: Hole 11 (31m) Par (3)'
+  - 'White: Hole 11 (31m) Birdie (2)'
+  - 'White: Hole 16 (60m) Par (3)'
+  - 'White: Hole 16 (60m) Birdie (2)'
+  - 'Silver: Hole 3 (90m) Par (4)'
+  - 'Silver: Hole 3 (90m) Birdie (3)'
+  - 'Silver: Hole 12 (97m) Par (3)'
+  - 'Silver: Hole 12 (97m) Birdie (2)'
+  - 'Blue Advanced: Hole 2 (109m) Par (3)'
+  - 'Blue Advanced: Hole 2 (109m) Birdie (2)'
+  - 'Blue Advanced: Hole 13 (93m) Par (3)'
+  - 'Blue Advanced: Hole 13 (93m) Birdie (2)'
+  - 'Blue Advanced: Hole 14 (151m) Par (4)'
+  - 'Blue Advanced: Hole 14 (151m) Birdie (3)'
+  - 'Blue Advanced: Hole 19 (82m) Par (3)'
+  - 'Blue Advanced: Hole 19 (82m) Birdie (2)'
+  - 'Blue Advanced: Hole 20 (106m) Par (3)'
+  - 'Blue Advanced: Hole 20 (106m) Birdie (2)'
+  - 'Blue Advanced: Hole 21 (134m) Par (4)'
+  - 'Blue Advanced: Hole 21 (134m) Birdie (3)'
+  - 'Light Blue: Hole 1 (112m) Par (4)'
+  - 'Light Blue: Hole 1 (112m) Birdie (3)'
+  - 'Light Blue: Hole 3 (56m) Par (3)'
+  - 'Light Blue: Hole 3 (56m) Birdie (2)'
+  - 'Light Blue: Hole 8 (151m) Par (5)'
+  - 'Light Blue: Hole 8 (151m) Birdie (4)'
+  - 'Light Blue: Hole 10 (120m) Par (4)'
+  - 'Light Blue: Hole 10 (120m) Birdie (3)'
+  - 'Light Blue: Hole 12 (116m) Par (4)'
+  - 'Light Blue: Hole 12 (116m) Birdie (3)'
+  - 'Light Blue: Hole 13 (78m) Par (3)'
+  - 'Light Blue: Hole 13 (78m) Birdie (2)'
+  - 'Light Blue: Hole 14 (93m) Par (3)'
+  - 'Light Blue: Hole 14 (93m) Birdie (2)'
+  - 'Light Blue: Hole 16 (71m) Par (3)'
+  - 'Light Blue: Hole 16 (71m) Birdie (2)'
+  - 'Light Blue: Hole 18 (115m) Par (5)'
+  - 'Light Blue: Hole 18 (115m) Birdie (4)'
+  - 'Light Blue: Hole 19 (63m) Par (3)'
+  - 'Light Blue: Hole 19 (63m) Birdie (2)'
+  - 'Light Blue: Hole 20 (74m) Par (3)'
+  - 'Light Blue: Hole 20 (74m) Birdie (2)'
+  - 'Light Blue: Hole 21 (74m) Par (3)'
+  - 'Light Blue: Hole 21 (74m) Birdie (2)'
+  - 'Silver: Hole 16 (245m) Par (5)'
+  - 'Silver: Hole 16 (245m) Birdie (4)'
+  - 'Blue Advanced: Hole 12 (116m) Par (3)'
+  - 'Blue Advanced: Hole 12 (116m) Birdie (2)'
+  - 'Blue Advanced: Hole 16 (105m) Par (3)'
+  - 'Blue Advanced: Hole 16 (105m) Birdie (2)'
+  - 'Dark Blue: Hole 6 (128m) Par (3)'
+  - 'Dark Blue: Hole 6 (128m) Birdie (2)'
+  - 'Dark Blue: Hole 10 (230m) Par (4)'
+  - 'Dark Blue: Hole 10 (230m) Birdie (3)'
+  - 'Dark Blue: Hole 13 (183m) Par (4)'
+  - 'Dark Blue: Hole 13 (183m) Birdie (3)'
+  - Pick up bag
+  task_count:
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  items:
+  - Putter 1 speed
+  - Putter 2 speed
+  - Putter 3 speed
+  - Midrange 4 speed
+  - Midrange 5 speed
+  - Midrange 6 speed
+  - Driver 7 speed
+  - Driver 8 speed
+  - Driver 9 speed
+  - Driver 10 speed
+  - Driver 11 speed
+  - Driver 12 speed
+  - Driver >12 Speed
+  - Backhand
+  - Forehand
+  - Straddle Putt
+  - Staggered Putt
+  - Pterodactyl
+  - Scoober
+  - Turbo Putt
+  - A crisp high five
+  - Free dopamine
+  - A crisp high five
+  - Free dopamine
+  - Mildly increased self-esteem
+  - Several pats on the back
+  - A nod of respect
+  - A nod of respect
+  - A crisp high five
+  - Mildly increased self-esteem
+  - A tiny mental victory parade
+  - Several pats on the back
+  - A crisp high five
+  - One (1) sense of accomplishment
+  - Free dopamine
+  - One (1) sense of accomplishment
+  - A firm handshake
+  - One (1) sense of accomplishment
+  - An imaginary star sticker
+  - Temporary immunity to self-criticism
+  - Free dopamine
+  - Several pats on the back
+  - Temporary immunity to self-criticism
+  - One (1) sense of accomplishment
+  - Temporary immunity to self-criticism
+  - A tiny mental victory parade
+  - A nod of respect
+  - A firm handshake
+  - Temporary immunity to self-criticism
+  - A tiny mental victory parade
+  - Temporary immunity to self-criticism
+  - Mildly increased self-esteem
+  - A nod of respect
+  - Mildly increased self-esteem
+  - One (1) sense of accomplishment
+  - Temporary immunity to self-criticism
+  - Temporary immunity to self-criticism
+  - Free dopamine
+  - An imaginary star sticker
+  - A nod of respect
+  - One (1) sense of accomplishment
+  - Several pats on the back
+  - Several pats on the back
+  - One (1) sense of accomplishment
+  - A nod of respect
+  - Free dopamine
+  - A tiny mental victory parade
+  - One (1) sense of accomplishment
+  - Free dopamine
+  - Temporary immunity to self-criticism
+  - A firm handshake
+  - Several pats on the back
+  - One (1) sense of accomplishment
+  - Temporary immunity to self-criticism
+  - A big thumbs up
+  - Several pats on the back
+  - One (1) sense of accomplishment
+  - One (1) sense of accomplishment
+  - A firm handshake
+  - Free dopamine
+  - One (1) sense of accomplishment
+  - A big thumbs up
+  - Temporary immunity to self-criticism
+  - A crisp high five
+  - A crisp high five
+  - Temporary immunity to self-criticism
+  - A firm handshake
+  - A nod of respect
+  - Several pats on the back
+  - One (1) sense of accomplishment
+  - A big thumbs up
+  - A big thumbs up
+  - A tiny mental victory parade
+  - A crisp high five
+  - One (1) sense of accomplishment
+  - Mildly increased self-esteem
+  - An imaginary star sticker
+  - A crisp high five
+  - A big thumbs up
+  - A firm handshake
+  - A nod of respect
+  - Temporary immunity to self-criticism
+  - Mildly increased self-esteem
+  - A firm handshake
+  - A crisp high five
+  - A nod of respect
+  - Temporary immunity to self-criticism
+  - One (1) sense of accomplishment
+  - Free dopamine
+  - A nod of respect
+  - A tiny mental victory parade
+  - Mildly increased self-esteem
+  - Temporary immunity to self-criticism
+  - An imaginary star sticker
+  - Temporary immunity to self-criticism
+  - Temporary immunity to self-criticism
+  - An imaginary star sticker
+  - A crisp high five
+  - Temporary immunity to self-criticism
+  - A firm handshake
+  - A tiny mental victory parade
+  - A nod of respect
+  - An imaginary star sticker
+  - Mildly increased self-esteem
+  - A crisp high five
+  - Free dopamine
+  - One (1) sense of accomplishment
+  - A big thumbs up
+  - Several pats on the back
+  - Free dopamine
+  - Several pats on the back
+  - A crisp high five
+  - One (1) sense of accomplishment
+  item_types:
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - progression
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  - junk
+  item_fillers:
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - false
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  - true
+  item_consumable:
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'false'
+  item_count:
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  task_prereqs:
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  item_prereqs:
+  - (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 || 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) || (4 || 5 || 6) || (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), ((1 || 2 || 3) || (4 || 5 || 6) || (7 || 8 || 9 || 10 || 11
+    || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - (14 && 15), (16 || 17 || 20), (14 || 15 || 18 || 19), ((1 || 2 || 3) && (4 || 5 || 6) && (7
+    || 8 || 9 || 10 || 11 || 12 || 13))
+  - ''
+  task_cost:
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+  lock_prereqs: true
+  hide_unreachable_tasks: true
+  goal_tasks: []
+  death_link_pool:
+  - Do 10 pushups
+  - Do 10 situps
+  - Plank for 30 seconds
+  death_link_weights:
+  - '1'
+  - '1'
+  - '1'
+  death_link_amnesty: 0
