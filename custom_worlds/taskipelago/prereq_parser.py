@@ -56,6 +56,7 @@ def parse_prereq(
     label: str,
     known_groups=None,
     known_regions=None,
+    location_label: str | None = None,
 ) -> Node | None:
     """
     Parse a prereq expression string into an AST.
@@ -64,12 +65,16 @@ def parse_prereq(
     All integer leaf values are 0-based task/item indices.
     known_groups: set of valid group names (or None)
     known_regions: set of valid region names (or None)
+    location_label: if given, used in error messages instead of "task {task_index+1}"
+                     (e.g. "region 'chores'") - for non-task callers like region prereqs.
     """
     text = text.strip()
     if not text:
         return None
 
-    tokens = _tokenize(text, task_index, label)
+    loc = location_label or f"task {task_index + 1}"
+
+    tokens = _tokenize(text, task_index, label, location_label)
     if not tokens:
         return None
 
@@ -83,7 +88,7 @@ def parse_prereq(
         if expected is not None and tok != expected:
             raise Exception(
                 f"Taskipelago: expected '{expected}' but got '{tok}' "
-                f"in {label} on task {task_index + 1}."
+                f"in {label} on {loc}."
             )
         pos[0] += 1
         return tok
@@ -111,7 +116,7 @@ def parse_prereq(
         tok = peek()
         if tok is None:
             raise Exception(
-                f"Taskipelago: unexpected end of {label} expression on task {task_index + 1}."
+                f"Taskipelago: unexpected end of {label} expression on {loc}."
             )
         if tok == "(":
             consume("(")
@@ -123,7 +128,7 @@ def parse_prereq(
             idx_1 = tok
             if idx_1 < 1 or idx_1 > n_tasks:
                 raise Exception(
-                    f"Taskipelago: {label} index '{idx_1}' on task {task_index + 1} "
+                    f"Taskipelago: {label} index '{idx_1}' on {loc} "
                     f"is out of range (1..{n_tasks})."
                 )
             return idx_1 - 1  # 0-based
@@ -133,12 +138,12 @@ def parse_prereq(
                 if label != "task prereq":
                     raise Exception(
                         f"Taskipelago: '{tok}' can only be used in task prereqs "
-                        f"(used in {label} on task {task_index + 1})."
+                        f"(used in {label} on {loc})."
                     )
                 if tok == "prev":
                     if task_index < 1:
                         raise Exception(
-                            f"Taskipelago: 'prev' used on task {task_index + 1} "
+                            f"Taskipelago: 'prev' used on {loc} "
                             f"but there is no previous task."
                         )
                     return task_index - 1
@@ -160,17 +165,17 @@ def parse_prereq(
                     return ("region_abs", base, suffix)
                 return ("region_ref", base, suffix)
             raise Exception(
-                f"Taskipelago: unknown name '{base}' in {label} on task {task_index + 1}."
+                f"Taskipelago: unknown name '{base}' in {label} on {loc}."
             )
         raise Exception(
-            f"Taskipelago: unexpected token '{tok}' in {label} on task {task_index + 1}."
+            f"Taskipelago: unexpected token '{tok}' in {label} on {loc}."
         )
 
     result = parse_expr()
 
     if pos[0] != len(tokens):
         raise Exception(
-            f"Taskipelago: unexpected token '{tokens[pos[0]]}' in {label} on task {task_index + 1}."
+            f"Taskipelago: unexpected token '{tokens[pos[0]]}' in {label} on {loc}."
         )
 
     return result
@@ -248,11 +253,12 @@ def _fold_to_text(node: Node | None) -> Tuple[str, str]:
     raise ValueError(f"Cannot serialize AST op: {op}")
 
 
-def _tokenize(text: str, task_index: int, label: str) -> list:
+def _tokenize(text: str, task_index: int, label: str, location_label: str | None = None) -> list:
     """
     Convert expression string into a flat list of tokens:
     integers, strings (named refs), '(', ')', '&&', '||', ','
     """
+    loc = location_label or f"task {task_index + 1}"
     tokens = []
     i = 0
     while i < len(text):
@@ -299,7 +305,7 @@ def _tokenize(text: str, task_index: int, label: str) -> list:
             continue
 
         raise Exception(
-            f"Taskipelago: unexpected character '{c}' in {label} on task {task_index + 1}."
+            f"Taskipelago: unexpected character '{c}' in {label} on {loc}."
         )
 
     return tokens

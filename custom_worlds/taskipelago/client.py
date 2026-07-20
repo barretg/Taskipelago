@@ -1358,6 +1358,7 @@ class TaskipelagoApp(tk.Tk):
         self.regions: list = []
         self.region_default_pcts: dict = {}
         self.region_colors: dict = {}  # name -> hex
+        self.region_prereqs: dict = {}  # name -> raw expression text
         self._next_color_idx: int = 0
         self._region_rows: list = []
 
@@ -1458,8 +1459,15 @@ class TaskipelagoApp(tk.Tk):
             "  myregion*5     ->  exactly 5 tasks in that region must be completed\n\n"
             "A task cannot depend on its own region.\n"
             "Regions also appear as Archipelago regions for location hinting.\n\n"
+            "A region can also depend on other regions. Set this per-region in the\n"
+            "'Depends on' field using the same syntax:\n"
+            "  otherregion       ->  that region's default % of tasks must be completed\n"
+            "  otherregion-75    ->  exactly 75% of that region's tasks must be completed\n"
+            "  otherregion*5     ->  exactly 5 tasks in that region must be completed\n"
+            "Combine with && / || / (). A region cannot depend on itself, and\n"
+            "dependency cycles between regions are not allowed.\n\n"
             "Click the color swatch on any region row to change its color.\n"
-            "Region names and default percentages are editable inline."
+            "Region names, default percentages, and dependencies are editable inline."
         ))
         self._refresh_regions_panel()
 
@@ -2111,6 +2119,7 @@ class TaskipelagoApp(tk.Tk):
             self.regions.remove(rname)
         self.region_default_pcts.pop(rname, None)
         self.region_colors.pop(rname, None)
+        self.region_prereqs.pop(rname, None)
         for row in self.task_rows:
             if row.region_var.get() == rname:
                 row.region_var.set("")
@@ -2228,6 +2237,8 @@ class TaskipelagoApp(tk.Tk):
             self.region_default_pcts[new_name] = self.region_default_pcts.pop(old_name)
         if old_name in self.region_colors:
             self.region_colors[new_name] = self.region_colors.pop(old_name)
+        if old_name in self.region_prereqs:
+            self.region_prereqs[new_name] = self.region_prereqs.pop(old_name)
         for task_row in self.task_rows:
             if task_row.region_var.get() == old_name:
                 task_row.region_var.set(new_name)
@@ -2242,6 +2253,10 @@ class TaskipelagoApp(tk.Tk):
             pct = self.region_default_pcts.get(name, 100)
         self.region_default_pcts[name] = pct
         row_data["pct_var"].set(pct)
+
+    def _commit_region_prereq_text(self, row_data: dict):
+        name = row_data["committed_name"]
+        self.region_prereqs[name] = row_data["prereq_var"].get().strip()
 
     def _refresh_regions_panel(self):
         if not hasattr(self, "regions_chips_frame"):
@@ -2262,6 +2277,7 @@ class TaskipelagoApp(tk.Tk):
         ttk.Label(hdr, text="Color", style="Muted.TLabel", width=6).pack(side="left", padx=(0, 4))
         ttk.Label(hdr, text="Name", style="Muted.TLabel", width=18).pack(side="left", padx=(0, 6))
         ttk.Label(hdr, text="Default %", style="Muted.TLabel", width=10).pack(side="left", padx=(0, 6))
+        ttk.Label(hdr, text="Depends on", style="Muted.TLabel", width=22).pack(side="left", padx=(0, 6))
 
         for rname in self.regions:
             pct = self.region_default_pcts.get(rname, 100)
@@ -2271,6 +2287,7 @@ class TaskipelagoApp(tk.Tk):
                 "committed_name": rname,
                 "name_var": tk.StringVar(value=rname),
                 "pct_var": tk.IntVar(value=pct),
+                "prereq_var": tk.StringVar(value=self.region_prereqs.get(rname, "")),
                 "swatch": None,
             }
 
@@ -2294,6 +2311,11 @@ class TaskipelagoApp(tk.Tk):
             pct_spin.pack(side="left", padx=(0, 8))
             pct_spin.bind("<FocusOut>", lambda e, rd=row_data: self._commit_region_pct(rd))
             pct_spin.bind("<Return>", lambda e, rd=row_data: self._commit_region_pct(rd))
+
+            prereq_entry = ttk.Entry(row, textvariable=row_data["prereq_var"], width=22)
+            prereq_entry.pack(side="left", padx=(0, 8))
+            prereq_entry.bind("<FocusOut>", lambda e, rd=row_data: self._commit_region_prereq_text(rd))
+            prereq_entry.bind("<Return>", lambda e, rd=row_data: self._commit_region_prereq_text(rd))
 
             ttk.Button(row, text="Remove", width=7,
                        command=lambda rd=row_data: self._remove_region(rd["committed_name"])
@@ -2648,6 +2670,14 @@ class TaskipelagoApp(tk.Tk):
                     except Exception as e:
                         expr_errors.append(f"Goal tasks: {e}")
 
+            for rname in self.regions:
+                rpr = self.region_prereqs.get(rname, "")
+                if rpr:
+                    try:
+                        parse_prereq(rpr, 0, 0, "region prereq", known_regions=region_set)
+                    except Exception as e:
+                        expr_errors.append(str(e))
+
             if expr_errors:
                 messagebox.showerror(
                     "Invalid Expressions",
@@ -2671,6 +2701,7 @@ class TaskipelagoApp(tk.Tk):
                 "regions": list(self.regions),
                 "region_default_pcts": [self.region_default_pcts.get(r, 100) for r in self.regions],
                 "region_colors": [self.region_colors.get(r, "") for r in self.regions],
+                "region_prereqs": [self.region_prereqs.get(r, "") for r in self.regions],
                 "task_region": task_region_list,
                 "task_priority": ["true" if p else "false" for p in task_priority_list],
 
@@ -2783,9 +2814,11 @@ class TaskipelagoApp(tk.Tk):
         raw_rg = list(block.get("regions", []) or [])
         raw_rdp = list(block.get("region_default_pcts", []) or [])
         raw_rcolors = list(block.get("region_colors", []) or [])
+        raw_rpr = list(block.get("region_prereqs", []) or [])
         self.regions = [str(r).strip() for r in raw_rg if str(r).strip()]
         self.region_default_pcts = {}
         self.region_colors = {}
+        self.region_prereqs = {}
         self._next_color_idx = len(self.regions)
         for i, rname in enumerate(self.regions):
             try:
@@ -2795,6 +2828,7 @@ class TaskipelagoApp(tk.Tk):
             self.region_default_pcts[rname] = pct
             color = str(raw_rcolors[i]).strip() if i < len(raw_rcolors) else ""
             self.region_colors[rname] = color if color else REGION_COLOR_PALETTE[i % len(REGION_COLOR_PALETTE)]
+            self.region_prereqs[rname] = str(raw_rpr[i]).strip() if i < len(raw_rpr) else ""
         self._refresh_regions_panel()
 
         # --------- Read tasks ---------
@@ -3039,6 +3073,7 @@ class TaskipelagoApp(tk.Tk):
         self.regions = []
         self.region_default_pcts = {}
         self.region_colors = {}
+        self.region_prereqs = {}
         self._next_color_idx = 0
         self._refresh_regions_panel()
 

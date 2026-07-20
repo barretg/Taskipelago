@@ -195,6 +195,24 @@ class RegionColors(OptionList):
     default: List[str] = []
 
 
+class RegionPrereqs(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with regions.
+    Each entry is a boolean expression, using the same syntax as Task Prereqs' region
+    references, that gates an entire region on OTHER regions being completed:
+        otherregion       -> that region's default percentage of tasks must be completed
+        otherregion-75    -> exactly 75% of that region's tasks must be completed
+        otherregion*5     -> exactly 5 tasks in that region must be completed
+    Combine with &&, ||, and (). A region cannot depend on itself, and dependency
+    cycles between regions are not allowed. Task/item indices and progressive groups
+    are not valid here - only other region names. Missing or empty entries mean the
+    region has no additional requirement of its own.
+    """
+    display_name = "Region Prereqs"
+    default: List[str] = []
+
+
 class TaskDescriptions(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -361,6 +379,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     regions: Regions
     region_default_pcts: RegionDefaultPcts
     region_colors: RegionColors
+    region_prereqs: RegionPrereqs
     task_region: TaskRegion
     bingo_mode: BingoMode
     bingo_dimension_x: BingoDimensionX
