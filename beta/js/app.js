@@ -27,6 +27,7 @@ const state = {
   deathLinkEnabled: false,
   sentItemNames: [],
   sentPlayerNames: [],
+  taskRewardPreviews: 0,
   progressiveGroups: [],
   rewardProgressiveGroup: [],
   taskProgressiveReqs: [],
@@ -47,6 +48,7 @@ const state = {
   pendingLocations: new Set(), // optimistic (not yet confirmed by server)
   taskPurchases: {},           // taskIdx -> {name: amount}
   manualConsumptions: {},      // name -> count of manually consumed units
+  hintRequestedIndices: new Set(), // task indices already hinted this session
   notifications: [],           // [{kind, title, body, createdAt}]
   sentGoal: false,
   deathLinkAmnestyLeft: 0,
@@ -445,6 +447,7 @@ function applySlotData(sd) {
   state.seedName            = sd.seed_name || '';
   state.sentItemNames       = sd.sent_item_names || [];
   state.sentPlayerNames     = sd.sent_player_names || [];
+  state.taskRewardPreviews  = parseInt(sd.task_reward_previews || 0);
   state.progressiveGroups   = sd.progressive_groups || [];
   state.rewardProgressiveGroup = sd.item_progressive_group || sd.reward_progressive_group || [];
   state.taskProgressiveReqs = sd.task_progressive_reqs || [];
@@ -715,6 +718,7 @@ function clearPlayState() {
   state.deathLinkEnabled = false;
   state.sentItemNames = [];
   state.sentPlayerNames = [];
+  state.taskRewardPreviews = 0;
   state.progressiveGroups = [];
   state.rewardProgressiveGroup = [];
   state.taskProgressiveReqs = [];
@@ -734,6 +738,7 @@ function clearPlayState() {
   state.pendingLocations = new Set();
   state.taskPurchases    = {};
   state.manualConsumptions = {};
+  state.hintRequestedIndices = new Set();
   state.notifications    = [];
   state.sentGoal         = false;
   state.deathLinkAmnestyLeft = 0;
@@ -1189,6 +1194,22 @@ function renderTasks() {
       }
     } else {
       const canComplete = !(effectiveLock && (!otherPrereqsOk || !costPaid));
+
+      if (canComplete && state.taskRewardPreviews !== 0) {
+        const rName = state.sentItemNames[i] || '';
+        const rPlayer = state.sentPlayerNames[i] || 'Unknown';
+        if (rName) {
+          const previewEl = document.createElement('span');
+          previewEl.className = 'task-reward-preview';
+          previewEl.textContent = `${rName} → ${rPlayer}`;
+          top.appendChild(previewEl);
+        }
+        if (state.taskRewardPreviews === 2 && !state.hintRequestedIndices.has(i)) {
+          state.hintRequestedIndices.add(i);
+          ap.sendLocationScouts([state.baseRewardId + i], 1);
+        }
+      }
+
       const cBtn = document.createElement('button');
       cBtn.textContent = 'Complete';
       cBtn.disabled = !canComplete;
