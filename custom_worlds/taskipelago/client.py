@@ -3538,7 +3538,7 @@ class TaskipelagoApp(tk.Tk):
             command=lambda idx=task_idx: self.complete_task(idx),
         )
         purchase_btn = ttk.Button(
-            top, text="Purchase",
+            top, text="$$ Purchase $$",
             command=lambda idx=task_idx: self._attempt_purchase(idx),
         )
         mc_btn = ttk.Button(

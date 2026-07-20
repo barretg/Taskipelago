@@ -1174,7 +1174,7 @@ function renderTasks() {
       }
     } else if (costOnlyLocked && effectiveLock) {
       const pBtn = document.createElement('button');
-      pBtn.textContent = 'Purchase';
+      pBtn.textContent = '$$ Purchase $$';
       pBtn.onclick = () => attemptPurchase(i);
       actions.appendChild(pBtn);
 
