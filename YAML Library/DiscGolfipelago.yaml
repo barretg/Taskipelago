@@ -1,6 +1,6 @@
 name: FrisbeeHooligan
 game: Taskipelago
-description: YAML template for Taskipelago
+description: Disc Golf YAML by @nebbii
 Taskipelago:
   progression_balancing: 50
   accessibility: full
