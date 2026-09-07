@@ -5,6 +5,7 @@ from itertools import combinations
 from pathlib import Path
 import random
 import re
+import sys
 import threading
 import time
 import urllib.request
@@ -23,6 +24,163 @@ import websockets
 import copy
 import CommonClient
 from NetUtils import Endpoint, decode
+
+# ----------------------------
+# Platform compatibility layer
+#
+# Windows behavior is the baseline and must not change. Anything that differs
+# on Linux (or macOS) is isolated here so the rest of the client stays
+# platform-agnostic.
+# ----------------------------
+IS_WINDOWS = sys.platform.startswith("win")
+IS_MAC = sys.platform == "darwin"
+IS_LINUX = not IS_WINDOWS and not IS_MAC
+
+
+def _platform_key() -> str:
+    return "windows" if IS_WINDOWS else ("mac" if IS_MAC else "linux")
+
+
+# First installed family wins; falls back to Tk's named fonts if none match.
+_UI_FONT_CANDIDATES = {
+    "windows": ["Segoe UI"],
+    "mac": ["SF Pro Text", "Helvetica Neue"],
+    "linux": ["Inter", "Cantarell", "Ubuntu", "Noto Sans", "DejaVu Sans", "Liberation Sans"],
+}
+_MONO_FONT_CANDIDATES = {
+    "windows": ["Consolas"],
+    "mac": ["Menlo"],
+    "linux": ["JetBrains Mono", "Fira Mono", "Noto Sans Mono", "DejaVu Sans Mono",
+              "Liberation Mono", "Ubuntu Mono"],
+}
+
+_FONT_UI = "Segoe UI"
+_FONT_MONO = "Consolas"
+
+
+def init_platform_fonts(root: tk.Misc) -> None:
+    """Resolve the UI and monospace families once a Tk root exists.
+
+    On Windows this always lands on Segoe UI/Consolas, matching the historical
+    hardcoded values exactly. Elsewhere the first installed candidate is used so
+    text does not fall back to Tk's ancient default bitmap fonts.
+    """
+    global _FONT_UI, _FONT_MONO
+    key = _platform_key()
+    try:
+        import tkinter.font as tkfont
+        available = {f.lower() for f in tkfont.families(root)}
+    except Exception:
+        return
+
+    def _first(candidates: list, fallback: str) -> str:
+        for name in candidates:
+            if name.lower() in available:
+                return name
+        return fallback
+
+    _FONT_UI = _first(_UI_FONT_CANDIDATES[key], "TkDefaultFont")
+    _FONT_MONO = _first(_MONO_FONT_CANDIDATES[key], "TkFixedFont")
+
+
+def ui_font(size: int = 10, *styles) -> tuple:
+    """UI font spec, e.g. ui_font(11, "bold")."""
+    return (_FONT_UI, size) + styles
+
+
+def mono_font(size: int = 10, *styles) -> tuple:
+    """Monospace font spec, e.g. mono_font(10, "bold")."""
+    return (_FONT_MONO, size) + styles
+
+
+def safe_grab_set(win: tk.Misc, _attempts: int = 20) -> None:
+    """grab_set() that tolerates X11 rejecting a grab on an unmapped window.
+
+    Windows grabs succeed on the first call, so behavior there is unchanged. On
+    X11 the window may not be viewable yet, which raises TclError; retry on the
+    event loop instead of blocking so the dialog still becomes modal.
+    """
+    try:
+        win.grab_set()
+    except tk.TclError:
+        if _attempts > 0:
+            try:
+                win.after(50, lambda: safe_grab_set(win, _attempts - 1))
+            except tk.TclError:
+                pass
+
+
+
+def clamp_to_screen(win: tk.Misc, x: int, y: int, w: int, h: int, margin: int = 8):
+    """Nudge a popup's top-left so a w x h window stays on screen.
+
+    Tiling WMs do not reposition override-redirect or override-placement
+    windows, so anything that would hang off an edge simply gets clipped. If the
+    popup is larger than the screen it still hangs over the far edge, since
+    there is nowhere to put it; the near edge is preferred so the start of the
+    content stays readable. Multi-monitor X11 reports the union of all outputs,
+    so this clamps to the desktop rather than to the current monitor.
+    """
+    try:
+        sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
+    except tk.TclError:
+        return x, y
+    x = margin if w + 2 * margin > sw else min(max(margin, x), sw - w - margin)
+    y = margin if h + 2 * margin > sh else min(max(margin, y), sh - h - margin)
+    return x, y
+
+
+def place_popup(win: tk.Misc, x: int, y: int, margin: int = 8) -> None:
+    """Position an already-populated popup at (x, y), clamped to the screen.
+
+    The size is set explicitly: an unmapped Toplevel measures 1x1, so clamping
+    has to use the requested size, and pinning it avoids a visible resize.
+    """
+    try:
+        win.update_idletasks()
+        w, h = win.winfo_reqwidth(), win.winfo_reqheight()
+        x, y = clamp_to_screen(win, x, y, w, h, margin)
+        win.wm_geometry(f"{w}x{h}+{x}+{y}")
+    except tk.TclError:
+        pass
+
+
+def place_dialog(win: tk.Misc, anchor: "tk.Misc | None" = None,
+                 dx: int = 0, dy: int = 0, margin: int = 8) -> None:
+    """Place a dialog near `anchor`, or centered on its parent, clamped to screen.
+
+    Deferred to an idle callback so the caller can finish packing its widgets
+    first; only then does the dialog have a meaningful requested size. Sets the
+    position but not the size, so a dialog whose content loads later can still
+    grow. Without this a tiling WM drops dialogs wherever it likes, which in
+    practice means half off the left edge.
+    """
+    def _place():
+        try:
+            win.update_idletasks()
+            w, h = win.winfo_reqwidth(), win.winfo_reqheight()
+            if anchor is not None and anchor.winfo_exists():
+                x = anchor.winfo_rootx() + dx
+                y = anchor.winfo_rooty() + dy
+            else:
+                parent = win.master
+                x = parent.winfo_rootx() + (parent.winfo_width() - w) // 2
+                # Slightly above center reads better than dead center.
+                y = parent.winfo_rooty() + (parent.winfo_height() - h) // 3
+            x, y = clamp_to_screen(win, x, y, w, h, margin)
+            win.wm_geometry(f"+{x}+{y}")
+        except tk.TclError:
+            pass
+
+    try:
+        win.after_idle(_place)
+    except tk.TclError:
+        pass
+
+def apply_platform_tweaks(root: tk.Misc) -> None:
+    """Hook for platform-specific setup that must run once on the main window."""
+    init_platform_fonts(root)
+
 
 MAX_TASK_DESCRIPTION_LEN = 100
 MAX_PLAYER_NAME_LEN = 16  # Archipelago's slot name character limit
@@ -441,12 +599,15 @@ class Tooltip:
         y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
         self._tip = tk.Toplevel(self._widget)
         self._tip.wm_overrideredirect(True)
-        self._tip.wm_geometry(f"+{x}+{y}")
+        # Keep it off-screen until it has been measured and placed, otherwise it
+        # flashes at the WM's chosen spot first.
+        self._tip.wm_geometry("+-10000+-10000")
         tk.Label(
             self._tip, text=self._text, justify="left", relief="solid",
             borderwidth=1, wraplength=self._WRAP,
-            bg="#2d2d30", fg="#e6e6e6", padx=6, pady=4, font=("Segoe UI", 9),
+            bg="#2d2d30", fg="#e6e6e6", padx=6, pady=4, font=ui_font(9),
         ).pack()
+        place_popup(self._tip, x, y)
 
     def _hide(self):
         if self._tip:
@@ -502,7 +663,7 @@ class CollapsibleSection:
 
         self._arrow = tk.StringVar(value="[-]" if expanded else "[+]")
         arrow_lbl = tk.Label(hdr, textvariable=self._arrow, bg=_bg, fg=_fg,
-                             font=("Courier", 9), cursor="hand2")
+                             font=mono_font(9), cursor="hand2")
         arrow_lbl.pack(side="left", padx=(6, 2), pady=3)
         title_lbl = tk.Label(hdr, text=title, bg=_bg, fg=_fg,
                              font=("TkDefaultFont", 9, "bold"), cursor="hand2")
@@ -584,17 +745,18 @@ class TaskRow:
         win.title("Task Description")
         win.resizable(False, False)
         win.configure(bg=bg)
-        win.grab_set()
+        safe_grab_set(win)
+        place_dialog(win)
 
         tk.Label(
             win, text=f"Optional flavor text shown under the task name in-game (max {MAX_TASK_DESCRIPTION_LEN} chars):",
-            bg=bg, fg=fg, font=("Segoe UI", 9), wraplength=360, justify="left",
+            bg=bg, fg=fg, font=ui_font(9), wraplength=360, justify="left",
         ).pack(padx=10, pady=(10, 6), anchor="w")
 
         text = tk.Text(
             win, width=44, height=4, wrap="word", bg=panel, fg=fg,
             insertbackground=fg, relief="flat",
-            highlightthickness=1, highlightbackground=border, font=("Segoe UI", 10),
+            highlightthickness=1, highlightbackground=border, font=ui_font(10),
         )
         text.pack(padx=10, pady=(0, 4))
         text.insert("1.0", self.desc_var.get())
@@ -615,7 +777,7 @@ class TaskRow:
         _update_counter()
 
         tk.Label(win, textvariable=counter_var, bg=bg, fg=self.colors.get("muted", "#bdbdbd"),
-                 font=("Segoe UI", 8)).pack(padx=10, anchor="e")
+                 font=ui_font(8)).pack(padx=10, anchor="e")
 
         btn_row = tk.Frame(win, bg=bg)
         btn_row.pack(padx=10, pady=(4, 10), fill="x")
@@ -1437,6 +1599,7 @@ class TaskipelagoApp(tk.Tk):
         self.title("Taskipelago")
         self.geometry("1080x840")
 
+        apply_platform_tweaks(self)
         self.colors = apply_dark_theme(self)
         ScrollableFrame.bind_mousewheel_to_root(self)
 
@@ -2250,12 +2413,13 @@ class TaskipelagoApp(tk.Tk):
         win.title(f"Region Color: {name}")
         win.resizable(False, False)
         win.configure(bg=bg)
-        win.grab_set()
+        safe_grab_set(win)
+        place_dialog(win, anchor=row_data.get("swatch"), dx=24, dy=0)
 
         selected = [current]
 
         tk.Label(win, text="Preset colors:", bg=bg, fg=fg,
-                 font=("Segoe UI", 10)).pack(padx=10, pady=(10, 4), anchor="w")
+                 font=ui_font(10)).pack(padx=10, pady=(10, 4), anchor="w")
 
         palette_frame = tk.Frame(win, bg=bg)
         palette_frame.pack(padx=10, pady=(0, 8))
@@ -2279,7 +2443,7 @@ class TaskipelagoApp(tk.Tk):
             c.bind("<Button-1>", lambda e, col=color: pick_preset(col))
 
         tk.Label(win, text="Hex code:", bg=bg, fg=fg,
-                 font=("Segoe UI", 10)).pack(padx=10, pady=(0, 2), anchor="w")
+                 font=ui_font(10)).pack(padx=10, pady=(0, 2), anchor="w")
         hex_var = tk.StringVar(value=current)
         hex_entry = tk.Entry(win, textvariable=hex_var, width=10, bg=panel, fg=fg,
                              insertbackground=fg, relief="flat",
@@ -3177,7 +3341,8 @@ class TaskipelagoApp(tk.Tk):
         win.title("Community YAMLs")
         win.resizable(False, False)
         win.configure(bg=self.colors.get("bg", "#1e1e1e"))
-        win.grab_set()
+        safe_grab_set(win)
+        place_dialog(win)
 
         status_var = tk.StringVar(value="Loading community YAML list...")
         ttk.Label(win, textvariable=status_var).pack(padx=16, pady=16)
@@ -3230,7 +3395,8 @@ class TaskipelagoApp(tk.Tk):
         status_win.title("Importing...")
         status_win.resizable(False, False)
         status_win.configure(bg=self.colors.get("bg", "#1e1e1e"))
-        status_win.grab_set()
+        safe_grab_set(status_win)
+        place_dialog(status_win)
         ttk.Label(status_win, text=f"Downloading {entry['filename']}...").pack(padx=16, pady=16)
 
         def finish(doc=None, error=None):
@@ -3582,11 +3748,13 @@ class TaskipelagoApp(tk.Tk):
         win.configure(bg=self.colors.get("bg", "#1e1e1e"))
 
         self.update_idletasks()
+        # Prefer sitting to the right of the main window, flip to the left if it
+        # does not fit, then clamp so a tiling WM cannot strand it off-screen.
         mx = self.winfo_rootx() + self.winfo_width() + 12
         my = self.winfo_rooty()
-        sw = win.winfo_screenwidth()
-        if mx + 500 > sw:
-            mx = max(0, self.winfo_rootx() - 500 - 12)
+        if mx + 500 > win.winfo_screenwidth():
+            mx = self.winfo_rootx() - 500 - 12
+        mx, my = clamp_to_screen(win, mx, my, 500, 500)
         win.geometry(f"500x500+{mx}+{my}")
 
         step_idx = [0]
@@ -3792,7 +3960,7 @@ class TaskipelagoApp(tk.Tk):
             top = tk.Frame(card, bg=panel)
             top.pack(fill="x", padx=8, pady=(8, 2))
 
-            title = tk.Label(top, text=n.title, bg=panel, fg=fg, font=("Segoe UI", 11, "bold"),
+            title = tk.Label(top, text=n.title, bg=panel, fg=fg, font=ui_font(11, "bold"),
                              anchor="w", justify="left", wraplength=260)
             title.pack(side="left", fill="x", expand=True)
 
@@ -3800,10 +3968,10 @@ class TaskipelagoApp(tk.Tk):
 
             ts = datetime.fromtimestamp(n.created_at).strftime("%H:%M:%S")
             meta = tk.Label(card, text=f"{n.kind.upper()} • {ts}", bg=panel, fg=muted,
-                            font=("Segoe UI", 9), anchor="w")
+                            font=ui_font(9), anchor="w")
             meta.pack(fill="x", padx=8)
 
-            body = tk.Label(card, text=n.body, bg=panel, fg=fg, font=("Segoe UI", 10),
+            body = tk.Label(card, text=n.body, bg=panel, fg=fg, font=ui_font(10),
                             anchor="w", justify="left", wraplength=300)
             body.pack(fill="x", padx=8, pady=(4, 8))
         
@@ -3893,7 +4061,7 @@ class TaskipelagoApp(tk.Tk):
 
         label = tk.Label(
             top, text="", bg=panel, fg=fg,
-            font=("Segoe UI", 12), wraplength=720, justify="left", anchor="w",
+            font=ui_font(12), wraplength=720, justify="left", anchor="w",
         )
         label.pack(side="left", fill="x", expand=True)
 
@@ -3912,17 +4080,17 @@ class TaskipelagoApp(tk.Tk):
 
         reward_preview_label = tk.Label(
             top, text="", bg=panel, fg=muted,
-            font=("Segoe UI", 11, "italic"), anchor="e", justify="right",
+            font=ui_font(11, "italic"), anchor="e", justify="right",
         )
 
         desc_label = tk.Label(
             content, text="", bg=panel, fg=self.colors.get("desc", "#d4d4d4"),
-            font=("Segoe UI", 10), anchor="w", justify="left", wraplength=740,
+            font=ui_font(10), anchor="w", justify="left", wraplength=740,
         )
 
         hints = [
             tk.Label(content, text="", bg=panel, fg=muted,
-                     font=("Segoe UI", 10), anchor="w", justify="left", wraplength=740)
+                     font=ui_font(10), anchor="w", justify="left", wraplength=740)
             for _ in range(4)
         ]
         spacer = tk.Frame(content, bg=panel, height=6)
@@ -4045,7 +4213,7 @@ class TaskipelagoApp(tk.Tk):
             row.pack(fill="x", pady=1)
 
             name_lbl = tk.Label(row, text=rname, bg=bg, fg=fg,
-                                width=14, anchor="w", font=("Segoe UI", 10))
+                                width=14, anchor="w", font=ui_font(10))
             name_lbl.pack(side="left", padx=(2, 6))
 
             bar_outer = tk.Frame(row, bg=border, height=12)
@@ -4067,7 +4235,7 @@ class TaskipelagoApp(tk.Tk):
             bar_canvas.bind("<Configure>", _draw)
 
             count_lbl = tk.Label(row, text=f"{done}/{total}", bg=bg, fg=muted,
-                                 width=6, anchor="e", font=("Segoe UI", 10))
+                                 width=6, anchor="e", font=ui_font(10))
             count_lbl.pack(side="left", padx=(6, 4))
 
     def refresh_play_tab(self):
@@ -4426,7 +4594,7 @@ class TaskipelagoApp(tk.Tk):
         grid_y = (h - grid_h) // 2
 
         font_size = max(7, cell_size // 12)
-        font = ("Segoe UI", font_size)
+        font = ui_font(font_size)
         padding = 6
 
         for i in range(n_spaces):
@@ -4517,7 +4685,7 @@ class TaskipelagoApp(tk.Tk):
             text_frame,
             bg=bg, fg=fg, insertbackground=fg,
             relief="flat", wrap="word",
-            font=("Consolas", 10),
+            font=mono_font(10),
             state="disabled",
         )
         self.console_text.grid(row=0, column=0, sticky="nsew")
@@ -4577,7 +4745,7 @@ class TaskipelagoApp(tk.Tk):
             if bg is not None:
                 kw["background"] = self._ANSI_BG.get(bg, "#000000")
             if bold:
-                kw["font"] = ("Consolas", 10, "bold")
+                kw["font"] = mono_font(10, "bold")
             self.console_text.tag_configure(tag, **kw)
         return tag
 
@@ -4740,7 +4908,8 @@ class TaskipelagoApp(tk.Tk):
         win.title("Choose Payment")
         win.resizable(False, False)
         win.configure(bg=self.colors.get("bg", "#1e1e1e"))
-        win.grab_set()
+        safe_grab_set(win)
+        place_dialog(win)
 
         ttk.Label(win, text="Choose how to pay for this task:").pack(padx=16, pady=(12, 4))
 
@@ -4812,7 +4981,8 @@ class TaskipelagoApp(tk.Tk):
         win.title("Make Change")
         win.resizable(False, False)
         win.configure(bg=self.colors.get("bg", "#1e1e1e"))
-        win.grab_set()
+        safe_grab_set(win)
+        place_dialog(win)
 
         ttk.Label(win, text=f"Currently paid: {current_label}").pack(padx=16, pady=(12, 2))
         ttk.Label(win, text="Switch payment to:").pack(padx=16, pady=(0, 6))
@@ -4997,14 +5167,14 @@ class TaskipelagoApp(tk.Tk):
             for g, received, total in prog_rows:
                 row = tk.Frame(inner, bg=bg)
                 row.pack(fill="x", padx=4, pady=1)
-                tk.Label(row, text=g, bg=bg, fg=fg, font=("Segoe UI", 10)).pack(side="left")
-                tk.Label(row, text=f"{received} / {total}", bg=bg, fg=muted, font=("Segoe UI", 10)).pack(side="right", padx=(0, 6))
+                tk.Label(row, text=g, bg=bg, fg=fg, font=ui_font(10)).pack(side="left")
+                tk.Label(row, text=f"{received} / {total}", bg=bg, fg=muted, font=ui_font(10)).pack(side="right", padx=(0, 6))
 
             for name in cons_names:
                 row = tk.Frame(inner, bg=bg)
                 row.pack(fill="x", padx=4, pady=1)
-                tk.Label(row, text=f"{name}  (currency)", bg=bg, fg=fg, font=("Segoe UI", 10)).pack(side="left")
-                tk.Label(row, text=f"{cons_recv.get(name, 0)} received", bg=bg, fg=muted, font=("Segoe UI", 10)).pack(side="right", padx=(0, 6))
+                tk.Label(row, text=f"{name}  (currency)", bg=bg, fg=fg, font=ui_font(10)).pack(side="left")
+                tk.Label(row, text=f"{cons_recv.get(name, 0)} received", bg=bg, fg=muted, font=ui_font(10)).pack(side="right", padx=(0, 6))
 
             ttk.Separator(inner, orient="horizontal").pack(fill="x", pady=(4, 2))
 
@@ -5131,7 +5301,7 @@ class TaskipelagoApp(tk.Tk):
         self.bingo_spaces_text = tk.Text(
             spaces_frame,
             bg=field_bg, fg=text_fg, insertbackground=text_fg,
-            font=("Segoe UI", 10), relief="flat", padx=6, pady=6,
+            font=ui_font(10), relief="flat", padx=6, pady=6,
             undo=True, wrap="word",
         )
         self.bingo_spaces_text.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 6))
@@ -5152,7 +5322,7 @@ class TaskipelagoApp(tk.Tk):
         self.bingo_rewards_text = tk.Text(
             rewards_frame,
             bg=field_bg, fg=text_fg, insertbackground=text_fg,
-            font=("Segoe UI", 10), relief="flat", padx=6, pady=6,
+            font=ui_font(10), relief="flat", padx=6, pady=6,
             undo=True, wrap="word",
         )
         self.bingo_rewards_text.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 6))
@@ -5182,7 +5352,7 @@ class TaskipelagoApp(tk.Tk):
         self.bingo_deathlink_text = tk.Text(
             dl_frame,
             bg=field_bg, fg=text_fg, insertbackground=text_fg,
-            font=("Segoe UI", 10), relief="flat", padx=6, pady=4,
+            font=ui_font(10), relief="flat", padx=6, pady=4,
             undo=True, wrap="word", height=3,
         )
         self.bingo_deathlink_text.grid(row=1, column=1, sticky="ew", padx=(0, 10), pady=(0, 6))
