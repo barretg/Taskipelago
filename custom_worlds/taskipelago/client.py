@@ -111,23 +111,83 @@ def safe_grab_set(win: tk.Misc, _attempts: int = 20) -> None:
 
 
 
+def _clamp_axis(pos: int, size: int, area_pos: int, area_size: int, margin: int) -> int:
+    """Slide a `size` span into an area, keeping the near edge if it cannot fit."""
+    if size + 2 * margin > area_size:
+        return area_pos + margin
+    return min(max(area_pos + margin, pos), area_pos + area_size - size - margin)
+
+
 def clamp_to_screen(win: tk.Misc, x: int, y: int, w: int, h: int, margin: int = 8):
-    """Nudge a popup's top-left so a w x h window stays on screen.
+    """Nudge a popup's top-left so a w x h window stays on the desktop.
 
     Tiling WMs do not reposition override-redirect or override-placement
     windows, so anything that would hang off an edge simply gets clipped. If the
     popup is larger than the screen it still hangs over the far edge, since
-    there is nowhere to put it; the near edge is preferred so the start of the
-    content stays readable. Multi-monitor X11 reports the union of all outputs,
-    so this clamps to the desktop rather than to the current monitor.
+    there is nowhere else to put it; the near edge is preferred so the start of
+    the content stays readable.
     """
     try:
         sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
     except tk.TclError:
         return x, y
-    x = margin if w + 2 * margin > sw else min(max(margin, x), sw - w - margin)
-    y = margin if h + 2 * margin > sh else min(max(margin, y), sh - h - margin)
-    return x, y
+    return _clamp_axis(x, w, 0, sw, margin), _clamp_axis(y, h, 0, sh, margin)
+
+
+def clamp_to_owner(win: tk.Misc, owner: "tk.Misc | None", x: int, y: int,
+                   w: int, h: int, margin: int = 8):
+    """Keep a popup inside its own window first, then inside the desktop.
+
+    On X11 winfo_screenwidth reports the union of every monitor, not the one the
+    window is on: two side-by-side 2560px displays report 5120. A screen-only
+    clamp therefore sees nothing wrong with a popup straddling the seam, and
+    each monitor renders half of it. The window a popup belongs to is on one
+    monitor by definition, so clamping to that keeps the popup on the same
+    display as the widget it describes, with no need to query monitor layout.
+    """
+    if owner is not None:
+        try:
+            ox, oy = owner.winfo_rootx(), owner.winfo_rooty()
+            ow, oh = owner.winfo_width(), owner.winfo_height()
+            if ow > 1 and oh > 1:
+                x = _clamp_axis(x, w, ox, ow, margin)
+                y = _clamp_axis(y, h, oy, oh, margin)
+        except tk.TclError:
+            pass
+    return clamp_to_screen(win, x, y, w, h, margin)
+
+
+def place_popup(win: tk.Misc, x: int, y: int, owner: "tk.Misc | None" = None,
+                margin: int = 8) -> None:
+    """Place a borderless popup at (x, y), clamped to the screen.
+
+    Applied on <Map> as well as immediately. An override-redirect window gets no
+    WM placement, but XWayland still drops the geometry requested before the
+    window is mapped, which leaves the popup at the origin and clipped. Size is
+    set explicitly because an unmapped Toplevel measures 1x1, so the clamp has
+    to work from the requested size.
+    """
+    def _apply(_event=None, _attempts: int = 6):
+        try:
+            win.update_idletasks()
+            w, h = win.winfo_reqwidth(), win.winfo_reqheight()
+            nx, ny = clamp_to_owner(win, owner, x, y, w, h, margin)
+            win.wm_geometry(f"{w}x{h}+{nx}+{ny}")
+            # A geometry request made before the window is mapped can be dropped
+            # outright, leaving the popup at the origin. winfo_rootx also lags
+            # the move by a round trip, so a mismatch here is not proof of
+            # failure; re-applying until it agrees costs little and makes the
+            # placement deterministic instead of dependent on <Map> timing.
+            if _attempts > 0 and (win.winfo_rootx(), win.winfo_rooty()) != (nx, ny):
+                win.after(30, lambda: _apply(_attempts=_attempts - 1))
+        except tk.TclError:
+            pass
+
+    try:
+        win.bind("<Map>", _apply, add=True)
+    except tk.TclError:
+        pass
+    _apply()
 
 
 def place_dialog(win: tk.Misc, anchor: "tk.Misc | None" = None,
@@ -165,7 +225,8 @@ def place_dialog(win: tk.Misc, anchor: "tk.Misc | None" = None,
                 x = parent.winfo_rootx() + (parent.winfo_width() - w) // 2
                 # Slightly above center reads better than dead center.
                 y = parent.winfo_rooty() + (parent.winfo_height() - h) // 3
-            x, y = clamp_to_screen(win, x, y, w, h, margin)
+            x, y = clamp_to_owner(win, win.master.winfo_toplevel(),
+                                  x, y, w, h, margin)
             win.wm_geometry(f"+{x}+{y}")
         except tk.TclError:
             pass
@@ -635,13 +696,7 @@ class Tooltip:
             borderwidth=1, wraplength=self._WRAP,
             bg="#2d2d30", fg="#e6e6e6", padx=6, pady=4, font=ui_font(9),
         ).pack()
-        # Measure after packing: an unmapped Toplevel is 1x1, so clamping before
-        # the label exists cannot know how wide the tooltip will be.
-        self._tip.update_idletasks()
-        x, y = clamp_to_screen(
-            self._tip, x, y, self._tip.winfo_reqwidth(), self._tip.winfo_reqheight()
-        )
-        self._tip.wm_geometry(f"+{x}+{y}")
+        place_popup(self._tip, x, y, owner=self._widget.winfo_toplevel())
 
     def _hide(self):
         if self._tip:
