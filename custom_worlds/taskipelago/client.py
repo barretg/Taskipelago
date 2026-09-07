@@ -130,32 +130,30 @@ def clamp_to_screen(win: tk.Misc, x: int, y: int, w: int, h: int, margin: int = 
     return x, y
 
 
-def place_popup(win: tk.Misc, x: int, y: int, margin: int = 8) -> None:
-    """Position an already-populated popup at (x, y), clamped to the screen.
+def place_dialog(win: tk.Misc, anchor: "tk.Misc | None" = None,
+                 dx: int = 0, dy: int = 0, margin: int = 8) -> None:
+    """Mark a dialog as transient and place it near `anchor`, or on its parent.
 
-    The size is set explicitly: an unmapped Toplevel measures 1x1, so clamping
-    has to use the requested size, and pinning it avoids a visible resize.
+    transient() is the part a tiling WM actually listens to: it says "this is a
+    dialog belonging to that window", which is what makes Hyprland float it near
+    its parent instead of treating it as a new tile and dropping it wherever.
+    Without it, a requested position is simply discarded.
+
+    Placement happens on <Map>, not from an idle callback. A geometry request
+    made before the window is mapped is only a hint and X11 WMs are free to
+    ignore it; once mapped it is an explicit move. Position only, not size, so a
+    dialog whose content loads later can still grow.
     """
     try:
-        win.update_idletasks()
-        w, h = win.winfo_reqwidth(), win.winfo_reqheight()
-        x, y = clamp_to_screen(win, x, y, w, h, margin)
-        win.wm_geometry(f"{w}x{h}+{x}+{y}")
+        win.transient(win.master.winfo_toplevel())
     except tk.TclError:
         pass
 
-
-def place_dialog(win: tk.Misc, anchor: "tk.Misc | None" = None,
-                 dx: int = 0, dy: int = 0, margin: int = 8) -> None:
-    """Place a dialog near `anchor`, or centered on its parent, clamped to screen.
-
-    Deferred to an idle callback so the caller can finish packing its widgets
-    first; only then does the dialog have a meaningful requested size. Sets the
-    position but not the size, so a dialog whose content loads later can still
-    grow. Without this a tiling WM drops dialogs wherever it likes, which in
-    practice means half off the left edge.
-    """
-    def _place():
+    def _place(_event=None):
+        try:
+            win.unbind("<Map>", bound[0])
+        except (tk.TclError, IndexError):
+            pass
         try:
             win.update_idletasks()
             w, h = win.winfo_reqwidth(), win.winfo_reqheight()
@@ -172,10 +170,43 @@ def place_dialog(win: tk.Misc, anchor: "tk.Misc | None" = None,
         except tk.TclError:
             pass
 
+    bound = []
     try:
-        win.after_idle(_place)
+        bound.append(win.bind("<Map>", _place, add=True))
     except tk.TclError:
         pass
+
+
+def force_redraw(widget: tk.Misc) -> None:
+    """Force a repaint of the widget's toplevel. No-op on Windows.
+
+    The Tcl/Tk bundled with the Archipelago AppImage does not reliably emit
+    damage for the area a grid reflow invalidates, so under XWayland a section
+    that expands or collapses is laid out and takes clicks while the screen
+    still shows the previous frame. Verified against the same compositor: system
+    Tk repaints, the bundled build does not. Synthesising an <Expose> over each
+    mapped widget's full area makes Tk redisplay it.
+    """
+    if IS_WINDOWS:
+        return
+    try:
+        top = widget.winfo_toplevel()
+        top.update_idletasks()
+    except tk.TclError:
+        return
+
+    stack = [top]
+    while stack:
+        w = stack.pop()
+        try:
+            if not w.winfo_ismapped():
+                continue        # children of a hidden widget cannot need paint
+            w.event_generate("<Expose>", x=0, y=0,
+                             width=w.winfo_width(), height=w.winfo_height())
+            stack.extend(w.winfo_children())
+        except tk.TclError:
+            continue
+
 
 def apply_platform_tweaks(root: tk.Misc) -> None:
     """Hook for platform-specific setup that must run once on the main window."""
@@ -599,15 +630,18 @@ class Tooltip:
         y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
         self._tip = tk.Toplevel(self._widget)
         self._tip.wm_overrideredirect(True)
-        # Keep it off-screen until it has been measured and placed, otherwise it
-        # flashes at the WM's chosen spot first.
-        self._tip.wm_geometry("+-10000+-10000")
         tk.Label(
             self._tip, text=self._text, justify="left", relief="solid",
             borderwidth=1, wraplength=self._WRAP,
             bg="#2d2d30", fg="#e6e6e6", padx=6, pady=4, font=ui_font(9),
         ).pack()
-        place_popup(self._tip, x, y)
+        # Measure after packing: an unmapped Toplevel is 1x1, so clamping before
+        # the label exists cannot know how wide the tooltip will be.
+        self._tip.update_idletasks()
+        x, y = clamp_to_screen(
+            self._tip, x, y, self._tip.winfo_reqwidth(), self._tip.winfo_reqheight()
+        )
+        self._tip.wm_geometry(f"+{x}+{y}")
 
     def _hide(self):
         if self._tip:
@@ -655,15 +689,17 @@ class CollapsibleSection:
         self.outer.grid_rowconfigure(0, weight=0)
         self.outer.grid_rowconfigure(1, weight=1)
 
-        parent.grid_rowconfigure(row, weight=(1 if expanded else 0),
-                                 minsize=(min_height if expanded else 0))
-
         hdr = tk.Frame(self.outer, bg=_bg, cursor="hand2")
         hdr.grid(row=0, column=0, sticky="ew")
+        self._hdr = hdr
 
         self._arrow = tk.StringVar(value="[-]" if expanded else "[+]")
+        # This one site was Courier, not Consolas, before the font sweep. Courier
+        # on Linux resolves to an ancient bitmap face, so use the resolved mono
+        # family there and keep Windows on exactly what it always rendered.
         arrow_lbl = tk.Label(hdr, textvariable=self._arrow, bg=_bg, fg=_fg,
-                             font=mono_font(9), cursor="hand2")
+                             font=(("Courier", 9) if IS_WINDOWS else mono_font(9)),
+                             cursor="hand2")
         arrow_lbl.pack(side="left", padx=(6, 2), pady=3)
         title_lbl = tk.Label(hdr, text=title, bg=_bg, fg=_fg,
                              font=("TkDefaultFont", 9, "bold"), cursor="hand2")
@@ -677,17 +713,49 @@ class CollapsibleSection:
         if not expanded:
             self.body.grid_remove()
 
-    def _toggle(self, event=None):
+        self._apply_row_size()
+
+    def _header_height(self) -> int:
+        """Requested height of the header strip, used as the collapsed floor."""
+        try:
+            self._hdr.update_idletasks()
+            h = self._hdr.winfo_reqheight()
+        except tk.TclError:
+            h = 0
+        # Before the first layout pass reqheight is 1; fall back to a sane value
+        # rather than pinning the row to nothing.
+        return h if h > 1 else 24
+
+    def _apply_row_size(self) -> None:
+        """Size the parent grid row for the current state.
+
+        Every row is floored at its header height and never at min_height. Tk's
+        grid refuses to shrink a row below its minsize, so a tall floor on an
+        expanded section pushes the rows beneath it past the bottom of the
+        notebook page, where they are silently clipped: expanding a section made
+        the buttons below it vanish. A floor of 0 has the opposite failure, a
+        collapsed header squeezed to nothing while still taking clicks.
+
+        min_height is instead used as the row's weight, so expanded sections
+        divide whatever space is left over in their intended proportions and can
+        always give ground when the window is short.
+        """
+        header = self._header_height()
         if self._expanded:
-            self.body.grid_remove()
-            self._arrow.set("[+]")
-            self._expanded = False
-            self._parent.grid_rowconfigure(self._row, weight=0, minsize=0)
+            self._parent.grid_rowconfigure(self._row, weight=self._min_height, minsize=header)
         else:
+            self._parent.grid_rowconfigure(self._row, weight=0, minsize=header)
+
+    def _toggle(self, event=None):
+        self._expanded = not self._expanded
+        if self._expanded:
             self.body.grid()
             self._arrow.set("[-]")
-            self._expanded = True
-            self._parent.grid_rowconfigure(self._row, weight=1, minsize=self._min_height)
+        else:
+            self.body.grid_remove()
+            self._arrow.set("[+]")
+        self._apply_row_size()
+        force_redraw(self.outer)
 
 
 # Rows (YAML Generator)
