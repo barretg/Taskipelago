@@ -344,6 +344,139 @@ def _collapse_items_by_count(names: list, types: list, fillers: list):
     return out_names, out_types, out_fillers, out_counts
 
 
+def _remap_prereq_indices(text: str, index_map: list) -> str:
+    """
+    Rewrite 1-based integer references in a prereq expression using index_map,
+    where index_map[k] is the list of new 1-based indices for old index k+1.
+    Multiple targets become an OR group (any copy satisfies the reference).
+    Name tokens (regions, progressive groups) and their embedded digits are
+    left untouched.
+    """
+    if not text:
+        return text
+
+    out = []
+    i = 0
+    n = len(text)
+    while i < n:
+        c = text[i]
+
+        if c.isspace():
+            out.append(c)
+            i += 1
+            continue
+
+        if text[i:i + 2] in ("&&", "||"):
+            out.append(text[i:i + 2])
+            i += 2
+            continue
+
+        if c in ("(", ")", ","):
+            out.append(c)
+            i += 1
+            continue
+
+        # Quoted name reference: copy verbatim
+        if c == '"':
+            j = text.find('"', i + 1)
+            j = n if j < 0 else j + 1
+            out.append(text[i:j])
+            i = j
+            continue
+
+        # Name token (region / progressive group): copy verbatim
+        if c.isalpha() or c == "_":
+            j = i
+            while j < n:
+                ch = text[j]
+                if ch.isspace() or ch in ("(", ")", ","):
+                    break
+                if text[j:j + 2] in ("&&", "||"):
+                    break
+                j += 1
+            out.append(text[i:j])
+            i = j
+            continue
+
+        if c.isdigit():
+            j = i
+            while j < n and text[j].isdigit():
+                j += 1
+            old_idx = int(text[i:j])
+            new_idxs = index_map[old_idx - 1] if 1 <= old_idx <= len(index_map) else []
+            if len(new_idxs) == 1:
+                out.append(str(new_idxs[0]))
+            elif len(new_idxs) > 1:
+                out.append("(" + " || ".join(str(k) for k in new_idxs) + ")")
+            else:
+                out.append(text[i:j])
+            i = j
+            continue
+
+        out.append(c)
+        i += 1
+
+    result = "".join(out)
+
+    # Collapse "(n || n || n)" groups, which appear when several old indices map
+    # onto the same new one (an expanded filler run read back into one row).
+    import re as _re
+    prev = None
+    while prev != result:
+        prev = result
+        result = _re.sub(r"(\b\d+\b)(?:\s*\|\|\s*\1\b)+", r"\1", result)
+    result = _re.sub(r"\(\s*(\d+)\s*\)", r"\1", result)
+    return result
+
+
+def _remap_cost_indices(text: str, index_map: list) -> str:
+    """
+    Rewrite 1-based integer item references in a cost expression using index_map.
+    Quoted name references are left untouched. A reference that maps to several
+    entries resolves to the first one (cost refs always target consumables,
+    which are never expanded).
+    """
+    if not text:
+        return text
+
+    out = []
+    i = 0
+    n = len(text)
+    while i < n:
+        c = text[i]
+
+        if c == '"':
+            j = text.find('"', i + 1)
+            j = n if j < 0 else j + 1
+            # keep any trailing *N with the quoted name
+            out.append(text[i:j])
+            i = j
+            continue
+
+        if c.isdigit():
+            j = i
+            while j < n and text[j].isdigit():
+                j += 1
+            # a digit run directly after '*' is a count, not an index
+            k = len(out) - 1
+            while k >= 0 and out[k].isspace():
+                k -= 1
+            if k >= 0 and out[k].endswith("*"):
+                out.append(text[i:j])
+                i = j
+                continue
+            old_idx = int(text[i:j])
+            new_idxs = index_map[old_idx - 1] if 1 <= old_idx <= len(index_map) else []
+            out.append(str(new_idxs[0]) if new_idxs else text[i:j])
+            i = j
+            continue
+
+        out.append(c)
+        i += 1
+
+    return "".join(out)
+
+
 def _expand_by_count(values: list, counts: list) -> list:
     out = []
     for v, c in zip(values, counts):
@@ -2829,8 +2962,12 @@ class TaskipelagoApp(tk.Tk):
         return result, errors
 
     @staticmethod
-    def _convert_cost_idx_to_quote(cost_text: str, item_names: list, item_counts: list) -> str:
-        """Replace integer-indexed cost refs with quoted names for items with count > 1."""
+    def _convert_cost_idx_to_quote(cost_text: str, item_names: list) -> str:
+        """
+        Replace integer-indexed cost refs with quoted names. Names survive both the
+        count expansion and the filler expansion done at export, so quoting every
+        resolvable ref keeps costs pointing at the item the editor row shows.
+        """
         import re as _re
         # Match already-quoted refs (leave alone) or bare idx*N / idx patterns
         pattern = _re.compile(r'"[^"]*"\*?\d*|\b(\d+)(?:\*(\d+))?\b')
@@ -2839,7 +2976,7 @@ class TaskipelagoApp(tk.Tk):
                 return m.group(0)  # already quoted, leave alone
             idx = int(m.group(1))
             n = m.group(2) or "1"
-            if 1 <= idx <= len(item_names) and item_counts[idx - 1] > 1:
+            if 1 <= idx <= len(item_names) and item_names[idx - 1]:
                 return f'"{item_names[idx - 1]}"*{n}'
             return m.group(0)
         return pattern.sub(repl, cost_text)
@@ -2883,12 +3020,17 @@ class TaskipelagoApp(tk.Tk):
 
         raw_item_names = []
         raw_item_consumables = []
+        # item_row_export_idxs[row] = 1-based indices this editor row occupies in the
+        # exported item list. Filler rows with a count are expanded into one exported
+        # row each, which shifts every row below them out of editor index space.
+        item_row_export_idxs = []
         items, item_types, item_fillers, item_prog_groups, item_consumables, item_counts = [], [], [], [], [], []
         for r in self.item_rows:
             itm, filler, itype, pgrp, consumable, count = r.get_data()
             raw_item_names.append(itm)
             is_filler_row = filler or not itm
             raw_item_consumables.append(consumable if not is_filler_row else False)
+            _export_start = len(items) + 1
             if is_filler_row and count > 1:
                 for _ in range(count):
                     items.append(_random_filler())
@@ -2904,6 +3046,7 @@ class TaskipelagoApp(tk.Tk):
                 item_prog_groups.append(pgrp if not is_filler_row else "")
                 item_consumables.append(consumable if not is_filler_row else False)
                 item_counts.append(count)
+            item_row_export_idxs.append(list(range(_export_start, len(items) + 1)))
 
         # Duplicate item name check (non-filler items only)
         _seen_items = {}
@@ -2991,7 +3134,7 @@ class TaskipelagoApp(tk.Tk):
 
         # Convert cost index refs to quoted names for items with count > 1
         task_costs = [
-            self._convert_cost_idx_to_quote(cost, raw_item_names, item_counts)
+            self._convert_cost_idx_to_quote(cost, raw_item_names)
             for cost in task_costs
         ]
 
@@ -3033,7 +3176,9 @@ class TaskipelagoApp(tk.Tk):
                 nm for nm, cons in zip(raw_item_names, raw_item_consumables) if cons and nm
             }
             n = len(tasks)
-            n_items = len(items)
+            # Item prereqs are still in editor-row space here (remapped to
+            # exported-row space after validation). should bound them by the row count.
+            n_items = len(raw_item_names)
             expr_errors = []
 
             for i, tpr in enumerate(task_prereqs):
@@ -3084,6 +3229,17 @@ class TaskipelagoApp(tk.Tk):
                     + "\n".join(expr_errors)
                 )
                 return
+
+        # Filler rows with a count expand into multiple exported rows, so every
+        # numeric item reference below one has to be shifted into exported index
+        # space (the apworld reads one editor row per exported row).
+        if any(idxs != [i + 1] for i, idxs in enumerate(item_row_export_idxs)):
+            item_prereqs_raw = [
+                _remap_prereq_indices(t, item_row_export_idxs) for t in item_prereqs_raw
+            ]
+            task_costs = [
+                _remap_cost_indices(t, item_row_export_idxs) for t in task_costs
+            ]
 
         data = {
             "name": player_name,
@@ -3313,6 +3469,8 @@ class TaskipelagoApp(tk.Tk):
 
             # Collapse consecutive filler entries (from expanded export) into one row
             items, item_types, item_fillers, item_prog_groups, item_consumables, item_counts = [], [], [], [], [], []
+            # flat_to_row[k] = 1-based editor row the k-th exported item lands in
+            flat_to_row = [[] for _ in range(len(_items_flat))]
             i = 0
             while i < len(_items_flat):
                 fi = _fillers_flat[i]
@@ -3334,6 +3492,8 @@ class TaskipelagoApp(tk.Tk):
                     item_prog_groups.append("")
                     item_consumables.append(False)
                     item_counts.append(total)
+                    for k in range(i, j):
+                        flat_to_row[k] = [len(items)]
                     i = j
                 else:
                     items.append(_items_flat[i])
@@ -3342,10 +3502,12 @@ class TaskipelagoApp(tk.Tk):
                     item_prog_groups.append(_pgroups_flat[i])
                     item_consumables.append(_cons_flat[i])
                     item_counts.append(_counts_flat[i])
+                    flat_to_row[i] = [len(items)]
                     i += 1
         else:
             # Crunch consecutive identical item names
             items, item_types, item_fillers, item_prog_groups, item_consumables, item_counts = [], [], [], [], [], []
+            flat_to_row = [[] for _ in range(len(items_raw))]
             i = 0
             while i < len(items_raw):
                 name = _str(items_raw[i])
@@ -3354,6 +3516,8 @@ class TaskipelagoApp(tk.Tk):
                 while j < len(items_raw) and _str(items_raw[j]) == name:
                     count += 1
                     j += 1
+                for k in range(i, j):
+                    flat_to_row[k] = [len(items) + 1]
                 items.append(name)
                 item_types.append(_str(item_types_raw[i], "useful") if i < len(item_types_raw) else "useful")
                 item_fillers.append(item_fillers_raw[i] if i < len(item_fillers_raw) else None)
@@ -3363,6 +3527,12 @@ class TaskipelagoApp(tk.Tk):
                 i = j
 
         n_items = len(items)
+
+        # Numeric item references in the file are one-per-exported-row; the editor
+        # collapses filler/duplicate runs back into single rows, so shift them back.
+        if any(rows != [k + 1] for k, rows in enumerate(flat_to_row)):
+            item_prereqs = [_remap_prereq_indices(t, flat_to_row) for t in item_prereqs]
+            task_costs = [_remap_cost_indices(t, flat_to_row) for t in task_costs]
 
         total_task_slots = sum(task_counts)
         total_item_slots = sum(item_counts)
