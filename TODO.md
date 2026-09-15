@@ -16,7 +16,7 @@ take that Jira.
 * Small Up/down carrots on left side of tasks/items to move them up/down in the ordering. This should adjust references to them (leave an option to disable this so that moving does not update references)
 
 ### High Prio:
-
+* Unify codebase (launch js client under a python wrapper?)
 
 ### Medium Prio:
 * Taskmaster style ui
