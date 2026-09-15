@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "web-client/**"
+      - "custom_worlds/taskipelago/web-client/**"
   workflow_dispatch:
 
 permissions:

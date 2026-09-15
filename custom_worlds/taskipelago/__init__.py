@@ -1385,7 +1385,7 @@ def _assert_no_region_cycles(region_names: List[str], region_prereq_reqs: Dict[s
 # --- Client launcher registration ---
 
 def launch_client(*args):
-    from .client import launch
+    from .webhost import launch
     launch_subprocess(launch, name="TaskipelagoClient", args=args)
 
 
@@ -1394,5 +1394,7 @@ components.append(
         "Taskipelago Client",
         func=launch_client,
         component_type=Type.CLIENT,
+        game_name="Taskipelago",
+        supports_uri=True,
     )
 )

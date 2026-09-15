@@ -4,6 +4,8 @@
  * Handles connection, reconnection across URL candidates, and all
  * standard AP network packets needed by the Connect-and-Play flow.
  */
+import { hasFeature } from './shared/config.js';
+
 export class ArchipelagoClient {
   constructor() {
     this._ws = null;
@@ -45,8 +47,13 @@ export class ArchipelagoClient {
     const raw = server.trim();
     const candidates = [];
 
+    // UNIFY 1.3: an explicit scheme is used as-is; ws:// is only attempted when
+    // the page is allowed to open insecure sockets (local webhost / plain http).
+    this._secureOnly = !hasFeature('insecureWs');
     if (raw.includes('://')) {
       candidates.push(raw);
+    } else if (this._secureOnly) {
+      candidates.push(`wss://${raw}`);
     } else {
       const isAP = raw.toLowerCase().includes('archipelago.gg');
       if (isAP) candidates.push(`wss://${raw}`);
@@ -59,11 +66,10 @@ export class ArchipelagoClient {
 
   _tryConnect(candidates, idx) {
     if (idx >= candidates.length) {
-      this.onDisconnected?.(
-        'Could not connect to server. ' +
-        'If your server is local over ws://, ensure you are accessing this page via HTTP (not HTTPS) ' +
-        'to avoid mixed-content restrictions.'
-      );
+      this.onDisconnected?.(this._secureOnly
+        ? 'This server may not support secure connections. Use the Taskipelago Client ' +
+          'from the Archipelago launcher to connect to ws:// servers.'
+        : 'Could not connect to server.');
       return;
     }
 

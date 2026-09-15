@@ -1,0 +1,9 @@
+{
+  "name": "taskipelago-tests",
+  "private": true,
+  "type": "module",
+  "description": "Regression tests for the Taskipelago web client. Run via python tests/run_tests.py.",
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}
