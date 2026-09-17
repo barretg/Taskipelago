@@ -73,13 +73,25 @@ V11_STEP_CHANGES = {
 }
 
 
+# The legacy text writes dashes as " -- ". Show a comma where the next word continues
+# the sentence, a colon otherwise (titles always get a colon).
+COMMA_AFTER_DASH = {"except", "like", "including", "useful", "higher", "no"}
+
+
+def undash(text: str, title: bool = False) -> str:
+    import re
+    def sub(m):
+        return ", " if not title and m.group(1) in COMMA_AFTER_DASH else ": "
+    return re.sub(r" -- (?=(\S+))", sub, text)
+
+
 def v11_steps(tree: ast.AST) -> list:
     steps = legacy_steps(tree)
     for step in steps:
         for old, new in V11_STEP_CHANGES.get(step[0], []):
             assert old in step[1], (step[0], old)
             step[1] = step[1].replace(old, new)
-    return steps
+    return [[undash(title, title=True), undash(text)] for title, text in steps]
 
 
 def v11_tips(tree: ast.AST) -> dict:
@@ -88,7 +100,7 @@ def v11_tips(tree: ast.AST) -> dict:
         for old, new in changes:
             assert old in tips[key], (key, old)
             tips[key] = tips[key].replace(old, new)
-    return tips
+    return {key: undash(text) for key, text in tips.items()}
 
 
 def render() -> str:

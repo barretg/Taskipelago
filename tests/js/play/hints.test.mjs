@@ -52,6 +52,7 @@ test('hints render names, colors and the default sort; DataPackage names fill in
   await wait(10);
   assert.equal(rows()[1][1], 'Master Sword');
   assert.equal(rows()[2][3], 'Big Chest');
+  assert.doesNotMatch($('hints-root').textContent, /null|Loading item and location names/);
   const tr = $('hints-root').querySelectorAll('tbody tr')[1];
   assert.equal(tr.children[0].className, 'hint-player-other');
   assert.equal(tr.children[1].className, 'hint-item-useful');
