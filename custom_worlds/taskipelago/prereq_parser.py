@@ -48,6 +48,22 @@ Node = Union[int, Tuple]
 # Bare words that cannot be used as region or progressive group names.
 RESERVED_WORDS = {"prev", "sequential"}
 
+# Region and group names never contain digits, so a trailing -N / *N suffix is
+# unambiguous whatever other characters the name holds (v1.1 F8).
+NAME_DASH_RE = _re.compile(r'^(\D+)-(\d+)$')
+NAME_STAR_RE = _re.compile(r'^(\D+)\*(\d+)$')
+
+
+def split_name_suffix(tok: str) -> Tuple[str, int | None, str]:
+    """Split a name token into (base, n, mode); mode is "dash", "star" or "none"."""
+    m = NAME_DASH_RE.match(tok)
+    if m:
+        return m.group(1), int(m.group(2)), "dash"
+    m = NAME_STAR_RE.match(tok)
+    if m:
+        return m.group(1), int(m.group(2)), "star"
+    return tok, None, "none"
+
 
 def parse_prereq(
     text: str,
@@ -148,14 +164,7 @@ def parse_prereq(
                         )
                     return task_index - 1
                 return ("seq_flag",)
-            m_dash = _re.match(r'^(.+[a-zA-Z_])-(\d+)$', tok)
-            m_star = _re.match(r'^(.+[a-zA-Z_])\*(\d+)$', tok)
-            if m_dash:
-                base, suffix, mode = m_dash.group(1), int(m_dash.group(2)), "dash"
-            elif m_star:
-                base, suffix, mode = m_star.group(1), int(m_star.group(2)), "star"
-            else:
-                base, suffix, mode = tok, None, "none"
+            base, suffix, mode = split_name_suffix(tok)
             if known_groups is not None and base in known_groups:
                 if mode == "star":
                     return ("group_count", base, suffix)

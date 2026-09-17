@@ -135,7 +135,7 @@ test('regions: add, invalid name error, rename updates task rows, remove', async
   input(addRow.querySelector('input[type="text"]'), 'bad1');
   button(addRow, 'Add Region').click();
   await wait(5);
-  assert.match(dialogText(), /Region name 'bad1' is invalid/);
+  assert.match(dialogText(), /Region name 'bad1' must not contain digits/);
   await answer('OK');
 
   input(addRow.querySelector('input[type="text"]'), 'chores');
@@ -278,6 +278,23 @@ test('bingo tab counts, validates and exports', async () => {
   assert.equal(data.Taskipelago.bingo_mode, true);
   assert.equal(data.Taskipelago.tasks.length, 9 + 8);
   assert.equal(data.Taskipelago.bingoal, 3);
+  assert.equal(data.Taskipelago.item_fillers[4], true, 'F9: free space is filler');
+
+  // F9: more rewards than slots asks first; declining exports nothing.
+  input(areas[1], Array.from({ length: 11 }, (_, i) => `Prize ${i + 1}`).join('\n'));
+  assert.match(bingo.textContent, /all 9 slots covered, 2 unused/);
+  const before = downloads.length;
+  button(bingo, 'Export Bingo YAML').click();
+  await wait(5);
+  assert.match(dialogText(), /2 rewards will be unused\. Export anyway\?/);
+  await answer('No');
+  assert.equal(downloads.length, before);
+  button(bingo, 'Export Bingo YAML').click();
+  await wait(5);
+  await answer('Yes');
+  await wait(5);
+  await answer('OK');
+  assert.equal(downloads.length, before + 1);
 
   await wait(450);
   assert.equal(JSON.parse(localStorage.getItem('taskipelago_draft_bingo')).x, '3');

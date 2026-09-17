@@ -1,3 +1,5 @@
+import { splitNameSuffix } from './prereq_parser.js';
+
 // Client-side prereq evaluator (port of legacy_client/client.py _eval_prereq_expr).
 // Unknown input evaluates to true so a bad expression never locks the UI.
 export function evalPrereqExpr(text, leafFn, nameFn) {
@@ -17,7 +19,7 @@ export function evalPrereqExpr(text, leafFn, nameFn) {
     } else if (text.slice(i, i + 2) === '&&') { tokens.push('&&'); i += 2; }
     else if (text.slice(i, i + 2) === '||') { tokens.push('||'); i += 2; }
     else if (c === '(' || c === ')' || c === ',') { tokens.push(c); i++; }
-    else if (/[a-zA-Z_]/.test(c)) {
+    else if (/[\p{L}_]/u.test(c)) {
       let j = i;
       while (j < text.length) {
         const ch = text[j];
@@ -51,11 +53,8 @@ export function evalPrereqExpr(text, leafFn, nameFn) {
     if (typeof tok === 'string' && tok !== '&&' && tok !== '||' && tok !== '(' && tok !== ')' && tok !== ',') {
       consume();
       if (nameFn) {
-        const mStar = tok.match(/^(.+[a-zA-Z_])\*(\d+)$/);
-        const mDash = tok.match(/^(.+[a-zA-Z_])-(\d+)$/);
-        if (mStar) return nameFn(mStar[1], parseInt(mStar[2], 10));
-        if (mDash) return nameFn(mDash[1], null);
-        return nameFn(tok, null);
+        const [base, n, mode] = splitNameSuffix(tok);
+        return nameFn(base, mode === 'star' ? n : null);
       }
       return true;
     }

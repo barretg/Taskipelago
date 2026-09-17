@@ -144,7 +144,7 @@ class GoalTasks(OptionList):
 class ProgressiveGroups(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
-    List of progressive group name strings (letters, underscores, and hyphens only - no digits).
+    List of progressive group name strings (no digits, whitespace, quotes, parentheses, commas, && or ||).
     Each name defines a set of interchangeable item entries that are treated as a progression counter.
     """
     display_name = "Progressive Groups"
@@ -165,7 +165,7 @@ class ItemProgressiveGroup(OptionList):
 class Regions(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
-    List of region name strings (letters, underscores, and hyphens only - no digits).
+    List of region name strings (no digits, whitespace, quotes, parentheses, commas, && or ||).
     Each name defines a set of tasks that can be used as percentage-based completion prerequisites.
     """
     display_name = "Regions"

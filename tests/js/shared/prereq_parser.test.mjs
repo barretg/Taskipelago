@@ -30,3 +30,23 @@ test('every corpus case matches the Python golden output', () => {
     .filter(m => JSON.stringify(m.python) !== JSON.stringify(m.js));
   assert.deepEqual(mismatches, []);
 });
+
+test('F8: validateRefName unified name rule', async () => {
+  const { validateRefName } = await importModule('shared/prereq_parser.js');
+  for (const ok of ['weapons+', 'side-quests!', '_x', 'café', 'weap-']) assert.equal(validateRefName(ok), null, ok);
+  for (const bad of ['', '1up', 'a b', 'x(y', 'a"b', 'a,b', 'prev', 'Sequential', 'a&&b', 'a||b', '-x', '+x']) {
+    assert.notEqual(validateRefName(bad), null, bad);
+  }
+});
+
+test('F8: evaluator splits suffixes on names with non-letters', async () => {
+  const { evalPrereqExpr } = await importModule('shared/eval_prereq.js');
+  const seen = [];
+  const counts = { 'weapons+': 2 };
+  const nameFn = (name, n) => { seen.push([name, n]); return n === null ? true : (counts[name] || 0) >= n; };
+  assert.equal(evalPrereqExpr('weapons+*3', () => true, nameFn), false);
+  counts['weapons+'] = 3;
+  assert.equal(evalPrereqExpr('weapons+*3', () => true, nameFn), true);
+  evalPrereqExpr('weap--2', () => true, nameFn);
+  assert.deepEqual(seen.at(-1), ['weap-', null]);
+});

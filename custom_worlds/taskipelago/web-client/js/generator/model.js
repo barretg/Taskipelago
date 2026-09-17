@@ -5,7 +5,7 @@
 // Values are raw widget values, like the Tk variables: counts and percentages
 // may be strings until export converts them. Each item keeps a `ui` object with
 // the ItemRow's saved values and disabled flags; it is never exported.
-import { RESERVED_WORDS } from '../shared/prereq_parser.js';
+import { RESERVED_WORDS, validateRefName } from '../shared/prereq_parser.js';
 import { isFillerExact, randomFiller as defaultRandomFiller } from '../shared/filler.js';
 import { pyInt, pyStrip } from '../shared/pyish.js';
 
@@ -19,12 +19,6 @@ export const REGION_COLOR_PALETTE = [
 export const REWARD_TYPE_VALUES = ['junk', 'useful', 'progression', 'trap'];
 export const DEFAULT_REWARD_TYPE = 'useful';
 export const TASK_REWARD_PREVIEW_LABELS = ['No Previews', 'Scout Previews', 'Hint Previews'];
-
-// Region name rule shared by add, rename and export. Python's re `$` also
-// matches before a trailing newline, and `\d` is any Unicode digit.
-export function isValidRegionName(name) {
-  return /^[a-zA-Z_][a-zA-Z_-]*\n?$/.test(name) && !/\p{Nd}/u.test(name) && !name.endsWith('-');
-}
 
 export const isReservedWord = name => RESERVED_WORDS.has(name.toLowerCase());
 
@@ -227,8 +221,8 @@ export function onConsumableToggle(it) {
 export function addProgGroup(model, rawName) {
   const name = pyStrip(rawName);
   if (!name) return ['Error', 'Group name cannot be empty.'];
-  if (/\p{Nd}/u.test(name)) return ['Error', `Group name '${name}' must not contain digits.`];
-  if (isReservedWord(name)) return ['Error', `Group name '${name}' is a reserved word.`];
+  const why = validateRefName(name);
+  if (why) return ['Error', `Group name '${name}' ${why}.`];
   if (model.progGroups.includes(name)) return ['Error', `Progressive group '${name}' already exists.`];
   model.progGroups.push(name);
   return null;
@@ -251,12 +245,8 @@ export function syncItemGroups(model) {
 export function addRegion(model, rawName, pct) {
   const name = pyStrip(rawName);
   if (!name) return ['Error', 'Region name cannot be empty.'];
-  if (!isValidRegionName(name)) {
-    return ['Error', `Region name '${name}' is invalid.\n`
-      + 'Names must start and end with a letter or underscore, '
-      + 'may contain hyphens in the middle, and must not contain spaces or digits.'];
-  }
-  if (isReservedWord(name)) return ['Error', `Region name '${name}' is a reserved word.`];
+  const why = validateRefName(name);
+  if (why) return ['Error', `Region name '${name}' ${why}.`];
   if (model.regions.some(r => r.name === name)) return ['Error', `Region '${name}' already exists.`];
   const color = REGION_COLOR_PALETTE[model.nextColorIdx % REGION_COLOR_PALETTE.length];
   model.nextColorIdx += 1;
@@ -284,12 +274,8 @@ export function syncTaskRegions(model) {
 export function renameRegion(model, oldName, rawNew) {
   const newName = pyStrip(rawNew);
   if (newName === oldName || !newName) return null;
-  if (!isValidRegionName(newName)) {
-    return ['Error', `Region name '${newName}' is invalid.\n`
-      + 'Names must start and end with a letter or underscore, '
-      + 'may contain hyphens in the middle, and must not contain spaces or digits.'];
-  }
-  if (isReservedWord(newName)) return ['Error', `Region name '${newName}' is a reserved word.`];
+  const why = validateRefName(newName);
+  if (why) return ['Error', `Region name '${newName}' ${why}.`];
   if (model.regions.some(r => r.name === newName)) return ['Error', `Region '${newName}' already exists.`];
   const region = model.regions.find(r => r.name === oldName);
   if (!region) return null;

@@ -133,5 +133,5 @@ export function buildRegionAddRow(ctx) {
     h('label', { className: 'inline-label' }, 'New region name:', name),
     h('label', { className: 'inline-label' }, 'Default %:', pct),
     h('button', { type: 'button', onclick: add }, 'Add Region'),
-    h('span', { className: 'muted-text hint-with-tip' }, '(letters, underscores, hyphens - no digits) ', tipMarker(TIPS.rg_hint)));
+    h('span', { className: 'muted-text hint-with-tip' }, '(no digits, spaces, quotes, parentheses or commas) ', tipMarker(TIPS.rg_hint)));
 }

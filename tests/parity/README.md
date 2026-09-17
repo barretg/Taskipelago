@@ -41,3 +41,14 @@ means the port is wrong, not the golden file (the legacy client is the reference
 `legacy_text.py` extracts the tutorial steps and every `build_ui` tooltip from the legacy client
 into `web-client/js/generator/legacy_text.js`. `tests/python/test_legacy_text.py` fails when it is
 stale. Web-only text (the hosted-vs-launcher tutorial step) lives in `generator/tutorial.js`.
+
+## Intentional v1.1 changes (plan rule 3)
+
+The harnesses still run the v1.0.2 code, then apply one named step per feature:
+- F8 (`generator_parity.py` `apply_v11_changes`): region and group names follow `validateRefName`
+  at export. Names legacy rejected but F8 accepts are exported under letter-only aliases and
+  mapped back. The prereq golden needs no override (it regenerates from `prereq_parser.py`).
+- F8 (`legacy_text.py` `V11_TIP_CHANGES`): region and group hint tooltips describe the new rule.
+- F9 (`apply_v11_bingo_export`, `apply_v11_bingo_counts`): the free space is filler instead of
+  `Bingo r,c Unlock`, and the rewards label reports unused rewards. `v102_yaml_from:*` loads keep
+  a v1.0.2 bingo export covered.

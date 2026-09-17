@@ -21,13 +21,14 @@ class PrereqGoldenTest(unittest.TestCase):
         self.assertEqual(mismatches, [],
                          "golden is stale (golden, python): run python tests/parity/prereq_parity.py")
 
-    def test_f8_cases_record_current_behavior(self):
+    def test_f8_suffix_on_names_with_non_letters(self):
         golden = json.loads(prereq_parity.GOLDEN.read_text(encoding="utf-8"))
         f8 = {c["text"]: c["result"] for c in golden["cases"] if c.get("f8")}
-        # Until Phase A (F8) these names cannot carry a -N / *N suffix.
-        self.assertEqual(f8["weapons+*3"], {"error": "Taskipelago: unknown name 'weapons+*3' in task prereq on task 5."})
-        self.assertEqual(f8["weapons+-2"], {"error": "Taskipelago: unknown name 'weapons+-2' in task prereq on task 5."})
-        self.assertEqual(f8["weap-*2"], {"error": "Taskipelago: unknown name 'weap-*2' in task prereq on task 5."})
+        self.assertEqual(f8["weapons+*3"], {"ast": ["group_count", "weapons+", 3]})
+        self.assertEqual(f8["weapons+-2"], {"ast": ["group_ref", "weapons+", 2]})
+        self.assertEqual(f8["weap-*2"], {"ast": ["group_count", "weap-", 2]})
+        self.assertEqual(f8["side-quests!*2"], {"ast": ["group_count", "side-quests!", 2]})
+        self.assertEqual(f8["x--3"], {"ast": ["region_ref", "x-", 3]})
         self.assertEqual(f8["my-group-3"], {"ast": ["group_ref", "my-group", 3]})
 
 

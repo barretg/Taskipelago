@@ -34,5 +34,5 @@ export function buildGroupAddRow(ctx) {
   return h('div', { className: 'add-row' },
     h('label', { className: 'inline-label' }, 'New group name:', name),
     h('button', { type: 'button', onclick: add }, 'Add Group'),
-    h('span', { className: 'muted-text hint-with-tip' }, '(letters, underscores, hyphens - no digits) ', tipMarker(TIPS.pg_hint)));
+    h('span', { className: 'muted-text hint-with-tip' }, '(no digits, spaces, quotes, parentheses or commas) ', tipMarker(TIPS.pg_hint)));
 }

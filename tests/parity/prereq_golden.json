@@ -1007,7 +1007,11 @@
    "text": "weapons+*3",
    "f8": true,
    "result": {
-    "error": "Taskipelago: unknown name 'weapons+*3' in task prereq on task 5."
+    "ast": [
+     "group_count",
+     "weapons+",
+     3
+    ]
    }
   },
   {
@@ -1033,7 +1037,11 @@
    "text": "weapons+-2",
    "f8": true,
    "result": {
-    "error": "Taskipelago: unknown name 'weapons+-2' in task prereq on task 5."
+    "ast": [
+     "group_ref",
+     "weapons+",
+     2
+    ]
    }
   },
   {
@@ -1059,7 +1067,129 @@
    "text": "weap-*2",
    "f8": true,
    "result": {
-    "error": "Taskipelago: unknown name 'weap-*2' in task prereq on task 5."
+    "ast": [
+     "group_count",
+     "weap-",
+     2
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "side-quests!"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "side-quests!*2",
+   "f8": true,
+   "result": {
+    "ast": [
+     "group_count",
+     "side-quests!",
+     2
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "x-"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "x--3",
+   "f8": true,
+   "result": {
+    "ast": [
+     "region_ref",
+     "x-",
+     3
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons+-2 && weap-*1",
+   "f8": true,
+   "result": {
+    "ast": [
+     "and",
+     [
+      [
+       "group_ref",
+       "weapons+",
+       2
+      ],
+      [
+       "group_count",
+       "weap-",
+       1
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "a-1-2",
+   "f8": true,
+   "result": {
+    "error": "Taskipelago: unknown name 'a-1-2' in task prereq on task 5."
    }
   },
   {
@@ -1084,7 +1214,11 @@
    "kind": "prereq",
    "text": "café-2",
    "result": {
-    "error": "Taskipelago: unknown name 'café-2' in task prereq on task 5."
+    "ast": [
+     "group_ref",
+     "café",
+     2
+    ]
    }
   },
   {

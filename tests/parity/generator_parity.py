@@ -70,6 +70,11 @@ EXPORT_CASES = [
     ("filler_names_may_repeat", model(items=[filler(), filler()])),
     ("bad_region_names", model(regions=[region("ok"), region("bad1"), region("-x"), region("a-"),
                                         region("has space"), region("a\n")])),
+    # F8: names legacy rejected (or never checked) that the unified rule accepts, and bad group names.
+    ("f8_names_accepted", model(progGroups=["weapons+", "side-quests!"], regions=[region("chores-"), region("caf\u00e9")],
+                                tasks=[task("A", itemPrereq="weapons+*1"), task("B", prereq="chores--50")],
+                                items=[item("X", progGroup="weapons+"), item("Y")])),
+    ("f8_bad_group_names", model(progGroups=["ok", "two words", "x(y", "a||b"])),
     ("reserved_region", model(regions=[region("Prev")])),
     ("reserved_group", model(progGroups=["keys", "sequential"])),
     ("unbalanced_declined", model(items=[item("X")]), False),
@@ -179,6 +184,109 @@ BINGO_LOAD_DOCS = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Intentional v1.1 changes applied to the legacy results (plan rule 3).
+# ---------------------------------------------------------------------------
+
+LEGACY_PRE_REGION_ERRORS = {"Error", "Duplicate Task Names", "Duplicate Item Names"}
+
+
+def f8_name_reason(name: str):
+    """Mirror of validateRefName (web-client/js/shared/prereq_parser.js)."""
+    import re
+    if not name:
+        return "must not be empty"
+    if re.search(r"\d", name):
+        return "must not contain digits"
+    if any(c.isspace() for c in name):
+        return "must not contain spaces"
+    if not (name[0].isalpha() or name[0] == "_"):
+        return "must start with a letter or underscore"
+    if any(c in name for c in '"(),'):
+        return "must not contain quotes, parentheses or commas"
+    if "&&" in name or "||" in name:
+        return "must not contain && or ||"
+    if name.lower() in ("prev", "sequential"):
+        return "is a reserved word"
+    return None
+
+
+def lg_region_rejected(name: str) -> bool:
+    import re
+    return not re.match(r'^[a-zA-Z_][a-zA-Z_-]*$', name) or bool(re.search(r'\d', name)) or name.endswith('-')
+
+
+def _swap(text: str, mapping: dict) -> str:
+    for old, new in mapping.items():
+        text = text.replace(json.dumps(old)[1:-1], new if new.isascii() else json.dumps(new)[1:-1])
+    return text
+
+
+def apply_v11_changes(m: dict, result: dict) -> dict:
+    # F8: unified region / progressive group name rule at export. It replaces the legacy
+    # region regex check and adds a group check; reserved words keep their legacy message.
+    errors = [msg for msg in result["messages"] if msg[0] == "error"]
+    if not (errors and errors[0][1] in LEGACY_PRE_REGION_ERRORS):
+        def bad(names):
+            return [f"{n} ({f8_name_reason(n)})" for n in names
+                    if n.lower() not in ("prev", "sequential") and f8_name_reason(n)]
+        regions = [r["name"] for r in m["regions"]]
+        if bad(regions):
+            return {"data": None, "messages": [["error", "Invalid Region Names",
+                    "The following region names are invalid and cannot be exported:\n\n" + "\n".join(bad(regions))]]}
+        if errors and errors[0][1] == "Invalid Region Names" and "reserved" not in errors[0][2]:
+            # Legacy stopped at a name F8 accepts: export with letter-only aliases, then map back.
+            aliases = {r: f"fEightAlias{chr(65 + i)}" for i, r in enumerate(sorted(
+                {r for r in regions if lg_region_rejected(r)}, key=len, reverse=True))}
+            result = json.loads(_swap(json.dumps(lg.legacy_export(json.loads(_swap(json.dumps(m), aliases)), True)),
+                                      {v: k for k, v in aliases.items()}))
+            errors = [msg for msg in result["messages"] if msg[0] == "error"]
+        reserved_region = errors and errors[0][1] == "Invalid Region Names" and "reserved" in errors[0][2]
+        if bad(m["progGroups"]) and not reserved_region:
+            return {"data": None, "messages": [["error", "Invalid Progressive Group Names",
+                    "The following progressive group names are invalid and cannot be exported:\n\n"
+                    + "\n".join(bad(m["progGroups"]))]]}
+    return result
+
+
+def apply_v11_bingo_export(m: dict, result: dict) -> dict:
+    # F9: the free space defaults to random filler (junk, filler) instead of a dead
+    # "Bingo r,c Unlock" progression item. A user reward there is unchanged.
+    data = result["data"]
+    if data is None:
+        return result
+    block = data["Taskipelago"]
+    names, types, fillers = [], [], []
+    for name, typ, fil, count in zip(block["items"], block["item_types"], block["item_fillers"], block["item_count"]):
+        names += [name] * int(count)
+        types += [typ] * int(count)
+        fillers += [fil] * int(count)
+    middle = block["bingo_dimension_x"] * block["bingo_dimension_y"] // 2
+    if names[middle].startswith("Bingo ") and types[middle] == "progression":
+        names[middle], types[middle], fillers[middle] = lg.load_client().FILLER_ITEMS[0], "junk", True
+    order, counts = [], {}
+    for key in zip(names, types, fillers):
+        if key not in counts:
+            order.append(key)
+        counts[key] = counts.get(key, 0) + 1
+    block["items"] = [k[0] for k in order]
+    block["item_types"] = [k[1] for k in order]
+    block["item_fillers"] = [k[2] for k in order]
+    block["item_count"] = [str(counts[k]) for k in order]
+    block["item_progressive_group"] = [""] * len(order)
+    return result
+
+
+def apply_v11_bingo_counts(m: dict, result: dict) -> dict:
+    # F9: the rewards label reports rewards beyond the available slots.
+    import re
+    n = int(re.match(r"Reward slots available: (-?\d+)", result["rewards"]).group(1))
+    have = len([line for line in str(m["rewards"]).splitlines() if line.strip()])
+    if have > n:
+        result["rewards"] += f", {have - n} unused"
+    return result
+
+
 def load_doc(path: Path):
     try:
         return {"doc": yaml.safe_load(path.read_text(encoding="utf-8"))}
@@ -198,24 +306,28 @@ def build_golden() -> dict:
         name, m = case[0], case[1]
         confirm = case[2] if len(case) > 2 else True
         exports.append({"name": name, "confirm": confirm, "model": m,
-                        "result": lg.legacy_export(copy.deepcopy(m), confirm)})
+                        "result": apply_v11_changes(m, lg.legacy_export(copy.deepcopy(m), confirm))})
     for entry in imports:
         m = entry["result"].get("model")
         if m:
             exports.append({"name": f"reexport:{entry['file']}", "confirm": True, "model": m,
-                            "result": lg.legacy_export(copy.deepcopy(m), True)})
+                            "result": apply_v11_changes(m, lg.legacy_export(copy.deepcopy(m), True))})
     return {"placeholder": F, "imports": imports, "exports": exports, "bingo": build_bingo()}
 
 
 def build_bingo() -> dict:
-    exports = [{"name": name, "model": m, "result": lg.legacy_bingo_export(copy.deepcopy(m))}
+    exports = [{"name": name, "model": m, "result": apply_v11_bingo_export(m, lg.legacy_bingo_export(copy.deepcopy(m)))}
                for name, m in BINGO_EXPORT_CASES]
     settings = [{"name": name, "model": m, "result": lg.legacy_bingo_settings(copy.deepcopy(m))}
                 for name, m in BINGO_EXPORT_CASES[:5]]
-    counts = [{"model": m, "result": lg.legacy_bingo_counts(copy.deepcopy(m))} for m in BINGO_COUNT_CASES]
+    counts = [{"model": m, "result": apply_v11_bingo_counts(m, lg.legacy_bingo_counts(copy.deepcopy(m)))}
+              for m in BINGO_COUNT_CASES]
     docs = list(BINGO_LOAD_DOCS)
     docs += [(f"settings_from:{e['name']}", e["result"]) for e in settings]
     docs += [(f"yaml_from:{e['name']}", e["result"]["data"]) for e in exports if e["result"]["data"]]
+    # F9: a v1.0.2 export (free space is a "Bingo r,c Unlock" item) must still load.
+    docs += [(f"v102_yaml_from:{name}", lg.legacy_bingo_export(copy.deepcopy(m))["data"])
+             for name, m in BINGO_EXPORT_CASES if name in ("bingo_4x2", "bingo_1x1")]
     loads = [{"name": name, "doc": doc, "result": lg.legacy_bingo_load(copy.deepcopy(doc))} for name, doc in docs]
     return {"exports": exports, "settings": settings, "counts": counts, "loads": loads}
 

@@ -32,6 +32,37 @@ const isSpace = c => PY_SPACE.has(c);
 const isDigit = c => c >= '0' && c <= '9';
 const isAlpha = c => /^\p{L}$/u.test(c);
 
+// Port of prereq_parser.py NAME_DASH_RE / NAME_STAR_RE / split_name_suffix (v1.1 F8).
+// Names never contain digits, so the trailing -N / *N split is unambiguous.
+const NAME_DASH_RE = /^(\P{Nd}+)-(\d+)$/u;
+const NAME_STAR_RE = /^(\P{Nd}+)\*(\d+)$/u;
+
+/** Returns [base, n, mode]; mode is 'dash', 'star' or 'none'. */
+export function splitNameSuffix(tok) {
+  let m = NAME_DASH_RE.exec(tok);
+  if (m) return [m[1], Number(m[2]), 'dash'];
+  m = NAME_STAR_RE.exec(tok);
+  if (m) return [m[1], Number(m[2]), 'star'];
+  return [tok, null, 'none'];
+}
+
+/**
+ * Unified region / progressive group name rule (v1.1 F8). Returns null when
+ * valid, else the reason as a predicate phrase ("must not contain digits").
+ * Rejects exactly what the tokenizer cannot carry inside one name token.
+ */
+export function validateRefName(name) {
+  const chars = Array.from(name);
+  if (!chars.length) return 'must not be empty';
+  if (/\p{Nd}/u.test(name)) return 'must not contain digits';
+  if (chars.some(isSpace)) return 'must not contain spaces';
+  if (!(isAlpha(chars[0]) || chars[0] === '_')) return 'must start with a letter or underscore';
+  if (/["(),]/.test(name)) return 'must not contain quotes, parentheses or commas';
+  if (name.includes('&&') || name.includes('||')) return 'must not contain && or ||';
+  if (RESERVED_WORDS.has(name.toLowerCase())) return 'is a reserved word';
+  return null;
+}
+
 function fail(message) {
   throw new Error(message);
 }
@@ -201,16 +232,7 @@ export function parsePrereq(text, nTasks, taskIndex, label,
         }
         return ['seq_flag'];
       }
-      const mDash = /^(.+[a-zA-Z_])-(\d+)$/u.exec(tok);
-      const mStar = /^(.+[a-zA-Z_])\*(\d+)$/u.exec(tok);
-      let base = tok;
-      let suffix = null;
-      let mode = 'none';
-      if (mDash) {
-        [base, suffix, mode] = [mDash[1], Number(mDash[2]), 'dash'];
-      } else if (mStar) {
-        [base, suffix, mode] = [mStar[1], Number(mStar[2]), 'star'];
-      }
+      const [base, suffix, mode] = splitNameSuffix(tok);
       if (groups !== null && groups.has(base)) {
         return mode === 'star' ? ['group_count', base, suffix] : ['group_ref', base, suffix];
       }
