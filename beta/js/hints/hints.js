@@ -104,12 +104,14 @@ export function hintLocationName(hint) {
   return (game && dpLocationName(hint.location, game)) || `#${hint.location}`;
 }
 
-/** True while a name still waits for its game's DataPackage. */
-function waitingForDataPackage(hint) {
-  return [hint.receiving_player, hint.finding_player].some(slot => {
+/** True while a shown name is still an #id waiting for its game's DataPackage. */
+function waitingForDataPackage(row) {
+  const pending = (text, id, slot) => {
     const game = ap.gameOfSlot(slot);
-    return game && !hasDataPackage(game);
-  });
+    return text === `#${id}` && !!game && !hasDataPackage(game);
+  };
+  return pending(row.item, row.hint.item, row.hint.receiving_player)
+    || pending(row.location, row.hint.location, row.hint.finding_player);
 }
 
 // ---------------------------------------------------------------------------
@@ -195,16 +197,20 @@ export function renderHints() {
       },
     }, label + (active ? (sort.desc ? ' v' : ' ^') : '')));
   }));
-  const rows = sortRows(rowsWithNames()).map(row => h('tr', { className: row.hint.found ? 'hint-found' : '' },
+  const named = sortRows(rowsWithNames());
+  const rows = named.map(row => h('tr', { className: row.hint.found ? 'hint-found' : '' },
     h('td', { className: playerClass(row.hint.receiving_player) }, row.receiving),
     h('td', { className: itemClass(row.hint.item_flags) }, row.item),
     h('td', { className: playerClass(row.hint.finding_player) }, row.finding),
     h('td', { className: 'hint-location' }, row.location),
     h('td', {}, row.entrance),
     h('td', {}, statusCell(row))));
-  const note = hints.some(waitingForDataPackage)
-    ? h('div', { className: 'muted-text hints-note' }, 'Loading item and location names...')
-    : null;
-  root.replaceChildren(h('div', { className: 'hints-scroll' },
-    h('table', { className: 'hints-table' }, h('thead', {}, header), h('tbody', {}, rows))), note);
+  const table = h('div', { className: 'hints-scroll' },
+    h('table', { className: 'hints-table' }, h('thead', {}, header), h('tbody', {}, rows)));
+  // replaceChildren would render a null argument as the text "null".
+  if (named.some(waitingForDataPackage)) {
+    root.replaceChildren(table, h('div', { className: 'muted-text hints-note' }, 'Loading item and location names...'));
+  } else {
+    root.replaceChildren(table);
+  }
 }
