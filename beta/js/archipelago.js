@@ -6,6 +6,9 @@
  */
 import { hasFeature } from './shared/config.js';
 
+const INSECURE_HELP = 'allow insecure content for this site in your browser settings, '
+  + 'or use the Taskipelago Client from the Archipelago launcher.';
+
 export const ClientStatus = { UNKNOWN: 0, CONNECTED: 5, READY: 10, PLAYING: 20, GOAL: 30 };
 
 export class ArchipelagoClient {
@@ -44,8 +47,10 @@ export class ArchipelagoClient {
 
   /**
    * Connect to an Archipelago server.
-   * UNIFY 1.3: an explicit scheme is used as-is; ws:// is only attempted when
-   * the page may open insecure sockets (local webhost / plain http).
+   * UNIFY 1.3: an explicit scheme is used as-is. Without one, pages that can open
+   * insecure sockets (local webhost / plain http) try ws:// first; secure pages
+   * try wss:// first and then ws://, which works when the browser allows mixed
+   * content. A blocked or failed ws:// attempt explains how to allow it.
    */
   connect(server, slotName, password) {
     this.disconnect();
@@ -64,10 +69,14 @@ export class ArchipelagoClient {
     const candidates = [];
 
     this._secureOnly = !hasFeature('insecureWs');
+    this._triedInsecure = false;
+    this._insecureBlocked = false;
     if (raw.includes('://')) {
       candidates.push(raw);
     } else if (this._secureOnly) {
       candidates.push(`wss://${raw}`);
+      // archipelago.gg always serves wss; others may only speak ws (mixed content).
+      if (!raw.toLowerCase().includes('archipelago.gg')) candidates.push(`ws://${raw}`);
     } else {
       const isAP = raw.toLowerCase().includes('archipelago.gg');
       if (isAP) candidates.push(`wss://${raw}`);
@@ -80,18 +89,26 @@ export class ArchipelagoClient {
 
   _tryConnect(candidates, idx) {
     if (idx >= candidates.length) {
-      this.onDisconnected?.(this._secureOnly
-        ? 'This server may not support secure connections. Use the Taskipelago Client ' +
-          'from the Archipelago launcher to connect to ws:// servers.'
-        : 'Could not connect to server.');
+      let reason = 'Could not connect to server.';
+      if (this._insecureBlocked) {
+        reason = `Your browser blocked the insecure (ws://) connection. To connect, ${INSECURE_HELP}`;
+      } else if (this._triedInsecure) {
+        reason = 'Could not connect to server. If it only supports insecure (ws://) connections, '
+          + `your browser may be blocking them: ${INSECURE_HELP}`;
+      }
+      this.onDisconnected?.(reason);
       return;
     }
 
     const url = candidates[idx];
+    const insecure = this._secureOnly && url.toLowerCase().startsWith('ws://');
+    if (insecure) this._triedInsecure = true;
     let ws;
     try {
       ws = new WebSocket(url);
     } catch (e) {
+      // Browsers that refuse mixed content throw SecurityError from the constructor.
+      if (insecure && e && e.name === 'SecurityError') this._insecureBlocked = true;
       this._tryConnect(candidates, idx + 1);
       return;
     }

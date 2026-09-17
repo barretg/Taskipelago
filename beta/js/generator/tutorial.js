@@ -12,9 +12,10 @@ const HOSTED_VS_LAUNCHER = [
   + 'does not lose it. Drafts are not shared between the hosted page and the launcher '
   + 'client, or between devices. Use Export YAML and Import YAML to move a design between them.\n\n'
   + 'Export YAML downloads the file through your browser. Import YAML opens a file picker.\n\n'
-  + 'Playing: the hosted page can only connect to secure (wss://) servers such as '
-  + 'archipelago.gg. For a local or LAN server (ws://), use the client opened from the '
-  + 'Archipelago Launcher.',
+  + 'Playing: the hosted page connects to secure (wss://) servers such as archipelago.gg. '
+  + 'Insecure (ws://) servers, such as most local or LAN servers, only work there if you allow '
+  + 'insecure content for the site in your browser settings. Otherwise use the client opened '
+  + 'from the Archipelago Launcher.',
 ];
 
 // v1.1 steps, each inserted after the legacy step with the given title.
