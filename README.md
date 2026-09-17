@@ -40,7 +40,7 @@
 
 * They are the same app. The launcher serves it locally and opens it in an app window, preferring a Chromium-based browser (Chrome, Edge, Chromium) and falling back to your default browser.
 
-* The hosted web client can only connect to secure (`wss://`) servers such as archipelago.gg. For a local or LAN server (`ws://`), use the client from the launcher.
+* The hosted web client connects to secure (`wss://`) servers such as archipelago.gg. Insecure (`ws://`) servers, such as most local or LAN servers, only work there if you allow insecure content for the site in your browser settings; otherwise use the client from the launcher.
 
 * Per-seed progress (notification history, purchases, manual consumable use) is stored on the Archipelago server, so it follows you between the two clients and across devices. Generator drafts and UI preferences stay on the device that made them.
 

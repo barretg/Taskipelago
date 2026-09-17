@@ -68,8 +68,14 @@ export class FakeWS {
   static instances = [];
   static onSent = null;
   static failUrls = new Set();
+  static throwUrls = new Set(); // constructor throws SecurityError (browser blocked mixed content)
   static roomInfo = { cmd: 'RoomInfo', seed_name: 'S' };
   constructor(url) {
+    if (FakeWS.throwUrls.has(url)) {
+      const err = new Error('The operation is insecure.');
+      err.name = 'SecurityError';
+      throw err;
+    }
     this.url = url;
     this.readyState = 0;
     FakeWS.instances.push(this);
