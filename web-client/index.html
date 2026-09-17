@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Taskipelago Web Client</title>
-  <link rel="stylesheet" href="style.css?v=3">
+  <title>Taskipelago</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='2' width='28' height='28' rx='6' fill='%23252526' stroke='%235c8de0' stroke-width='3'/%3E%3Cpath d='M9 16.5l5 5 9-11' fill='none' stroke='%238de05c' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
   <div id="app">
@@ -12,6 +13,9 @@
     <nav id="main-tabs">
       <button class="tab-btn active" data-tab="play">Connect and Play</button>
       <button class="tab-btn" data-tab="console">Text Console</button>
+      <button class="tab-btn" data-tab="hints">Hints</button>
+      <button class="tab-btn" data-tab="generator">YAML Generator</button>
+      <button class="tab-btn" data-tab="bingo-gen">Taskipelabingo</button>
     </nav>
 
     <!-- ===== Connect and Play ===== -->
@@ -60,6 +64,7 @@
 
           <fieldset class="panel tasks-panel">
             <legend>Tasks</legend>
+            <div id="deathlink-cards" class="hidden deathlink-cards"></div>
             <div id="region-progress-section" class="hidden region-progress-section">
               <div class="region-progress-header">
                 <button id="region-progress-toggle" class="region-toggle-btn">&#9660; Regions</button>
@@ -83,11 +88,17 @@
           </nav>
           <div id="subtab-notifications" class="subtab-pane active">
             <div class="subtab-toolbar">
+              <label class="check-label" title="Play a short beep when a DeathLink task is triggered.">
+                <input type="checkbox" id="dl-sound-cb" checked> Sound on DeathLink
+              </label>
               <button id="clear-notifs-btn">Clear</button>
             </div>
             <div id="notif-list" class="scroll-area"></div>
           </div>
           <div id="subtab-items" class="subtab-pane">
+            <div class="subtab-toolbar items-toolbar">
+              <button id="items-filter-btn" aria-haspopup="dialog" aria-expanded="false">Filter</button>
+            </div>
             <div id="items-list" class="scroll-area"></div>
           </div>
           <div id="subtab-consumables" class="subtab-pane">
@@ -112,6 +123,21 @@
       </div>
     </section>
 
+    <!-- ===== Hints (built by js/hints/hints.js) ===== -->
+    <section id="tab-hints" class="tab-pane">
+      <div id="hints-root" class="hints-root"></div>
+    </section>
+
+    <!-- ===== YAML Generator (built by js/generator/generator.js) ===== -->
+    <section id="tab-generator" class="tab-pane">
+      <div id="generator-root" class="gen-root"></div>
+    </section>
+
+    <!-- ===== Taskipelabingo generator (built by js/bingo_gen/bingo_gen.js) ===== -->
+    <section id="tab-bingo-gen" class="tab-pane">
+      <div id="bingo-gen-root" class="gen-root"></div>
+    </section>
+
   </div><!-- #app -->
 
   <!-- Modal for purchase / make-change dialogs -->
@@ -123,6 +149,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js?v=3"></script>
+  <script type="module" src="js/app.js?v=5"></script>
 </body>
 </html>
