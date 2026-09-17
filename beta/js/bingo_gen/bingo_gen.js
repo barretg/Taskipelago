@@ -68,6 +68,10 @@ async function exportBingo() {
     await alertDialog('error', ...result.error);
     return;
   }
+  if (result.unusedRewards > 0) {
+    const n = result.unusedRewards;
+    if (!(await confirmDialog('Unused Rewards', `${n} reward${n === 1 ? '' : 's'} will be unused. Export anyway?`))) return;
+  }
   const fileName = `${safeFileName(result.data.name)}.yaml`;
   downloadText(fileName, dumpYaml(result.data));
   await alertDialog('info', 'Success', `Bingo YAML exported as:\n${fileName}`);

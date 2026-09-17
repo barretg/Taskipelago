@@ -5,6 +5,7 @@
 // indexMap[k] lists the new 1-based indices for old index k+1.
 // Digits are ASCII only (Python's str.isdigit also accepts other Unicode digits).
 import { isPySpace } from './pyish.js';
+import { splitNameSuffix } from './prereq_parser.js';
 
 const isDigit = c => c >= '0' && c <= '9';
 const isAlpha = c => /^\p{L}$/u.test(c);
@@ -16,8 +17,12 @@ function findQuote(chars, from) {
 
 const pair = (chars, i) => chars[i] + (chars[i + 1] ?? '');
 
-/** Port of _remap_prereq_indices: several targets become an OR group. */
-export function remapPrereqIndices(text, indexMap) {
+/**
+ * Port of _remap_prereq_indices: several targets become an OR group. With
+ * collapse false (one-to-one maps, F10 reorder) the legacy "(n || n)" cleanup
+ * is skipped so untouched text stays exactly as typed.
+ */
+export function remapPrereqIndices(text, indexMap, collapse = true) {
   if (!text) return text;
   const chars = Array.from(text);
   const n = chars.length;
@@ -67,6 +72,7 @@ export function remapPrereqIndices(text, indexMap) {
 
   // Collapse "(n || n || n)" groups left when several old indices map to one new row.
   let result = out.join('');
+  if (!collapse) return result;
   let prev = null;
   while (prev !== result) {
     prev = result;
@@ -112,3 +118,61 @@ export function remapCostIndices(text, indexMap) {
   }
   return out.join('');
 }
+
+/**
+ * v1.1 B0: rename region / group name tokens (the same token walk as
+ * remapPrereqIndices). Quoted strings and integers are copied verbatim; a name
+ * token whose base (splitNameSuffix) equals oldName keeps its -N / *N suffix.
+ * Returns { text, count } with the number of tokens changed.
+ */
+export function renameNameRefs(text, oldName, newName) {
+  if (!text) return { text, count: 0 };
+  const chars = Array.from(text);
+  const n = chars.length;
+  const out = [];
+  let count = 0;
+  let i = 0;
+  while (i < n) {
+    const c = chars[i];
+    if (c === '"') {
+      const q = findQuote(chars, i + 1);
+      const j = q < 0 ? n : q + 1;
+      out.push(chars.slice(i, j).join(''));
+      i = j;
+      continue;
+    }
+    if (isAlpha(c) || c === '_') {
+      let j = i;
+      while (j < n) {
+        const ch = chars[j];
+        if (isPySpace(ch) || ch === '(' || ch === ')' || ch === ',') break;
+        const p = pair(chars, j);
+        if (p === '&&' || p === '||') break;
+        j++;
+      }
+      const tok = chars.slice(i, j).join('');
+      const [base] = splitNameSuffix(tok);
+      if (base === oldName) {
+        out.push(newName + tok.slice(base.length));
+        count++;
+      } else {
+        out.push(tok);
+      }
+      i = j;
+      continue;
+    }
+    if (isDigit(c)) {
+      let j = i;
+      while (j < n && isDigit(chars[j])) j++;
+      out.push(chars.slice(i, j).join(''));
+      i = j;
+      continue;
+    }
+    out.push(c);
+    i++;
+  }
+  return { text: out.join(''), count };
+}
+
+/** Number of name tokens in text that reference name (with or without a suffix). */
+export const countNameRefs = (text, name) => renameNameRefs(text, name, name).count;

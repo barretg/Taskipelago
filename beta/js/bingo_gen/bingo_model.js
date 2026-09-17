@@ -165,7 +165,8 @@ export function bingoCounts(model) {
   const haveRw = nonEmptyLines(model.rewards).length;
   let rwSuffix;
   if (haveRw === 0) rwSuffix = `all ${nFiller} slots will be filler`;
-  else if (haveRw >= nFiller) rwSuffix = `all ${nFiller} slots covered`;
+  else if (haveRw === nFiller) rwSuffix = `all ${nFiller} slots covered`;
+  else if (haveRw > nFiller) rwSuffix = `all ${nFiller} slots covered, ${haveRw - nFiller} unused`; // v1.1 F9
   else rwSuffix = `${haveRw} replaced, ${nFiller - haveRw} remain filler`;
   return {
     spaces: `Enter one space per line (need ${needed}, have ${have}${suffix})`,
@@ -174,8 +175,11 @@ export function bingoCounts(model) {
 }
 
 /**
- * _export_bingo_yaml. Resolves to { data } or { error: [title, message] }.
+ * _export_bingo_yaml. Resolves to { data, unusedRewards } or { error: [title, message] }.
  * Board sizes below 1 are rejected here; the legacy client crashed on them.
+ * v1.1 F9: the free space defaults to filler like line rewards (legacy gave it a
+ * dead "Bingo r,c Unlock" progression item), and unusedRewards counts user
+ * rewards beyond the available slots so the UI can confirm before exporting.
  */
 export function buildBingoExport(model, rng = defaultRng) {
   const fail = (title, message) => ({ error: [title, message] });
@@ -204,12 +208,13 @@ export function buildBingoExport(model, rng = defaultRng) {
   for (let i = 0; i < nSpaces; i++) {
     const r = Math.floor(i / X);
     const c = i % X;
+    const free = i === middle;
     tasks.push(selected[i]);
-    rewards.push(`Bingo ${r + 1},${c + 1} Unlock`);
-    itemFillers.push(false);
+    rewards.push(free ? rng.filler() : `Bingo ${r + 1},${c + 1} Unlock`);
+    itemFillers.push(free);
     taskPrereqs.push('');
-    rewardPrereqs.push(i === middle ? '' : String(i + 1));
-    rewardTypes.push('progression');
+    rewardPrereqs.push(free ? '' : String(i + 1));
+    rewardTypes.push(free ? 'junk' : 'progression');
   }
 
   const lines = bingoLines(X, Y);
@@ -250,6 +255,7 @@ export function buildBingoExport(model, rng = defaultRng) {
   if (userReward) {
     rewards[middle] = userReward;
     rewardTypes[middle] = 'useful';
+    itemFillers[middle] = false;
   }
   for (let li = 0; li < L; li++) {
     userReward = take();
@@ -267,6 +273,10 @@ export function buildBingoExport(model, rng = defaultRng) {
   }
   const goalExpr = genBingoalExpr(nSpaces, L, bingoal);
   const collapsed = collapseItemsByCount(rewards, rewardTypes, itemFillers);
+  // Board unlock rows are distinct first occurrences, so merges never shift them and
+  // the String(i + 1) item prereqs above stay valid.
+  console.assert(rewards.slice(0, nSpaces).every((rw, i) => i === middle || collapsed.names[i] === rw),
+    'bingo export: board unlock item rows shifted after collapse');
 
   const data = {
     name: playerName,
@@ -297,7 +307,7 @@ export function buildBingoExport(model, rng = defaultRng) {
       bingoal,
     },
   };
-  return { data };
+  return { data, unusedRewards: rewardPool.length - next };
 }
 
 /** _save_bingo_settings document (.bingo file). */

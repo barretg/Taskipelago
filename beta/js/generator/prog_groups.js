@@ -1,22 +1,52 @@
-// Progressive Groups panel (legacy client.py:2210-2235, 2568-2616).
+// Progressive Groups panel (legacy client.py:2210-2235, 2568-2616). v1.1 F4:
+// rows with inline rename (offers to update item-prereq references) and Remove.
 import { h } from '../shared/dom.js';
 import { alertDialog } from '../shared/dialog.js';
 import { tipMarker } from '../shared/tooltip.js';
 import { TIPS } from './legacy_text.js';
-import { addProgGroup, removeProgGroup } from './model.js';
+import { addProgGroup, checkGroupRename, removeProgGroup, renameProgGroup } from './model.js';
+import { commitNameChange, confirmNameRemoval } from './rename_refs.js';
+
+function groupRow(group, ctx) {
+  const name = h('input', {
+    type: 'text', value: group, className: 'region-name', spellcheck: false, 'aria-label': 'Group name',
+  });
+  let committing = false; // blur fires again when the prompt takes focus
+  const commitName = async () => {
+    if (committing) return;
+    committing = true;
+    try {
+      const renamed = await commitNameChange(ctx, {
+        kind: 'group', label: 'Progressive Group', oldName: group, raw: name.value,
+        check: checkGroupRename, apply: renameProgGroup,
+      });
+      if (renamed) ctx.changed({ groups: true, items: true, tasks: true });
+      else name.value = group;
+    } finally {
+      committing = false;
+    }
+  };
+  name.addEventListener('keydown', e => { if (e.key === 'Enter') name.blur(); });
+  name.addEventListener('blur', commitName);
+  return h('div', { className: 'region-row group-row' },
+    name,
+    h('button', {
+      type: 'button', className: 'remove-btn', 'aria-label': `Remove group ${group}`,
+      onclick: async () => {
+        if (!(await confirmNameRemoval(ctx, { kind: 'group', label: 'Progressive Group', name: group }))) return;
+        removeProgGroup(ctx.model, group);
+        ctx.changed({ groups: true, items: true });
+      },
+    }, 'Remove'));
+}
 
 export function renderProgGroups(container, ctx) {
   const { model } = ctx;
   if (!model.progGroups.length) {
-    container.replaceChildren(h('span', { className: 'muted-text' }, 'No groups defined.'));
+    container.replaceChildren(h('div', { className: 'muted-text empty-note' }, 'No groups defined.'));
     return;
   }
-  container.replaceChildren(...model.progGroups.map(g => h('span', { className: 'chip' },
-    h('span', {}, g),
-    h('button', {
-      type: 'button', className: 'chip-x', 'aria-label': `Remove group ${g}`,
-      onclick: () => { removeProgGroup(model, g); ctx.changed({ groups: true, items: true }); },
-    }, 'x'))));
+  container.replaceChildren(...model.progGroups.map(g => groupRow(g, ctx)));
 }
 
 export function buildGroupAddRow(ctx) {
@@ -34,5 +64,5 @@ export function buildGroupAddRow(ctx) {
   return h('div', { className: 'add-row' },
     h('label', { className: 'inline-label' }, 'New group name:', name),
     h('button', { type: 'button', onclick: add }, 'Add Group'),
-    h('span', { className: 'muted-text hint-with-tip' }, '(letters, underscores, hyphens - no digits) ', tipMarker(TIPS.pg_hint)));
+    h('span', { className: 'muted-text hint-with-tip' }, '(no digits, spaces, quotes, parentheses or commas) ', tipMarker(TIPS.pg_hint)));
 }

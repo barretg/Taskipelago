@@ -5,6 +5,7 @@ import { pyStrip } from '../shared/pyish.js';
 import { tipHeader } from '../shared/tooltip.js';
 import { MAX_TASK_DESCRIPTION_LEN, newTask } from './model.js';
 import { TIPS } from './legacy_text.js';
+import { rowNumberCell } from './reorder.js';
 
 /** Code-point length and truncation for the description editor. */
 const cpLen = s => Array.from(s).length;
@@ -41,9 +42,9 @@ function editDescription(task, onDone) {
 
 const cell = (...children) => h('div', { className: 'gt-cell' }, ...children);
 
-function textInput(obj, key, ctx, placeholder = '') {
+function textInput(obj, key, ctx, field) {
   return h('input', {
-    type: 'text', value: obj[key], placeholder, spellcheck: false,
+    type: 'text', value: obj[key], spellcheck: false, dataset: { field },
     oninput: e => { obj[key] = e.target.value; ctx.changed(); },
   });
 }
@@ -73,7 +74,7 @@ export function renderTaskTable(container, ctx) {
   );
 
   model.tasks.forEach((task, i) => {
-    const descBtn = h('button', { type: 'button', className: 'desc-btn' });
+    const descBtn = h('button', { type: 'button', className: 'desc-btn', dataset: { field: `tasks.${i}.desc` } });
     const refreshDesc = () => { descBtn.textContent = pyStrip(task.desc) ? 'Description*' : 'Description'; };
     refreshDesc();
     descBtn.onclick = () => editDescription(task, () => { refreshDesc(); ctx.changed(); });
@@ -84,11 +85,11 @@ export function renderTaskTable(container, ctx) {
     region.value = task.region;
 
     container.appendChild(h('div', { className: 'gt-row gt-task' },
-      cell(h('span', { className: 'row-num' }, String(i + 1))),
-      cell(h('div', { className: 'task-name-cell' }, textInput(task, 'name', ctx), descBtn)),
-      cell(textInput(task, 'prereq', ctx)),
-      cell(textInput(task, 'itemPrereq', ctx)),
-      cell(textInput(task, 'cost', ctx)),
+      cell(rowNumberCell(ctx, 'tasks', i, container)),
+      cell(h('div', { className: 'task-name-cell' }, textInput(task, 'name', ctx, `tasks.${i}.name`), descBtn)),
+      cell(textInput(task, 'prereq', ctx, `tasks.${i}.prereq`)),
+      cell(textInput(task, 'itemPrereq', ctx, `tasks.${i}.itemPrereq`)),
+      cell(textInput(task, 'cost', ctx, `tasks.${i}.cost`)),
       cell(region),
       cell(h('input', {
         type: 'checkbox', checked: !!task.priority, 'aria-label': 'Priority',

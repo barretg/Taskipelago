@@ -3,16 +3,17 @@
 import { h } from '../shared/dom.js';
 import { tipHeader } from '../shared/tooltip.js';
 import { TIPS } from './legacy_text.js';
+import { rowNumberCell } from './reorder.js';
 import {
   REWARD_TYPE_VALUES, newItem, onConsumableToggle, onFillerToggle, setItemProgGroup,
 } from './model.js';
 
 const cell = (...children) => h('div', { className: 'gt-cell' }, ...children);
 
-function itemRow(it, i, ctx) {
+function itemRow(it, i, ctx, container) {
   const { model } = ctx;
   const name = h('input', {
-    type: 'text', spellcheck: false,
+    type: 'text', spellcheck: false, dataset: { field: `items.${i}.name` },
     oninput: e => { it.name = e.target.value; ctx.changed(); },
   });
   const type = h('select', { onchange: e => { it.type = e.target.value; ctx.changed(); } });
@@ -56,7 +57,7 @@ function itemRow(it, i, ctx) {
   sync();
 
   return h('div', { className: 'gt-row gt-item' },
-    cell(h('span', { className: 'row-num' }, String(i + 1))),
+    cell(rowNumberCell(ctx, 'items', i, container)),
     cell(name), cell(type),
     cell(h('label', { className: 'check-label' }, filler, 'Filler')),
     cell(h('label', { className: 'check-label' }, consumable, 'Consumable')),
@@ -83,7 +84,7 @@ export function renderItemTable(container, ctx) {
       cell('')),
     h('div', { className: 'gt-row gt-hint muted-text' },
       cell(''), cell('Multiworld item name (blank = filler)'), cell(''), cell(''), cell(''), cell(''), cell(''), cell('')),
-    ...ctx.model.items.map((it, i) => itemRow(it, i, ctx)),
+    ...ctx.model.items.map((it, i) => itemRow(it, i, ctx, container)),
   );
 }
 

@@ -1,13 +1,13 @@
 // Port of export_yaml (legacy_client/client.py:2947-3292), UNIFY 5.3.
 // Every validation, its order and its message text match the legacy client;
 // tests/parity/export_golden.json holds the reference results.
-import { parsePrereq, parseCostExpr } from '../shared/prereq_parser.js';
+import { parsePrereq, parseCostExpr, validateRefName } from '../shared/prereq_parser.js';
 import { randomFiller as defaultRandomFiller } from '../shared/filler.js';
 import { remapPrereqIndices, remapCostIndices } from '../shared/expr_rewrite.js';
 import { pyInt, pySlice, pyStrip } from '../shared/pyish.js';
 import { dumpYaml } from '../shared/yaml11.js';
 import {
-  MAX_TASK_DESCRIPTION_LEN, isValidRegionName, isReservedWord, taskData, itemData,
+  MAX_TASK_DESCRIPTION_LEN, isReservedWord, taskData, itemData,
 } from './model.js';
 
 /** _resolve_name_refs: "Quoted Name" -> first matching 1-based index. */
@@ -127,17 +127,23 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   const regionNames = model.regions.map(r => r.name);
   // Region fields come from name-keyed dicts in the legacy client: duplicates share the last entry.
   const regionByName = new Map(model.regions.map(r => [r.name, r]));
-  const badRegions = regionNames.filter(r => !isValidRegionName(r));
+  // v1.1 F8: unified name rule; reserved words keep their own message below.
+  const badNames = names => names.filter(n => !isReservedWord(n) && validateRefName(n))
+    .map(n => `${n} (${validateRefName(n)})`);
+  const badRegions = badNames(regionNames);
   if (badRegions.length) {
     return fail('Invalid Region Names',
-      'The following region names are invalid and cannot be exported.\n'
-      + 'Names must start and end with a letter or underscore, may contain hyphens in the middle, '
-      + 'and must not contain digits:\n\n' + badRegions.join('\n'));
+      'The following region names are invalid and cannot be exported:\n\n' + badRegions.join('\n'));
   }
   const reservedRegions = regionNames.filter(isReservedWord);
   if (reservedRegions.length) {
     return fail('Invalid Region Names',
       'The following region names are reserved words and cannot be exported:\n\n' + reservedRegions.join('\n'));
+  }
+  const badGroups = badNames(model.progGroups);
+  if (badGroups.length) {
+    return fail('Invalid Progressive Group Names',
+      'The following progressive group names are invalid and cannot be exported:\n\n' + badGroups.join('\n'));
   }
   const reservedGroups = model.progGroups.filter(isReservedWord);
   if (reservedGroups.length) {

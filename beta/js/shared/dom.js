@@ -25,3 +25,10 @@ export function h(tag, props = {}, ...children) {
   }
   return node;
 }
+
+/** Scroll an element to the middle of its scroll container, then focus it (v1.1 B0). */
+export function scrollIntoViewAndFocus(el) {
+  if (!el) return;
+  el.scrollIntoView?.({ block: 'center' });
+  el.focus({ preventScroll: true });
+}
