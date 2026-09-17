@@ -8,6 +8,8 @@ import {
 import { renderBingo } from './bingo_board.js';
 import { ap } from './state.js';
 import { getUiPref, setUiPref } from '../shared/ui_prefs.js';
+import { h } from '../shared/dom.js';
+import { completeDeathLinkEntry, isDeathLinkLocked, pendingDeathLinks } from './deathlink_queue.js';
 
 // =============================================================
 // Region helpers
@@ -79,9 +81,33 @@ export function renderRegionProgress() {
 }
 
 // =============================================================
+// DeathLink task cards (v1.1 F3), pinned above everything else
+// =============================================================
+export function renderDeathLinkCards() {
+  const box = els.deathLinkCards;
+  if (!box) return;
+  const entries = state.connState === 'connected' ? pendingDeathLinks() : [];
+  box.classList.toggle('hidden', !entries.length);
+  const cards = entries.map(e => h('div', { className: 'task-card dl-task-card', dataset: { id: e.id } },
+    h('div', { className: 'task-top' },
+      h('span', { className: 'task-name' }, `DeathLink: ${e.task}`),
+      h('div', { className: 'task-actions' },
+        h('button', { type: 'button', onclick: () => completeDeathLinkEntry(e.id) }, 'Complete'))),
+    h('div', { className: 'task-description' }, `From ${e.source}${e.cause ? `: ${e.cause}` : ''}`)));
+  if (entries.length && isDeathLinkLocked()) {
+    cards.push(h('div', { className: 'task-hint dl-lock-hint' }, 'Locked until your DeathLink task(s) are done'));
+  }
+  box.replaceChildren(...cards);
+}
+
+// =============================================================
 // Rendering: tasks
 // =============================================================
 export function renderTasks() {
+  renderDeathLinkCards();
+  const dlLocked = isDeathLinkLocked();
+  els.tasksList.classList.toggle('locked-dl', dlLocked);
+  els.bingoSection.classList.toggle('locked-dl', dlLocked);
   const connected = !!(
     state.tasks.length &&
     state.baseRewardId !== null &&
@@ -279,6 +305,7 @@ export function renderTasks() {
       actions.appendChild(cBtn);
     }
 
+    if (dlLocked) for (const btn of actions.querySelectorAll('button')) btn.disabled = true;
     top.appendChild(actions);
     card.appendChild(top);
 

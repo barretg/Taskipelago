@@ -12,8 +12,9 @@ import { commitNameChange, confirmNameRemoval } from './rename_refs.js';
 
 const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
-function pickColor(region, ctx) {
-  const current = region.color || REGION_COLOR_PALETTE[0];
+/** Color picker dialog shared by regions and progressive groups (F6). onPick(color) runs on OK. */
+export function openColorPicker(title, currentColor, onPick) {
+  const current = currentColor || REGION_COLOR_PALETTE[0];
   let selected = current;
   const hex = h('input', { type: 'text', value: current, className: 'hex-input', spellcheck: false });
   const preview = h('div', { className: 'color-preview' });
@@ -39,7 +40,7 @@ function pickColor(region, ctx) {
     onclick: () => { hex.value = color; apply(color); },
   })));
   openDialog({
-    title: `Region Color: ${region.name}`,
+    title,
     body: h('div', { className: 'color-picker' },
       h('div', { className: 'muted-text' }, 'Preset colors:'), swatches,
       h('div', { className: 'muted-text' }, 'Hex code:'),
@@ -47,7 +48,7 @@ function pickColor(region, ctx) {
     buttons: [
       {
         label: 'OK', primary: true,
-        onClick: close => { region.color = selected; ctx.changed({ regions: true }); close(true); },
+        onClick: close => { onPick(selected); close(true); },
       },
       { label: 'Cancel', value: false },
     ],
@@ -87,7 +88,11 @@ function regionRow(region, i, ctx) {
   return h('div', { className: 'region-row' },
     h('button', {
       type: 'button', className: 'color-swatch', style: { background: region.color || '#808080' },
-      'aria-label': `Change color of ${region.name}`, onclick: () => pickColor(region, ctx),
+      'aria-label': `Change color of ${region.name}`,
+      onclick: () => openColorPicker(`Region Color: ${region.name}`, region.color, color => {
+        region.color = color;
+        ctx.changed({ regions: true });
+      }),
     }),
     name,
     pct,

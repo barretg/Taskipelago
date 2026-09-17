@@ -1,6 +1,9 @@
 import { ap, state, els, MAX_NOTIFICATIONS } from './state.js';
 import { isFiller } from '../shared/filler.js';
 import { dpItemName, ownGame } from './datapackage.js';
+import { addDeathLinkEntry, deathLinkId, hasDeathLinkEntry } from './deathlink_queue.js';
+import { alertDeathLink } from './alerts.js';
+import { renderAll } from './render.js';
 
 // Dedupe windows (legacy_client/client.py:6363, 6480)
 const DEATHLINK_DEDUPE_MS = 2000;
@@ -34,7 +37,7 @@ export function renderNotifications() {
     const n = list[i];
 
     const card = document.createElement('div');
-    card.className = 'notif-card';
+    card.className = `notif-card notif-${n.kind}`;
 
     const hdr = document.createElement('div');
     hdr.className = 'notif-header';
@@ -121,6 +124,11 @@ export function handleDeathLinkBounce(tags, data) {
 
   if (isDuplicate(lastDeathLink, JSON.stringify([data.time, data.source, data.cause]), DEATHLINK_DEDUPE_MS)) return;
 
+  // F3: another open client of this slot already queued this DeathLink.
+  const source = data.source || 'Unknown';
+  const id = deathLinkId(data.time, source);
+  if (hasDeathLinkEntry(id)) return;
+
   // Amnesty. Regression note: the counter resets only when a DeathLink actually
   // triggers. The legacy client also reset it on every network update
   // (legacy_client/client.py:4318); that bug is intentionally not ported.
@@ -147,13 +155,15 @@ export function handleDeathLinkBounce(tags, data) {
     task = 'No pool entries configured. Make something up, I guess';
   }
 
-  const source = data.source || 'Unknown';
   const cause  = data.cause  || '';
+  addDeathLinkEntry({ id, task, source, cause, time: Number(data.time) || 0 });
   enqueueNotification({
     kind:  'deathlink',
     title: 'DEATHLINK!',
     body:  `From: ${source}${cause ? '\n' + cause : ''}\n\nTask: ${task}`,
   });
+  renderAll();
+  alertDeathLink();
 }
 
 export function initNotifications() {

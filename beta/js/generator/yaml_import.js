@@ -45,6 +45,22 @@ function attempt(body, fallback, catches = null) {
 }
 
 const VALUE_OR_TYPE = ['ValueError', 'TypeError'];
+
+/**
+ * An AP Toggle value as written by hand or by the generator: bool, number,
+ * "true"/"on"/"yes"/"1", or a weights dict ({true: 50, false: 0}). v1.1 F3.
+ */
+export function toggleOption(v) {
+  if (isDict(v)) {
+    return attempt(() => {
+      const t = pyInt(pyTruthy(pyGet(v, 'true', 0)) ? pyGet(v, 'true', 0) : 0);
+      const f = pyInt(pyTruthy(pyGet(v, 'false', 0)) ? pyGet(v, 'false', 0) : 0);
+      return t > 0 && t >= f;
+    }, false);
+  }
+  if (typeof v === 'string') return ['true', 'on', 'yes', '1'].includes(pyStrip(v).toLowerCase());
+  return pyTruthy(v);
+}
 const str = (v, fallback = '') => (v === null || v === undefined ? fallback : pyStrip(pyStr(v)));
 const at = (list, i, fn, fallback = '') => (i < list.length ? fn(list[i]) : fallback);
 const isTrueText = v => str(v).toLowerCase() === 'true';
@@ -105,6 +121,13 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
 
   // --------- Progressive groups and regions (before rows) ---------
   model.progGroups = pyListOr(block, 'progressive_groups').map(g => pyStrip(pyStr(g))).filter(Boolean);
+  // v1.1 F6: colors parallel to the groups, with the region palette-by-index fallback.
+  const rawGroupColors = pyListOr(block, 'progressive_group_colors');
+  model.progGroupColors = Object.fromEntries(model.progGroups.map((g, i) => {
+    const color = i < rawGroupColors.length ? pyStrip(pyStr(rawGroupColors[i])) : '';
+    return [g, color || REGION_COLOR_PALETTE[i % REGION_COLOR_PALETTE.length]];
+  }));
+  model.deathLinkLockTasks = toggleOption(pyGet(block, 'death_link_lock_tasks', false)); // v1.1 F3
 
   const rawRegions = pyListOr(block, 'regions');
   const rawPcts = pyListOr(block, 'region_default_pcts');

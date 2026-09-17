@@ -6,7 +6,7 @@ import { alertDialog, confirmDialog } from '../shared/dialog.js';
 import { downloadText, pickTextFile, safeFileName } from '../shared/files.js';
 import { PyError } from '../shared/pyish.js';
 import { dumpYaml, loadYaml } from '../shared/yaml11.js';
-import { limitPlayerName } from '../generator/model.js';
+import { DEATHLINK_LOCK_TIP as DL_LOCK_TIP, limitPlayerName } from '../generator/model.js';
 import {
   bingoCounts, bingoSettingsDoc, buildBingoExport, defaultBingoModel, loadBingoDoc, normalizeBingoModel,
 } from './bingo_model.js';
@@ -36,7 +36,7 @@ function changed({ save = true } = {}) {
 const FIELDS = [
   ['playerName', 'value'], ['x', 'value'], ['y', 'value'], ['bingoal', 'value'],
   ['progressionBalancing', 'value'], ['accessibility', 'value'], ['deathLinkEnabled', 'checked'],
-  ['deathLinkAmnesty', 'value'], ['spaces', 'value'], ['rewards', 'value'], ['deathLinkPool', 'value'],
+  ['deathLinkAmnesty', 'value'], ['deathLinkLockTasks', 'checked'], ['spaces', 'value'], ['rewards', 'value'], ['deathLinkPool', 'value'],
 ];
 
 function loadModel(next) {
@@ -141,7 +141,9 @@ function build(root) {
       h('fieldset', { className: 'panel' }, h('legend', {}, 'DeathLink'),
         h('div', { className: 'gen-settings' },
           h('label', { className: 'check-label' }, bind('deathLinkEnabled', h('input', { type: 'checkbox' })), 'Enable DeathLink'),
-          label('Amnesty:', numberInput('deathLinkAmnesty', 0, 999))),
+          label('Amnesty:', numberInput('deathLinkAmnesty', 0, 999)),
+          h('label', { className: 'check-label', title: DL_LOCK_TIP },
+            bind('deathLinkLockTasks', h('input', { type: 'checkbox' })), 'Lock other tasks until DeathLink tasks are done')),
         h('label', { className: 'stack-label' }, 'Pool (one per line):',
           bind('deathLinkPool', h('textarea', { className: 'bingo-dl-text', rows: 3, spellcheck: false }))))),
     h('div', { className: 'gen-bottom' },

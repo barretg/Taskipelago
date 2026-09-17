@@ -6,6 +6,8 @@ import {
 } from './play/connection.js';
 import { initTasks } from './play/tasks.js';
 import { initNotifications } from './play/notifications.js';
+import { initItems } from './play/items.js';
+import { initAlerts } from './play/alerts.js';
 import { initConsole } from './console/console.js';
 import { renderAll } from './play/render.js';
 import { initTooltips } from './shared/tooltip.js';
@@ -38,6 +40,8 @@ async function boot() {
   initConnection();
   initTasks();
   initNotifications();
+  initItems();
+  initAlerts();
   initConsole({
     connect: connectTo,
     disconnect: startDisconnect,

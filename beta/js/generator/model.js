@@ -17,6 +17,9 @@ export const REGION_COLOR_PALETTE = [
   '#5ce09a', '#5cd4e0', '#5c8de0', '#7b5ce0',
   '#c05ce0', '#e05cb4', '#a0a0a0', '#5ce0c8',
 ];
+export const DEATHLINK_LOCK_TIP = 'When on, a pending DeathLink task card locks every other task '
+  + '(completing, purchasing and consumable adjustments) until all DeathLink cards are completed.\n\n'
+  + 'DeathLink task cards always appear when DeathLink is enabled; this only adds the lock.';
 export const REWARD_TYPE_VALUES = ['junk', 'useful', 'progression', 'trap'];
 export const DEFAULT_REWARD_TYPE = 'useful';
 export const TASK_REWARD_PREVIEW_LABELS = ['No Previews', 'Scout Previews', 'Hint Previews'];
@@ -64,6 +67,9 @@ export function defaultModel() {
     tasks: [newTask()],
     items: [],
     deathLink: [],
+    // v1.1 (appended so older drafts and parity shapes keep their key order)
+    progGroupColors: {}, // F6: group name -> hex color ('' = no color)
+    deathLinkLockTasks: false, // F3
   };
 }
 
@@ -94,6 +100,9 @@ export function normalizeModel(raw) {
   model.regions = (Array.isArray(model.regions) ? model.regions : [])
     .map(r => ({ name: '', pct: 100, color: '', prereq: '', ...r }));
   model.progGroups = Array.isArray(model.progGroups) ? model.progGroups : [];
+  const colors = model.progGroupColors;
+  model.progGroupColors = colors && typeof colors === 'object' && !Array.isArray(colors) ? colors : {};
+  model.deathLinkLockTasks = !!model.deathLinkLockTasks;
   return model;
 }
 
@@ -226,12 +235,15 @@ export function addProgGroup(model, rawName) {
   if (why) return ['Error', `Group name '${name}' ${why}.`];
   if (model.progGroups.includes(name)) return ['Error', `Progressive group '${name}' already exists.`];
   model.progGroups.push(name);
+  // F6: auto-assign from the region palette.
+  model.progGroupColors[name] = REGION_COLOR_PALETTE[(model.progGroups.length - 1) % REGION_COLOR_PALETTE.length];
   return null;
 }
 
 export function removeProgGroup(model, name) {
   const idx = model.progGroups.indexOf(name);
   if (idx >= 0) model.progGroups.splice(idx, 1);
+  if (model.progGroupColors) delete model.progGroupColors[name];
   for (const it of model.items) if (it.progGroup === name) setItemProgGroup(it, '');
   syncItemGroups(model);
 }
@@ -317,6 +329,10 @@ export function renameProgGroup(model, oldName, rawNew) {
   const idx = model.progGroups.indexOf(oldName);
   if (idx < 0) return null;
   model.progGroups[idx] = newName;
+  if (model.progGroupColors && Object.hasOwn(model.progGroupColors, oldName)) {
+    model.progGroupColors[newName] = model.progGroupColors[oldName];
+    delete model.progGroupColors[oldName];
+  }
   for (const it of model.items) {
     if (it.progGroup === oldName) it.progGroup = newName;
     if (it.ui?.savedGroup === oldName) it.ui.savedGroup = newName;
