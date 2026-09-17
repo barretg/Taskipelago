@@ -101,7 +101,11 @@
        "text": "Plank",
        "weight": "2"
       }
-     ]
+     ],
+     "progGroupColors": {
+      "tickets": "#e05c5c"
+     },
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -182,7 +186,9 @@
        "count": 1
       }
      ],
-     "deathLink": []
+     "deathLink": [],
+     "progGroupColors": {},
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -268,7 +274,9 @@
        "text": "Pushups",
        "weight": "1"
       }
-     ]
+     ],
+     "progGroupColors": {},
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -358,7 +366,9 @@
        "text": "Plank",
        "weight": "1"
       }
-     ]
+     ],
+     "progGroupColors": {},
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -439,7 +449,9 @@
        "count": 1
       }
      ],
-     "deathLink": []
+     "deathLink": [],
+     "progGroupColors": {},
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -520,7 +532,9 @@
        "count": 1
       }
      ],
-     "deathLink": []
+     "deathLink": [],
+     "progGroupColors": {},
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -601,7 +615,9 @@
        "count": 1
       }
      ],
-     "deathLink": []
+     "deathLink": [],
+     "progGroupColors": {},
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -684,7 +700,11 @@
        "count": 1
       }
      ],
-     "deathLink": []
+     "deathLink": [],
+     "progGroupColors": {
+      "keys": "#e05c5c"
+     },
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -789,7 +809,11 @@
        "text": "Plank",
        "weight": "2"
       }
-     ]
+     ],
+     "progGroupColors": {
+      "tickets": "#e05c5c"
+     },
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -894,7 +918,11 @@
        "text": "Plank",
        "weight": "2"
       }
-     ]
+     ],
+     "progGroupColors": {
+      "tickets": "#e05c5c"
+     },
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -999,7 +1027,11 @@
        "text": "Plank",
        "weight": "2"
       }
-     ]
+     ],
+     "progGroupColors": {
+      "tickets": "#e05c5c"
+     },
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -1104,7 +1136,11 @@
        "text": "Plank",
        "weight": "2"
       }
-     ]
+     ],
+     "progGroupColors": {
+      "tickets": "#e05c5c"
+     },
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -1217,7 +1253,11 @@
        "text": "Plank",
        "weight": "2"
       }
-     ]
+     ],
+     "progGroupColors": {
+      "tickets": "#e05c5c"
+     },
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -1314,7 +1354,11 @@
        "count": 1
       }
      ],
-     "deathLink": []
+     "deathLink": [],
+     "progGroupColors": {
+      "swords": "#e05c5c"
+     },
+     "deathLinkLockTasks": false
     },
     "messages": [
      [
@@ -1356,7 +1400,9 @@
       }
      ],
      "items": [],
-     "deathLink": []
+     "deathLink": [],
+     "progGroupColors": {},
+     "deathLinkLockTasks": false
     },
     "messages": [
      [
@@ -1499,7 +1545,13 @@
        "text": "b",
        "weight": "1"
       }
-     ]
+     ],
+     "progGroupColors": {
+      "keys": "#e05c5c",
+      "7": "#e0955c",
+      "None": "#e0d45c"
+     },
+     "deathLinkLockTasks": false
     },
     "messages": []
    }
@@ -1510,6 +1562,102 @@
     "ok": false,
     "exception": "OverflowError",
     "model": null,
+    "messages": []
+   }
+  },
+  {
+   "file": "hand_v11_keys.yaml",
+   "result": {
+    "ok": true,
+    "exception": null,
+    "model": {
+     "playerName": "V11 Keys",
+     "progressionBalancing": 50,
+     "accessibility": "full",
+     "deathLinkEnabled": true,
+     "deathLinkAmnesty": 0,
+     "lockPrereqs": true,
+     "hideUnreachable": true,
+     "taskRewardPreviews": 0,
+     "goalTasks": "",
+     "progGroups": [
+      "keys",
+      "weapons+",
+      "gems"
+     ],
+     "regions": [],
+     "nextColorIdx": 0,
+     "tasks": [
+      {
+       "name": "A",
+       "prereq": "",
+       "itemPrereq": "",
+       "cost": "",
+       "region": "",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      },
+      {
+       "name": "B",
+       "prereq": "",
+       "itemPrereq": "keys-1",
+       "cost": "",
+       "region": "",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      },
+      {
+       "name": "C",
+       "prereq": "",
+       "itemPrereq": "weapons+*1",
+       "cost": "",
+       "region": "",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      }
+     ],
+     "items": [
+      {
+       "name": "Key",
+       "filler": false,
+       "type": "progression",
+       "progGroup": "keys",
+       "consumable": false,
+       "count": 1
+      },
+      {
+       "name": "Sword",
+       "filler": false,
+       "type": "progression",
+       "progGroup": "weapons+",
+       "consumable": false,
+       "count": 1
+      },
+      {
+       "name": "Ruby",
+       "filler": false,
+       "type": "progression",
+       "progGroup": "gems",
+       "consumable": false,
+       "count": 1
+      }
+     ],
+     "deathLink": [
+      {
+       "text": "Pushups",
+       "weight": "1"
+      }
+     ],
+     "progGroupColors": {
+      "keys": "#123456",
+      "weapons+": "#e0955c",
+      "gems": "#e0d45c"
+     },
+     "deathLinkLockTasks": true
+    },
     "messages": []
    }
   },
@@ -1659,7 +1807,14 @@
        "text": "Plank",
        "weight": "1"
       }
-     ]
+     ],
+     "progGroupColors": {
+      "k": "#e05c5c",
+      "e": "#e0955c",
+      "y": "#e0d45c",
+      "s": "#8de05c"
+     },
+     "deathLinkLockTasks": false
     },
     "messages": [
      [
@@ -2041,6 +2196,7 @@
        "false": 50
       },
       "progressive_groups": [],
+      "progressive_group_colors": [],
       "item_progressive_group": [
        "",
        ""
@@ -2107,7 +2263,8 @@
       "goal_tasks": [],
       "death_link_pool": [],
       "death_link_weights": [],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -2309,6 +2466,10 @@
        "weapons+",
        "side-quests!"
       ],
+      "progressive_group_colors": [
+       "",
+       ""
+      ],
       "item_progressive_group": [
        "weapons+",
        ""
@@ -2387,7 +2548,8 @@
       "goal_tasks": [],
       "death_link_pool": [],
       "death_link_weights": [],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -2739,6 +2901,7 @@
        "false": 50
       },
       "progressive_groups": [],
+      "progressive_group_colors": [],
       "item_progressive_group": [
        ""
       ],
@@ -2799,7 +2962,8 @@
       "goal_tasks": [],
       "death_link_pool": [],
       "death_link_weights": [],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": [
@@ -3349,6 +3513,9 @@
       "progressive_groups": [
        "keys"
       ],
+      "progressive_group_colors": [
+       ""
+      ],
       "item_progressive_group": [
        "",
        "",
@@ -3487,7 +3654,8 @@
        "1",
        "4"
       ],
-      "death_link_amnesty": 2
+      "death_link_amnesty": 2,
+      "death_link_lock_tasks": false
      }
     },
     "messages": [
@@ -3598,6 +3766,7 @@
        "false": 50
       },
       "progressive_groups": [],
+      "progressive_group_colors": [],
       "item_progressive_group": [
        "",
        "",
@@ -3686,7 +3855,8 @@
       "goal_tasks": [],
       "death_link_pool": [],
       "death_link_weights": [],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": [
@@ -3827,6 +3997,9 @@
       "progressive_groups": [
        "keys"
       ],
+      "progressive_group_colors": [
+       ""
+      ],
       "item_progressive_group": [
        "",
        "",
@@ -3941,7 +4114,8 @@
       "goal_tasks": [],
       "death_link_pool": [],
       "death_link_weights": [],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": [
@@ -4112,6 +4286,7 @@
        "false": 50
       },
       "progressive_groups": [],
+      "progressive_group_colors": [],
       "item_progressive_group": [
        "",
        ""
@@ -4194,7 +4369,8 @@
       "goal_tasks": [],
       "death_link_pool": [],
       "death_link_weights": [],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -4365,6 +4541,7 @@
        "false": 50
       },
       "progressive_groups": [],
+      "progressive_group_colors": [],
       "item_progressive_group": [
        "",
        "",
@@ -4505,7 +4682,8 @@
       "goal_tasks": [],
       "death_link_pool": [],
       "death_link_weights": [],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -4609,7 +4787,11 @@
       "text": "Plank",
       "weight": "2"
      }
-    ]
+    ],
+    "progGroupColors": {
+     "tickets": "#e05c5c"
+    },
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -4625,6 +4807,9 @@
       },
       "progressive_groups": [
        "tickets"
+      ],
+      "progressive_group_colors": [
+       "#e05c5c"
       ],
       "item_progressive_group": [
        "",
@@ -4732,7 +4917,8 @@
        "1",
        "2"
       ],
-      "death_link_amnesty": 1
+      "death_link_amnesty": 1,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -4812,7 +4998,9 @@
       "count": 1
      }
     ],
-    "deathLink": []
+    "deathLink": [],
+    "progGroupColors": {},
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -4827,6 +5015,7 @@
        "false": 50
       },
       "progressive_groups": [],
+      "progressive_group_colors": [],
       "item_progressive_group": [
        "",
        "",
@@ -4907,7 +5096,8 @@
       "goal_tasks": [],
       "death_link_pool": [],
       "death_link_weights": [],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -4992,7 +5182,9 @@
       "text": "Pushups",
       "weight": "1"
      }
-    ]
+    ],
+    "progGroupColors": {},
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -5007,6 +5199,7 @@
        "false": 0
       },
       "progressive_groups": [],
+      "progressive_group_colors": [],
       "item_progressive_group": [
        "",
        "",
@@ -5091,7 +5284,8 @@
       "death_link_weights": [
        "1"
       ],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -5180,7 +5374,9 @@
       "text": "Plank",
       "weight": "1"
      }
-    ]
+    ],
+    "progGroupColors": {},
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -5195,6 +5391,7 @@
        "false": 0
       },
       "progressive_groups": [],
+      "progressive_group_colors": [],
       "item_progressive_group": [
        "",
        "",
@@ -5281,7 +5478,8 @@
        "3",
        "1"
       ],
-      "death_link_amnesty": 2
+      "death_link_amnesty": 2,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -5361,7 +5559,9 @@
       "count": 1
      }
     ],
-    "deathLink": []
+    "deathLink": [],
+    "progGroupColors": {},
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -5376,6 +5576,7 @@
        "false": 50
       },
       "progressive_groups": [],
+      "progressive_group_colors": [],
       "item_progressive_group": [
        "",
        "",
@@ -5456,7 +5657,8 @@
       "goal_tasks": [],
       "death_link_pool": [],
       "death_link_weights": [],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -5536,7 +5738,9 @@
       "count": 1
      }
     ],
-    "deathLink": []
+    "deathLink": [],
+    "progGroupColors": {},
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -5551,6 +5755,7 @@
        "false": 50
       },
       "progressive_groups": [],
+      "progressive_group_colors": [],
       "item_progressive_group": [
        "",
        "",
@@ -5633,7 +5838,8 @@
       ],
       "death_link_pool": [],
       "death_link_weights": [],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -5713,7 +5919,9 @@
       "count": 1
      }
     ],
-    "deathLink": []
+    "deathLink": [],
+    "progGroupColors": {},
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -5728,6 +5936,7 @@
        "false": 50
       },
       "progressive_groups": [],
+      "progressive_group_colors": [],
       "item_progressive_group": [
        "",
        "",
@@ -5810,7 +6019,8 @@
       ],
       "death_link_pool": [],
       "death_link_weights": [],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -5892,7 +6102,11 @@
       "count": 1
      }
     ],
-    "deathLink": []
+    "deathLink": [],
+    "progGroupColors": {
+     "keys": "#e05c5c"
+    },
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -5908,6 +6122,9 @@
       },
       "progressive_groups": [
        "keys"
+      ],
+      "progressive_group_colors": [
+       "#e05c5c"
       ],
       "item_progressive_group": [
        "keys",
@@ -5989,7 +6206,8 @@
       "goal_tasks": [],
       "death_link_pool": [],
       "death_link_weights": [],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -6093,7 +6311,11 @@
       "text": "Plank",
       "weight": "2"
      }
-    ]
+    ],
+    "progGroupColors": {
+     "tickets": "#e05c5c"
+    },
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -6109,6 +6331,9 @@
       },
       "progressive_groups": [
        "tickets"
+      ],
+      "progressive_group_colors": [
+       "#e05c5c"
       ],
       "item_progressive_group": [
        "",
@@ -6216,7 +6441,8 @@
        "1",
        "2"
       ],
-      "death_link_amnesty": 1
+      "death_link_amnesty": 1,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -6320,7 +6546,11 @@
       "text": "Plank",
       "weight": "2"
      }
-    ]
+    ],
+    "progGroupColors": {
+     "tickets": "#e05c5c"
+    },
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -6336,6 +6566,9 @@
       },
       "progressive_groups": [
        "tickets"
+      ],
+      "progressive_group_colors": [
+       "#e05c5c"
       ],
       "item_progressive_group": [
        "",
@@ -6443,7 +6676,8 @@
        "1",
        "2"
       ],
-      "death_link_amnesty": 1
+      "death_link_amnesty": 1,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -6547,7 +6781,11 @@
       "text": "Plank",
       "weight": "2"
      }
-    ]
+    ],
+    "progGroupColors": {
+     "tickets": "#e05c5c"
+    },
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -6563,6 +6801,9 @@
       },
       "progressive_groups": [
        "tickets"
+      ],
+      "progressive_group_colors": [
+       "#e05c5c"
       ],
       "item_progressive_group": [
        "",
@@ -6670,7 +6911,8 @@
        "1",
        "2"
       ],
-      "death_link_amnesty": 1
+      "death_link_amnesty": 1,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -6774,7 +7016,11 @@
       "text": "Plank",
       "weight": "2"
      }
-    ]
+    ],
+    "progGroupColors": {
+     "tickets": "#e05c5c"
+    },
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -6790,6 +7036,9 @@
       },
       "progressive_groups": [
        "tickets"
+      ],
+      "progressive_group_colors": [
+       "#e05c5c"
       ],
       "item_progressive_group": [
        "",
@@ -6897,7 +7146,8 @@
        "1",
        "2"
       ],
-      "death_link_amnesty": 1
+      "death_link_amnesty": 1,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -7009,7 +7259,11 @@
       "text": "Plank",
       "weight": "2"
      }
-    ]
+    ],
+    "progGroupColors": {
+     "tickets": "#e05c5c"
+    },
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -7025,6 +7279,9 @@
       },
       "progressive_groups": [
        "tickets"
+      ],
+      "progressive_group_colors": [
+       "#e05c5c"
       ],
       "item_progressive_group": [
        "",
@@ -7138,7 +7395,8 @@
        "1",
        "2"
       ],
-      "death_link_amnesty": 1
+      "death_link_amnesty": 1,
+      "death_link_lock_tasks": false
      }
     },
     "messages": []
@@ -7234,7 +7492,11 @@
       "count": 1
      }
     ],
-    "deathLink": []
+    "deathLink": [],
+    "progGroupColors": {
+     "swords": "#e05c5c"
+    },
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": null,
@@ -7281,7 +7543,9 @@
      }
     ],
     "items": [],
-    "deathLink": []
+    "deathLink": [],
+    "progGroupColors": {},
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": null,
@@ -7424,7 +7688,13 @@
       "text": "b",
       "weight": "1"
      }
-    ]
+    ],
+    "progGroupColors": {
+     "keys": "#e05c5c",
+     "7": "#e0955c",
+     "None": "#e0d45c"
+    },
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": null,
@@ -7435,6 +7705,210 @@
       "The following progressive group names are invalid and cannot be exported:\n\n7 (must not contain digits)"
      ]
     ]
+   }
+  },
+  {
+   "name": "reexport:hand_v11_keys.yaml",
+   "confirm": true,
+   "model": {
+    "playerName": "V11 Keys",
+    "progressionBalancing": 50,
+    "accessibility": "full",
+    "deathLinkEnabled": true,
+    "deathLinkAmnesty": 0,
+    "lockPrereqs": true,
+    "hideUnreachable": true,
+    "taskRewardPreviews": 0,
+    "goalTasks": "",
+    "progGroups": [
+     "keys",
+     "weapons+",
+     "gems"
+    ],
+    "regions": [],
+    "nextColorIdx": 0,
+    "tasks": [
+     {
+      "name": "A",
+      "prereq": "",
+      "itemPrereq": "",
+      "cost": "",
+      "region": "",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     },
+     {
+      "name": "B",
+      "prereq": "",
+      "itemPrereq": "keys-1",
+      "cost": "",
+      "region": "",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     },
+     {
+      "name": "C",
+      "prereq": "",
+      "itemPrereq": "weapons+*1",
+      "cost": "",
+      "region": "",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     }
+    ],
+    "items": [
+     {
+      "name": "Key",
+      "filler": false,
+      "type": "progression",
+      "progGroup": "keys",
+      "consumable": false,
+      "count": 1
+     },
+     {
+      "name": "Sword",
+      "filler": false,
+      "type": "progression",
+      "progGroup": "weapons+",
+      "consumable": false,
+      "count": 1
+     },
+     {
+      "name": "Ruby",
+      "filler": false,
+      "type": "progression",
+      "progGroup": "gems",
+      "consumable": false,
+      "count": 1
+     }
+    ],
+    "deathLink": [
+     {
+      "text": "Pushups",
+      "weight": "1"
+     }
+    ],
+    "progGroupColors": {
+     "keys": "#123456",
+     "weapons+": "#e0955c",
+     "gems": "#e0d45c"
+    },
+    "deathLinkLockTasks": true
+   },
+   "result": {
+    "data": {
+     "name": "V11 Keys",
+     "game": "Taskipelago",
+     "description": "YAML template for Taskipelago",
+     "Taskipelago": {
+      "progression_balancing": 50,
+      "accessibility": "full",
+      "death_link": {
+       "true": 50,
+       "false": 0
+      },
+      "progressive_groups": [
+       "keys",
+       "weapons+",
+       "gems"
+      ],
+      "progressive_group_colors": [
+       "#123456",
+       "#e0955c",
+       "#e0d45c"
+      ],
+      "item_progressive_group": [
+       "keys",
+       "weapons+",
+       "gems"
+      ],
+      "regions": [],
+      "region_default_pcts": [],
+      "region_colors": [],
+      "region_prereqs": [],
+      "task_region": [
+       "",
+       "",
+       ""
+      ],
+      "task_priority": [
+       "false",
+       "false",
+       "false"
+      ],
+      "tasks": [
+       "A",
+       "B",
+       "C"
+      ],
+      "task_count": [
+       "1",
+       "1",
+       "1"
+      ],
+      "task_description": [
+       "",
+       "",
+       ""
+      ],
+      "items": [
+       "Key",
+       "Sword",
+       "Ruby"
+      ],
+      "item_types": [
+       "progression",
+       "progression",
+       "progression"
+      ],
+      "item_fillers": [
+       false,
+       false,
+       false
+      ],
+      "item_consumable": [
+       "false",
+       "false",
+       "false"
+      ],
+      "item_count": [
+       "1",
+       "1",
+       "1"
+      ],
+      "task_prereqs": [
+       "",
+       "",
+       ""
+      ],
+      "item_prereqs": [
+       "",
+       "keys-1",
+       "weapons+*1"
+      ],
+      "task_cost": [
+       "",
+       "",
+       ""
+      ],
+      "lock_prereqs": true,
+      "hide_unreachable_tasks": true,
+      "task_reward_previews": 0,
+      "goal_tasks": [],
+      "death_link_pool": [
+       "Pushups"
+      ],
+      "death_link_weights": [
+       "1"
+      ],
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": true
+     }
+    },
+    "messages": []
    }
   },
   {
@@ -7575,7 +8049,14 @@
       "text": "Plank",
       "weight": "1"
      }
-    ]
+    ],
+    "progGroupColors": {
+     "k": "#e05c5c",
+     "e": "#e0955c",
+     "y": "#e0d45c",
+     "s": "#8de05c"
+    },
+    "deathLinkLockTasks": false
    },
    "result": {
     "data": {
@@ -7594,6 +8075,12 @@
        "e",
        "y",
        "s"
+      ],
+      "progressive_group_colors": [
+       "#e05c5c",
+       "#e0955c",
+       "#e0d45c",
+       "#8de05c"
       ],
       "item_progressive_group": [
        "",
@@ -7715,7 +8202,8 @@
        "2",
        "1"
       ],
-      "death_link_amnesty": 0
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
      }
     },
     "messages": [
@@ -8031,6 +8519,7 @@
        ],
        "death_link_weights": [],
        "death_link_amnesty": 2,
+       "death_link_lock_tasks": false,
        "bingo_mode": true,
        "bingo_dimension_x": 5,
        "bingo_dimension_y": 5,
@@ -8496,6 +8985,7 @@
        "death_link_pool": [],
        "death_link_weights": [],
        "death_link_amnesty": 0,
+       "death_link_lock_tasks": false,
        "bingo_mode": true,
        "bingo_dimension_x": 7,
        "bingo_dimension_y": 5,
@@ -8658,6 +9148,7 @@
        "death_link_pool": [],
        "death_link_weights": [],
        "death_link_amnesty": 0,
+       "death_link_lock_tasks": false,
        "bingo_mode": true,
        "bingo_dimension_x": 3,
        "bingo_dimension_y": 3,
@@ -8680,7 +9171,8 @@
      "deathLinkAmnesty": 0,
      "spaces": "Only",
      "rewards": "",
-     "deathLinkPool": ""
+     "deathLinkPool": "",
+     "deathLinkLockTasks": true
     },
     "result": {
      "data": {
@@ -8739,6 +9231,7 @@
        "death_link_pool": [],
        "death_link_weights": [],
        "death_link_amnesty": 0,
+       "death_link_lock_tasks": true,
        "bingo_mode": true,
        "bingo_dimension_x": 1,
        "bingo_dimension_y": 1,
@@ -8900,6 +9393,7 @@
        "death_link_pool": [],
        "death_link_weights": [],
        "death_link_amnesty": 0,
+       "death_link_lock_tasks": false,
        "bingo_mode": true,
        "bingo_dimension_x": 4,
        "bingo_dimension_y": 2,
@@ -9197,6 +9691,7 @@
        "death_link_pool": [],
        "death_link_weights": [],
        "death_link_amnesty": 0,
+       "death_link_lock_tasks": false,
        "bingo_mode": true,
        "bingo_dimension_x": 5,
        "bingo_dimension_y": 5,
@@ -9347,6 +9842,7 @@
      "accessibility": "full",
      "death_link_enabled": true,
      "death_link_amnesty": 2,
+     "death_link_lock_tasks": false,
      "death_link_pool": [
       "Pushups",
       "Plank"
@@ -9449,6 +9945,7 @@
      "accessibility": "full",
      "death_link_enabled": false,
      "death_link_amnesty": 0,
+     "death_link_lock_tasks": false,
      "death_link_pool": []
     }
    },
@@ -9490,6 +9987,7 @@
      "accessibility": "minimal",
      "death_link_enabled": false,
      "death_link_amnesty": 0,
+     "death_link_lock_tasks": false,
      "death_link_pool": []
     }
    },
@@ -9506,7 +10004,8 @@
      "deathLinkAmnesty": 0,
      "spaces": "Only",
      "rewards": "",
-     "deathLinkPool": ""
+     "deathLinkPool": "",
+     "deathLinkLockTasks": true
     },
     "result": {
      "spaces": [
@@ -9521,6 +10020,7 @@
      "accessibility": "full",
      "death_link_enabled": false,
      "death_link_amnesty": 0,
+     "death_link_lock_tasks": true,
      "death_link_pool": []
     }
    },
@@ -9559,6 +10059,7 @@
      "accessibility": "full",
      "death_link_enabled": false,
      "death_link_amnesty": 0,
+     "death_link_lock_tasks": false,
      "death_link_pool": []
     }
    }
@@ -9662,6 +10163,83 @@
   ],
   "loads": [
    {
+    "name": "settings_lock_tasks",
+    "doc": {
+     "spaces": [
+      "a",
+      "b"
+     ],
+     "death_link_lock_tasks": "yes"
+    },
+    "result": {
+     "kind": "settings",
+     "exception": null,
+     "ok": true,
+     "model": {
+      "playerName": "",
+      "x": 5,
+      "y": 5,
+      "bingoal": 3,
+      "progressionBalancing": 50,
+      "accessibility": "full",
+      "deathLinkEnabled": false,
+      "deathLinkAmnesty": 0,
+      "spaces": "a\nb\n",
+      "rewards": "",
+      "deathLinkPool": "",
+      "deathLinkLockTasks": true
+     },
+     "messages": []
+    }
+   },
+   {
+    "name": "yaml_lock_tasks",
+    "doc": {
+     "name": "Lock",
+     "Taskipelago": {
+      "bingo_mode": true,
+      "tasks": [
+       "t",
+       "t",
+       "t",
+       "t",
+       "t",
+       "t",
+       "t",
+       "t",
+       "t",
+       "t",
+       "t",
+       "t"
+      ],
+      "death_link_lock_tasks": {
+       "true": 50,
+       "false": 0
+      }
+     }
+    },
+    "result": {
+     "kind": "yaml",
+     "exception": null,
+     "ok": true,
+     "model": {
+      "playerName": "Lock",
+      "x": 5,
+      "y": 5,
+      "bingoal": 3,
+      "progressionBalancing": 50,
+      "accessibility": "full",
+      "deathLinkEnabled": false,
+      "deathLinkAmnesty": 0,
+      "spaces": "t\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\n",
+      "rewards": "",
+      "deathLinkPool": "",
+      "deathLinkLockTasks": true
+     },
+     "messages": []
+    }
+   },
+   {
     "name": "settings_odd_values",
     "doc": {
      "spaces": "ab",
@@ -9695,7 +10273,8 @@
       "deathLinkAmnesty": 3,
       "spaces": "a\nb\n",
       "rewards": "",
-      "deathLinkPool": "1\nNone\np\n"
+      "deathLinkPool": "1\nNone\np\n",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -9724,7 +10303,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "",
       "rewards": "",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -9774,7 +10354,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "a\nb\nNone\nd\n",
       "rewards": "",
-      "deathLinkPool": "x\ny\n"
+      "deathLinkPool": "x\ny\n",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -9849,7 +10430,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "t\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\n",
       "rewards": "Treat\nTreat\nNap\n",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -9879,7 +10461,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "",
       "rewards": "",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": false
      },
      "messages": [
       [
@@ -9912,7 +10495,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "",
       "rewards": "",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": false
      },
      "messages": [
       [
@@ -9987,6 +10571,7 @@
      "accessibility": "full",
      "death_link_enabled": true,
      "death_link_amnesty": 2,
+     "death_link_lock_tasks": false,
      "death_link_pool": [
       "Pushups",
       "Plank"
@@ -10007,7 +10592,8 @@
       "deathLinkAmnesty": 2,
       "spaces": "Space 1\nSpace 2\nSpace 3\nSpace 4\nSpace 5\nSpace 6\nSpace 7\nSpace 8\nSpace 9\nSpace 10\nSpace 11\nSpace 12\nSpace 13\nSpace 14\nSpace 15\nSpace 16\nSpace 17\nSpace 18\nSpace 19\nSpace 20\nSpace 21\nSpace 22\nSpace 23\nSpace 24\nSpace 25\nSpace 26\nSpace 27\nSpace 28\nSpace 3\nSpace 5\n",
       "rewards": "Cookie\nNap\nCookie\n",
-      "deathLinkPool": "Pushups\nPlank\n"
+      "deathLinkPool": "Pushups\nPlank\n",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -10095,6 +10681,7 @@
      "accessibility": "full",
      "death_link_enabled": false,
      "death_link_amnesty": 0,
+     "death_link_lock_tasks": false,
      "death_link_pool": []
     },
     "result": {
@@ -10112,7 +10699,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "Cell 1\nCell 2\nCell 3\nCell 4\nCell 5\nCell 6\nCell 7\nCell 8\nCell 9\nCell 10\nCell 11\nCell 12\nCell 13\nCell 14\nCell 15\nCell 16\nCell 17\nCell 18\nCell 19\nCell 20\nCell 21\nCell 22\nCell 23\nCell 24\nCell 25\nCell 26\nCell 27\nCell 28\nCell 29\nCell 30\nCell 31\nCell 32\nCell 33\nCell 34\nCell 35\nCell 36\nCell 37\nCell 38\nCell 39\nCell 40\n",
       "rewards": "Prize 1\nPrize 2\nPrize 3\nPrize 4\nPrize 5\nPrize 6\nPrize 7\nPrize 8\nPrize 9\nPrize 10\nPrize 11\nPrize 12\nPrize 13\nPrize 14\nPrize 15\nPrize 16\nPrize 17\nPrize 18\nPrize 19\nPrize 20\nPrize 1\nPrize 2\nBingo Bonus\nExtra\nExtra\nExtra\nExtra\nExtra\n",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -10142,6 +10730,7 @@
      "accessibility": "minimal",
      "death_link_enabled": false,
      "death_link_amnesty": 0,
+     "death_link_lock_tasks": false,
      "death_link_pool": []
     },
     "result": {
@@ -10159,7 +10748,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "a\nb\nc\nd\ne\nf\ng\nh\ni\n",
       "rewards": "only one\n",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -10179,6 +10769,7 @@
      "accessibility": "full",
      "death_link_enabled": false,
      "death_link_amnesty": 0,
+     "death_link_lock_tasks": true,
      "death_link_pool": []
     },
     "result": {
@@ -10196,7 +10787,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "Only\n",
       "rewards": "",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": true
      },
      "messages": []
     }
@@ -10223,6 +10815,7 @@
      "accessibility": "full",
      "death_link_enabled": false,
      "death_link_amnesty": 0,
+     "death_link_lock_tasks": false,
      "death_link_pool": []
     },
     "result": {
@@ -10240,7 +10833,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "S 1\nS 2\nS 3\nS 4\nS 5\nS 6\nS 7\nS 8\n",
       "rewards": "",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -10532,6 +11126,7 @@
       ],
       "death_link_weights": [],
       "death_link_amnesty": 2,
+      "death_link_lock_tasks": false,
       "bingo_mode": true,
       "bingo_dimension_x": 5,
       "bingo_dimension_y": 5,
@@ -10553,7 +11148,8 @@
       "deathLinkAmnesty": 2,
       "spaces": "Space 5\nSpace 3\nSpace 28\nSpace 27\nSpace 26\nSpace 25\nSpace 24\nSpace 23\nSpace 22\nSpace 21\nSpace 20\nSpace 19\nSpace 18\nSpace 17\nSpace 16\nSpace 15\nSpace 14\nSpace 13\nSpace 12\nSpace 11\nSpace 10\nSpace 9\nSpace 8\nSpace 7\nSpace 6\n",
       "rewards": "Cookie\nCookie\nNap\n",
-      "deathLinkPool": "Pushups\nPlank\n"
+      "deathLinkPool": "Pushups\nPlank\n",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -11000,6 +11596,7 @@
       "death_link_pool": [],
       "death_link_weights": [],
       "death_link_amnesty": 0,
+      "death_link_lock_tasks": false,
       "bingo_mode": true,
       "bingo_dimension_x": 7,
       "bingo_dimension_y": 5,
@@ -11021,7 +11618,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "Cell 40\nCell 39\nCell 38\nCell 37\nCell 36\nCell 35\nCell 34\nCell 33\nCell 32\nCell 31\nCell 30\nCell 29\nCell 28\nCell 27\nCell 26\nCell 25\nCell 24\nCell 23\nCell 22\nCell 21\nCell 20\nCell 19\nCell 18\nCell 17\nCell 16\nCell 15\nCell 14\nCell 13\nCell 12\nCell 11\nCell 10\nCell 9\nCell 8\nCell 7\nCell 6\n",
       "rewards": "Extra\nExtra\nExtra\nExtra\nExtra\nPrize 2\nPrize 1\nPrize 20\nPrize 19\nPrize 18\nPrize 17\nPrize 16\nPrize 15\nPrize 14\nPrize 13\nPrize 12\nPrize 11\nPrize 10\n",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -11165,6 +11763,7 @@
       "death_link_pool": [],
       "death_link_weights": [],
       "death_link_amnesty": 0,
+      "death_link_lock_tasks": false,
       "bingo_mode": true,
       "bingo_dimension_x": 3,
       "bingo_dimension_y": 3,
@@ -11186,7 +11785,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "i\nh\ng\nf\ne\nd\nc\nb\na\n",
       "rewards": "only one\n",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -11249,6 +11849,7 @@
       "death_link_pool": [],
       "death_link_weights": [],
       "death_link_amnesty": 0,
+      "death_link_lock_tasks": true,
       "bingo_mode": true,
       "bingo_dimension_x": 1,
       "bingo_dimension_y": 1,
@@ -11270,7 +11871,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "Only\n",
       "rewards": "",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": true
      },
      "messages": []
     }
@@ -11413,6 +12015,7 @@
       "death_link_pool": [],
       "death_link_weights": [],
       "death_link_amnesty": 0,
+      "death_link_lock_tasks": false,
       "bingo_mode": true,
       "bingo_dimension_x": 4,
       "bingo_dimension_y": 2,
@@ -11434,7 +12037,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "S 8\nS 7\nS 6\nS 5\nS 4\nS 3\nS 2\nS 1\n",
       "rewards": "",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -11713,6 +12317,7 @@
       "death_link_pool": [],
       "death_link_weights": [],
       "death_link_amnesty": 0,
+      "death_link_lock_tasks": false,
       "bingo_mode": true,
       "bingo_dimension_x": 5,
       "bingo_dimension_y": 5,
@@ -11734,7 +12339,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "S 25\nS 24\nS 23\nS 22\nS 21\nS 20\nS 19\nS 18\nS 17\nS 16\nS 15\nS 14\nS 13\nS 12\nS 11\nS 10\nS 9\nS 8\nS 7\nS 6\nS 5\nS 4\nS 3\nS 2\nS 1\n",
       "rewards": "",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -11823,7 +12429,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "Only\n",
       "rewards": "",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }
@@ -11992,7 +12599,8 @@
       "deathLinkAmnesty": 0,
       "spaces": "S 8\nS 7\nS 6\nS 5\nS 4\nS 3\nS 2\nS 1\n",
       "rewards": "",
-      "deathLinkPool": ""
+      "deathLinkPool": "",
+      "deathLinkLockTasks": false
      },
      "messages": []
     }

@@ -18,6 +18,8 @@
 
 * As an example things like "10 pushups" or "Tidy one thing in your room" or "Read 2 pages of a book" or "1 minute plank" make for good DeathLink tasks
 
+* Each triggered DeathLink task shows up as a red card at the top of your task list until you complete it. Optionally, pending DeathLink cards can lock all other tasks until they are done
+
 ### Taskipelabingo
 
 * Taskipelabingo mode allows you to provide a list of tasks to be selected at random and shuffled into a bingo board. For more information, see the Taskipelabingo tab in the client

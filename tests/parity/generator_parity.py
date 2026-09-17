@@ -149,7 +149,7 @@ BINGO_EXPORT_CASES = [
                                     rewards=lines("Prize", 20, "\nPrize 1\nPrize 2\nBingo Bonus\n" + "\n".join(["Extra"] * 5)))),
     ("bingo_3x3_pairs", bingo(x=3, y=3, bingoal="2", progressionBalancing="abc", accessibility="minimal",
                               spaces="a\r\nb\u2028c\x85d\x0be\x0cf\x1cg\rh\ni", rewards="only one")),
-    ("bingo_1x1", bingo(x=1, y=1, bingoal=0, spaces="Only")),
+    ("bingo_1x1", bingo(x=1, y=1, bingoal=0, spaces="Only", deathLinkLockTasks=True)),
     ("bingo_4x2", bingo(x=4, y=2, bingoal=5, spaces=lines("S", 8), playerName="  Rect Player  ")),
     ("bingo_bad_numbers", bingo(x="abc", y="2.5", bingoal="", spaces=lines("S", 25), deathLinkAmnesty="x")),
     ("bingo_not_enough_spaces", bingo(spaces=lines("S", 24))),
@@ -166,6 +166,10 @@ BINGO_COUNT_CASES = [
 ]
 
 BINGO_LOAD_DOCS = [
+    # C2 (F3): the lock toggle in a settings file and in a bingo YAML (weights dict form).
+    ("settings_lock_tasks", {"spaces": ["a", "b"], "death_link_lock_tasks": "yes"}),
+    ("yaml_lock_tasks", {"name": "Lock", "Taskipelago": {"bingo_mode": True, "tasks": ["t"] * 12,
+                                                          "death_link_lock_tasks": {"true": 50, "false": 0}}}),
     ("settings_odd_values", {"spaces": "ab", "bingo_x": "7", "bingo_y": None, "bingoal": "x",
                              "progression_balancing": 20, "player_name": "  A Very Long Player Name ",
                              "death_link_enabled": "no", "death_link_pool": [1, None, " p "], "rewards": None,
@@ -249,12 +253,75 @@ def apply_v11_changes(m: dict, result: dict) -> dict:
     return result
 
 
+def c2_toggle(v) -> bool:
+    """Mirror of toggleOption (web-client/js/generator/yaml_import.js)."""
+    if isinstance(v, dict):
+        try:
+            t = int(v.get("true", 0) or 0)
+            f = int(v.get("false", 0) or 0)
+        except (ValueError, TypeError):
+            return False
+        return t > 0 and t >= f
+    if isinstance(v, str):
+        return v.strip().lower() in ("true", "on", "yes", "1")
+    return bool(v)
+
+
+def _insert_after(d: dict, after: str, key: str, value) -> dict:
+    out = {}
+    for k, v in d.items():
+        out[k] = v
+        if k == after:
+            out[key] = value
+    return out
+
+
+def _block(doc):
+    return lg.new_app()._extract_taskipelago_block(doc)[1]
+
+
+def apply_v11_import(doc, result: dict) -> dict:
+    # C2 (F6, F3): the editor model gains progGroupColors (palette-by-index fallback, as regions)
+    # and deathLinkLockTasks, appended after the legacy keys.
+    m = result.get("model")
+    if not m:
+        return result
+    colors, lock = {}, False
+    if result.get("ok"):
+        block = _block(doc)
+        raw = block.get("progressive_group_colors")
+        raw = list(raw) if raw else []
+        palette = lg.load_client().REGION_COLOR_PALETTE
+        for i, g in enumerate(m["progGroups"]):
+            colors[g] = (str(raw[i]).strip() if i < len(raw) else "") or palette[i % len(palette)]
+        lock = c2_toggle(block.get("death_link_lock_tasks", False))
+    m["progGroupColors"] = colors
+    m["deathLinkLockTasks"] = lock
+    return result
+
+
+def apply_v11_export_keys(m: dict, result: dict) -> dict:
+    # C2: export progressive_group_colors after progressive_groups and death_link_lock_tasks last.
+    if result.get("data") is None:
+        return result
+    block = result["data"]["Taskipelago"]
+    colors = m.get("progGroupColors") or {}
+    block = _insert_after(block, "progressive_groups", "progressive_group_colors",
+                          [colors.get(g, "") for g in m["progGroups"]])
+    block = _insert_after(block, "death_link_amnesty", "death_link_lock_tasks", bool(m.get("deathLinkLockTasks")))
+    result["data"]["Taskipelago"] = block
+    return result
+
+
 def apply_v11_bingo_export(m: dict, result: dict) -> dict:
     # F9: the free space defaults to random filler (junk, filler) instead of a dead
     # "Bingo r,c Unlock" progression item. A user reward there is unchanged.
     data = result["data"]
     if data is None:
         return result
+    # C2 (F3): death_link_lock_tasks after death_link_amnesty.
+    data["Taskipelago"] = _insert_after(data["Taskipelago"], "death_link_amnesty", "death_link_lock_tasks",
+                                        bool(m.get("deathLinkLockTasks")))
     block = data["Taskipelago"]
     names, types, fillers = [], [], []
     for name, typ, fil, count in zip(block["items"], block["item_types"], block["item_fillers"], block["item_count"]):
@@ -287,6 +354,24 @@ def apply_v11_bingo_counts(m: dict, result: dict) -> dict:
     return result
 
 
+def apply_v11_bingo_settings(m: dict, result: dict) -> dict:
+    # C2 (F3): .bingo settings carry death_link_lock_tasks after death_link_amnesty.
+    return _insert_after(result, "death_link_amnesty", "death_link_lock_tasks", bool(m.get("deathLinkLockTasks")))
+
+
+def apply_v11_bingo_load(doc, result: dict) -> dict:
+    # C2 (F3): the bingo model gains deathLinkLockTasks, read from settings files and bingo YAMLs.
+    if result.get("model") is None:
+        return result
+    lock = False
+    if result["kind"] == "settings":
+        lock = c2_toggle(doc.get("death_link_lock_tasks", False))
+    elif result.get("ok"):
+        lock = c2_toggle(_block(doc).get("death_link_lock_tasks", False))
+    result["model"]["deathLinkLockTasks"] = lock
+    return result
+
+
 def load_doc(path: Path):
     try:
         return {"doc": yaml.safe_load(path.read_text(encoding="utf-8"))}
@@ -298,7 +383,8 @@ def build_golden() -> dict:
     imports = []
     for path in sorted(CORPUS_DIR.glob("*.yaml")):
         loaded = load_doc(path)
-        result = {"load_error": loaded["load_error"]} if "load_error" in loaded else lg.legacy_import(loaded["doc"])
+        result = ({"load_error": loaded["load_error"]} if "load_error" in loaded
+                  else apply_v11_import(loaded["doc"], lg.legacy_import(loaded["doc"])))
         imports.append({"file": path.name, "result": result})
 
     exports = []
@@ -306,19 +392,19 @@ def build_golden() -> dict:
         name, m = case[0], case[1]
         confirm = case[2] if len(case) > 2 else True
         exports.append({"name": name, "confirm": confirm, "model": m,
-                        "result": apply_v11_changes(m, lg.legacy_export(copy.deepcopy(m), confirm))})
+                        "result": apply_v11_export_keys(m, apply_v11_changes(m, lg.legacy_export(copy.deepcopy(m), confirm)))})
     for entry in imports:
         m = entry["result"].get("model")
         if m:
             exports.append({"name": f"reexport:{entry['file']}", "confirm": True, "model": m,
-                            "result": apply_v11_changes(m, lg.legacy_export(copy.deepcopy(m), True))})
+                            "result": apply_v11_export_keys(m, apply_v11_changes(m, lg.legacy_export(copy.deepcopy(m), True)))})
     return {"placeholder": F, "imports": imports, "exports": exports, "bingo": build_bingo()}
 
 
 def build_bingo() -> dict:
     exports = [{"name": name, "model": m, "result": apply_v11_bingo_export(m, lg.legacy_bingo_export(copy.deepcopy(m)))}
                for name, m in BINGO_EXPORT_CASES]
-    settings = [{"name": name, "model": m, "result": lg.legacy_bingo_settings(copy.deepcopy(m))}
+    settings = [{"name": name, "model": m, "result": apply_v11_bingo_settings(m, lg.legacy_bingo_settings(copy.deepcopy(m)))}
                 for name, m in BINGO_EXPORT_CASES[:5]]
     counts = [{"model": m, "result": apply_v11_bingo_counts(m, lg.legacy_bingo_counts(copy.deepcopy(m)))}
               for m in BINGO_COUNT_CASES]
@@ -328,7 +414,8 @@ def build_bingo() -> dict:
     # F9: a v1.0.2 export (free space is a "Bingo r,c Unlock" item) must still load.
     docs += [(f"v102_yaml_from:{name}", lg.legacy_bingo_export(copy.deepcopy(m))["data"])
              for name, m in BINGO_EXPORT_CASES if name in ("bingo_4x2", "bingo_1x1")]
-    loads = [{"name": name, "doc": doc, "result": lg.legacy_bingo_load(copy.deepcopy(doc))} for name, doc in docs]
+    loads = [{"name": name, "doc": doc, "result": apply_v11_bingo_load(doc, lg.legacy_bingo_load(copy.deepcopy(doc)))}
+             for name, doc in docs]
     return {"exports": exports, "settings": settings, "counts": counts, "loads": loads}
 
 

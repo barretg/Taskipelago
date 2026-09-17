@@ -5,7 +5,7 @@
 //   taskipelago_manual::<slot>::<seed>     {name: count}            replace
 //   taskipelago_notify::<slot>::<seed>     int item index           max; replace on server-restart reset
 //   taskipelago_purchases::<slot>::<seed>  {taskIdx: {name: amt}}   update
-//   taskipelago_deathlink::<slot>::<seed>  {id: entry}              reserved for v1.1 F3 (DeathLink queue)
+//   taskipelago_deathlink::<slot>::<seed>  {id: entry}              update to add, pop to remove (v1.1 F3)
 import { ap, state, CLIENT_ID } from '../play/state.js';
 
 const NOTIFY_DEBOUNCE_MS = 1000;
@@ -72,6 +72,21 @@ export function writePurchase(taskIdx, deduction) {
   ap.sendSetOps(serverKeys().purchases, {}, [
     { operation: 'update', value: { [String(taskIdx)]: sanitizeCounts(deduction) } },
   ], false, OWN);
+}
+
+/** v1.1 F3: add one DeathLink queue entry. */
+export function writeDeathLinkAdd(entry) {
+  ap.sendSetOps(serverKeys().deathlink, {}, [{ operation: 'update', value: { [entry.id]: entry } }], false, OWN);
+}
+
+/** v1.1 F3: push device entries when the server key did not exist yet. */
+export function writeDeathLinkMerge(queue) {
+  ap.sendSetOps(serverKeys().deathlink, {}, [{ operation: 'update', value: queue }], false, OWN);
+}
+
+/** v1.1 F3: remove a completed entry. */
+export function writeDeathLinkRemove(id) {
+  ap.sendSetOps(serverKeys().deathlink, {}, [{ operation: 'pop', value: id }], false, OWN);
 }
 
 let notifyTimer = null;

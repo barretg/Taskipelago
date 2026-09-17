@@ -28,10 +28,13 @@ export const state = {
   deathLinkWeights: [],
   deathLinkAmnesty: 0,
   deathLinkEnabled: false,
+  deathLinkLockTasks: false,   // v1.1 F3 (slot_data death_link_lock_tasks)
   sentItemNames: [],
   sentPlayerNames: [],
   taskRewardPreviews: 0,
   progressiveGroups: [],
+  progressiveGroupColors: [],  // v1.1 F6, parallel to progressiveGroups
+  itemFillers: null,           // v1.1 F7, expanded item_fillers; null for older seeds
   rewardProgressiveGroup: [],
   taskProgressiveReqs: [],
   taskCostAmounts: [],
@@ -55,6 +58,7 @@ export const state = {
   notifications: [],           // [{kind, title, body, createdAt}]
   sentGoal: false,
   deathLinkAmnestyLeft: 0,
+  deathLinkQueue: {},          // v1.1 F3: {id: {id, task, source, cause, time}}
 
   // Notify dedup (mirrors legacy _last_item_index logic)
   lastItemIndex: 0,
@@ -96,6 +100,9 @@ export const els = {
   notifList:     $('notif-list'),
   clearNotifsBtn:$('clear-notifs-btn'),
   itemsList:     $('items-list'),
+  itemsFilterBtn: $('items-filter-btn'),
+  dlSoundCb:     $('dl-sound-cb'),
+  deathLinkCards: $('deathlink-cards'),
   consumablesList: $('consumables-list'),
 
   consoleOutput: $('console-output'),

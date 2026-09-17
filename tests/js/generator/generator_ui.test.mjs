@@ -70,7 +70,7 @@ async function answer(label) {
 
 test('generator and bingo tabs are in the tab bar', () => {
   const tabs = [...doc.querySelectorAll('#main-tabs .tab-btn')].map(b => b.textContent);
-  assert.deepEqual(tabs, ['Connect and Play', 'Text Console', 'YAML Generator', 'Taskipelabingo']);
+  assert.deepEqual(tabs, ['Connect and Play', 'Text Console', 'Hints', 'YAML Generator', 'Taskipelabingo']);
   button(doc.getElementById('main-tabs'), 'YAML Generator').click();
   assert.ok($('tab-generator').classList.contains('active'));
   assert.equal(doc.title, 'Taskipelago');
@@ -237,7 +237,7 @@ test('F4: renaming a region or group offers to update references; remove warns',
   assert.equal(root().querySelector('.goal-input').value, 'house && 3');
   assert.equal(root().querySelectorAll('.gt-task')[1].querySelectorAll('input[type="text"]')[1].value, 'house*1');
 
-  const groupName = () => root().querySelector('.gen-groups .group-row .region-name');
+  const groupName = () => root().querySelector('.gen-groups .gen-group-row .region-name');
   await rename(groupName(), 'tools');
   assert.match(dialogText(), /1 expression references 'keys'\. Update it to 'tools'\?/);
   await answer('Update');
@@ -254,7 +254,7 @@ test('F4: renaming a region or group offers to update references; remove warns',
   assert.match(dialogText(), /3 expressions still reference 'house' and will fail to export/);
   await answer('No');
   assert.equal(m.regions.length, 2);
-  button(root().querySelector('.gen-groups .group-row'), 'Remove').click();
+  button(root().querySelector('.gen-groups .gen-group-row'), 'Remove').click();
   await wait(5);
   await answer('Yes');
   assert.deepEqual(m.progGroups, []);
@@ -396,14 +396,21 @@ test('reset asks first', async () => {
   assert.equal(root().querySelectorAll('.gt-task').length, 1);
 });
 
-test('tutorial shows the legacy steps plus the hosted/launcher step', () => {
+test('tutorial shows the legacy steps plus the hosted/launcher and v1.1 steps', () => {
   button(root(), 'Tutorial').click();
   const panel = doc.querySelector('.tutorial-panel');
   assert.ok(panel);
-  assert.equal(STEPS.length, 19);
+  assert.equal(STEPS.length, 24);
+  const titles = STEPS.map(s => s[0]);
+  const after = (a, b) => assert.equal(titles.indexOf(b), titles.indexOf(a) + 1, `${b} follows ${a}`);
+  after('Progressive Groups', 'Group Colors and Renaming');
+  after('Item Count and Item Settings', 'Reordering Tasks and Items');
+  after('Reordering Tasks and Items', 'Find and Replace');
+  after('DeathLink (Optional Challenge)', 'DeathLink Task Cards and Lock');
+  after('While Playing: Hints and Item Filters', 'Hosted Page and Launcher Client');
   assert.match(panel.textContent, /Welcome to the YAML Generator/);
-  assert.match(panel.textContent, /Step 1 of 19/);
-  for (let i = 0; i < 17; i++) button(panel, 'Next >').click();
+  assert.match(panel.textContent, /Step 1 of 24/);
+  for (let i = 0; i < 22; i++) button(panel, 'Next >').click();
   assert.match(panel.textContent, /Hosted Page and Launcher Client/);
   button(panel, 'Next >').click();
   assert.match(panel.textContent, /Export, Import, and Reset/);

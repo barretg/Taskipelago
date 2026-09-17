@@ -327,6 +327,11 @@ export class ArchipelagoClient {
     this.sendSetOps(key, defaultValue, [{ operation: 'replace', value }], false);
   }
 
+  /** Change a hint's status (v1.1 F1). player is the finding player. */
+  sendUpdateHint(location, player, status) {
+    this._send([{ cmd: 'UpdateHint', location, player, status }]);
+  }
+
   sendGetDataPackage(games) {
     this._send([{ cmd: 'GetDataPackage', games }]);
   }

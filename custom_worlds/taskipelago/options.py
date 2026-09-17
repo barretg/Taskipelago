@@ -117,6 +117,15 @@ class DeathLinkAmnesty(Range):
     default = 0
 
 
+class DeathLinkLockTasks(Toggle):
+    """
+    When enabled, the client locks every other task (completions, purchases and consumable
+    adjustments) while a DeathLink task card is pending, until all DeathLink cards are completed.
+    DeathLink task cards appear whenever DeathLink is enabled; this only adds the lock.
+    """
+    display_name = "Lock Tasks Until DeathLink Tasks Are Done"
+
+
 class TaskPriority(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -192,6 +201,17 @@ class RegionColors(OptionList):
     Missing or empty entries will be treated as no color.
     """
     display_name = "Region Colors"
+    default: List[str] = []
+
+
+class ProgressiveGroupColors(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with progressive_groups.
+    Each entry is a hex color string (e.g. '#e05c5c') used to color code that group in the client's Items tab.
+    Missing or empty entries will be treated as no color.
+    """
+    display_name = "Progressive Group Colors"
     default: List[str] = []
 
 
@@ -374,8 +394,10 @@ class TaskipelagoOptions(PerGameCommonOptions):
     death_link_pool: DeathLinkPool
     death_link_weights: DeathLinkWeights
     death_link_amnesty: DeathLinkAmnesty
+    death_link_lock_tasks: DeathLinkLockTasks
     progressive_groups: ProgressiveGroups
     item_progressive_group: ItemProgressiveGroup
+    progressive_group_colors: ProgressiveGroupColors
     regions: Regions
     region_default_pcts: RegionDefaultPcts
     region_colors: RegionColors

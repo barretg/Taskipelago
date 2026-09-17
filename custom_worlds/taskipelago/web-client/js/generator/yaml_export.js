@@ -250,6 +250,8 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       death_link: { true: dlOn ? 50 : 0, false: dlOn ? 0 : 50 },
 
       progressive_groups: [...model.progGroups],
+      progressive_group_colors: model.progGroups.map(g => ( // v1.1 F6
+        model.progGroupColors && Object.hasOwn(model.progGroupColors, g) ? model.progGroupColors[g] : '')),
       item_progressive_group: itemProgGroups,
 
       regions: regionNames,
@@ -278,6 +280,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       death_link_pool: deathLinkPool,
       death_link_weights: deathLinkWeights,
       death_link_amnesty: pyInt(model.deathLinkAmnesty),
+      death_link_lock_tasks: !!model.deathLinkLockTasks, // v1.1 F3
     },
   };
   return { data };

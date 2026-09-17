@@ -52,3 +52,9 @@ The harnesses still run the v1.0.2 code, then apply one named step per feature:
 - F9 (`apply_v11_bingo_export`, `apply_v11_bingo_counts`): the free space is filler instead of
   `Bingo r,c Unlock`, and the rewards label reports unused rewards. `v102_yaml_from:*` loads keep
   a v1.0.2 bingo export covered.
+- C2 / F6, F3 (`apply_v11_import`, `apply_v11_export_keys`, `apply_v11_bingo_settings`,
+  `apply_v11_bingo_load`): the generator model gains `progGroupColors` (palette-by-index fallback)
+  and `deathLinkLockTasks`; exports add `progressive_group_colors` after `progressive_groups` and
+  `death_link_lock_tasks` after `death_link_amnesty` (bingo YAML and `.bingo` settings too).
+  `hand_v11_keys.yaml` and the `*_lock_tasks` bingo load docs exercise the new keys.
+- F8 / F4 (`legacy_text.py` `V11_STEP_CHANGES`): the tutorial "Regions" step text.

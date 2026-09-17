@@ -1,0 +1,15 @@
+# v1.1 C2: progressive_group_colors (with blank and missing entries) and death_link_lock_tasks.
+name: V11 Keys
+game: Taskipelago
+Taskipelago:
+  progressive_groups: [keys, weapons+, gems]
+  progressive_group_colors: ['#123456', '']
+  death_link: {'true': 50, 'false': 0}
+  death_link_lock_tasks: true
+  death_link_pool: [Pushups]
+  tasks: [A, B, C]
+  task_count: ['1', '1', '1']
+  items: [Key, Sword, Ruby]
+  item_count: ['1', '1', '1']
+  item_progressive_group: [keys, weapons+, gems]
+  item_prereqs: ['', keys-1, 'weapons+*1']

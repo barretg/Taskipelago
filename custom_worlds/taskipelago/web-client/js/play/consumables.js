@@ -1,6 +1,7 @@
 import { ap, state, els, CLIENT_ID } from './state.js';
 import { consumableBalance, consumableReceivedCounts, consumableSpentCounts } from './logic.js';
 import * as storage from '../shared/storage.js';
+import { isDeathLinkLocked } from './deathlink_queue.js';
 import { sanitizeCounts, writeManualConsumptions } from '../shared/server_state.js';
 
 // =============================================================
@@ -95,6 +96,7 @@ export function renderConsumables() {
   }
 
   const usedInTasks = consumableNamesUsedInTasks();
+  const dlLocked = isDeathLinkLocked(); // F3
   const frag = document.createDocumentFragment();
   for (const name of names) {
     const b = bal[name]  || 0;
@@ -112,8 +114,9 @@ export function renderConsumables() {
       const btnMinus = document.createElement('button');
       btnMinus.className = 'consumable-manual-btn';
       btnMinus.textContent = '-1';
-      btnMinus.disabled = b < 1;
+      btnMinus.disabled = b < 1 || dlLocked;
       btnMinus.addEventListener('click', () => {
+        if (isDeathLinkLocked()) return;
         state.manualConsumptions[name] = (state.manualConsumptions[name] || 0) + 1;
         saveLocalManualChange();
         renderConsumables();
@@ -122,8 +125,9 @@ export function renderConsumables() {
       const btnPlus = document.createElement('button');
       btnPlus.className = 'consumable-manual-btn';
       btnPlus.textContent = '+1';
-      btnPlus.disabled = m < 1;
+      btnPlus.disabled = m < 1 || dlLocked;
       btnPlus.addEventListener('click', () => {
+        if (isDeathLinkLocked()) return;
         const next = Math.max(0, (state.manualConsumptions[name] || 0) - 1);
         if (next) state.manualConsumptions[name] = next;
         else delete state.manualConsumptions[name];

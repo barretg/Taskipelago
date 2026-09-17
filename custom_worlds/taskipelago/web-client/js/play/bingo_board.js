@@ -1,5 +1,6 @@
 import { ap, state, els } from './state.js';
 import { allChecked, receivedItemIds, bingoLines, completeTask } from './logic.js';
+import { isDeathLinkLocked } from './deathlink_queue.js';
 
 export function renderBingo() {
   const X = state.bingoDimX;
@@ -72,6 +73,7 @@ export function renderBingo() {
     if (spUnlocked[i] && !spDone[i]) {
       const btn = document.createElement('button');
       btn.textContent = 'Complete';
+      btn.disabled = isDeathLinkLocked(); // F3
       btn.onclick = () => completeTask(i);
       cell.appendChild(btn);
     }

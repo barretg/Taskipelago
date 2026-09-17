@@ -41,7 +41,7 @@ test('connect subscribes to every per-seed key in one batch', async () => {
           { item: 301, location: 6, player: 2, flags: 0 },
         ] }]);
       }
-      if (m.cmd === 'Get') {
+      if (m.cmd === 'Get' && m.keys.includes(KEYS.manual)) { // a real server answers only the requested keys
         setTimeout(() => ws.recv([{ cmd: 'Retrieved', keys: {
           [KEYS.manual]: null, [KEYS.notify]: 1, [KEYS.purchases]: { 1: { Gold: 1 }, bad: { Gold: 1 } },
           [KEYS.deathlink]: null,

@@ -5,6 +5,9 @@ import {
   loadManualConsumptions, applyServerManualConsumptions, handleManualSyncBounce,
 } from './consumables.js';
 import { requestDataPackages, handleDataPackage } from './datapackage.js';
+import { loadDeviceDeathLinkQueue, applyServerDeathLinkQueue } from './deathlink_queue.js';
+import { primeAudio } from './alerts.js';
+import { subscribeHints, handleHintsValue, clearHints, hintsKey } from '../hints/hints.js';
 import { updateConsoleConnected } from '../console/console.js';
 import { renderAll } from './render.js';
 import * as storage from '../shared/storage.js';
@@ -129,11 +132,14 @@ function applySlotData(sd) {
   state.deathLinkWeights    = sd.death_link_weights || [];
   state.deathLinkAmnesty    = parseInt(sd.death_link_amnesty || 0);
   state.deathLinkEnabled    = !!sd.death_link_enabled;
+  state.deathLinkLockTasks  = !!sd.death_link_lock_tasks;
   state.seedName            = sd.seed_name || (ap.roomInfo && ap.roomInfo.seed_name) || '';
   state.sentItemNames       = sd.sent_item_names || [];
   state.sentPlayerNames     = sd.sent_player_names || [];
   state.taskRewardPreviews  = parseInt(sd.task_reward_previews || 0);
   state.progressiveGroups   = sd.progressive_groups || [];
+  state.progressiveGroupColors = Array.isArray(sd.progressive_group_colors) ? sd.progressive_group_colors : [];
+  state.itemFillers         = Array.isArray(sd.item_fillers) ? sd.item_fillers : null;
   state.rewardProgressiveGroup = sd.item_progressive_group || sd.reward_progressive_group || [];
   state.taskProgressiveReqs = sd.task_progressive_reqs || [];
   state.taskCostAmounts     = sd.task_cost_amounts || [];
@@ -164,6 +170,7 @@ export function startConnect() {
   }
 
   saveLastConnection(server, slot);
+  primeAudio(); // F2: Connect click (or launcher autoconnect) unlocks DeathLink sound
   state.connState = 'connecting';
   state.serverAddr = server;
   state.slotName = slot;
@@ -228,10 +235,13 @@ function clearPlayState() {
   state.deathLinkWeights = [];
   state.deathLinkAmnesty = 0;
   state.deathLinkEnabled = false;
+  state.deathLinkLockTasks = false;
   state.sentItemNames = [];
   state.sentPlayerNames = [];
   state.taskRewardPreviews = 0;
   state.progressiveGroups = [];
+  state.progressiveGroupColors = [];
+  state.itemFillers = null;
   state.rewardProgressiveGroup = [];
   state.taskProgressiveReqs = [];
   state.taskCostAmounts = [];
@@ -254,6 +264,7 @@ function clearPlayState() {
   state.notifications    = [];
   state.sentGoal         = false;
   state.deathLinkAmnestyLeft = 0;
+  state.deathLinkQueue   = {}; // F3: in-memory only; the device and server copies stay
   state.lastItemIndex    = 0;
   state.notifyIndexLoaded = false;
   state.notifyReady      = false;
@@ -264,6 +275,7 @@ function clearPlayState() {
   els.showLockedCb.checked = false;
   // AP client received items
   ap.itemsReceived = [];
+  clearHints(); // F1: the DataPackage cache stays
 }
 
 function setStatus(msg) { els.connectStatus.textContent = msg; }
@@ -308,8 +320,10 @@ export function initConnection() {
     els.connectBtn.textContent = 'Disconnect';
 
     loadManualConsumptions();  // device copy first; the server value overrides via onRetrieved
+    loadDeviceDeathLinkQueue(); // F3: device copy before the first render
     beginNotifySync();         // before the Get, so an immediate Retrieved is handled
     subscribeServerState();
+    subscribeHints();
     requestDataPackages();
 
     state.deathLinkAmnestyLeft = state.deathLinkAmnesty;
@@ -357,8 +371,13 @@ export function initConnection() {
 
   ap.onRetrieved = keys => {
     const k = serverKeys();
+    if (hintsKey() in keys) handleHintsValue(keys[hintsKey()]);
     if (k.manual in keys) applyServerManualConsumptions(keys[k.manual], true);
     if (k.purchases in keys) applyServerPurchases(keys[k.purchases]);
+    if (k.deathlink in keys) {
+      applyServerDeathLinkQueue(keys[k.deathlink], true);
+      renderAll();
+    }
     if (k.notify in keys) {
       const v = keys[k.notify];
       state.serverNotifyIndex = Number.isInteger(v) && v >= 0 ? v : null;
@@ -369,6 +388,10 @@ export function initConnection() {
 
   ap.onSetReply = (key, value, msg) => {
     const k = serverKeys();
+    if (key === hintsKey()) {
+      handleHintsValue(value);
+      return;
+    }
     if (key === k.notify) {
       // Recorded only: another client showing an item does not hide it here.
       if (Number.isInteger(value) && value >= 0) state.serverNotifyIndex = value;
@@ -377,6 +400,10 @@ export function initConnection() {
     if (isOwnWrite(msg)) return;
     if (key === k.manual) applyServerManualConsumptions(value, false);
     else if (key === k.purchases) applyServerPurchases(value);
+    else if (key === k.deathlink) {
+      applyServerDeathLinkQueue(value, false);
+      renderAll();
+    }
   };
 
   ap.onDataPackage = games => {

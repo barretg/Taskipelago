@@ -6,6 +6,7 @@ import { enqueueNotification } from './notifications.js';
 import { renderTasks } from './tasks.js';
 import { renderConsumables } from './consumables.js';
 import { writePurchase } from '../shared/server_state.js';
+import { isDeathLinkLocked } from './deathlink_queue.js';
 
 // Port of legacy_client/client.py _bingo_lines
 export function bingoLines(X, Y) {
@@ -240,6 +241,7 @@ export function maybeSendGoal() {
 // Task completion
 // =============================================================
 export function completeTask(taskIdx) {
+  if (isDeathLinkLocked()) return; // F3
   if (state.baseRewardId === null || state.baseCompleteId === null) return;
   const completeId = state.baseCompleteId + taskIdx;
   const rewardId   = state.baseRewardId   + taskIdx;
@@ -267,6 +269,7 @@ export function completeTask(taskIdx) {
 // Purchase / Make Change
 // =============================================================
 export function attemptPurchase(taskIdx) {
+  if (isDeathLinkLocked()) return; // F3
   const branches = state.taskCostAmounts[taskIdx] || [];
   if (!branches.length) return;
   const bal = consumableBalance();
@@ -303,6 +306,7 @@ export function attemptPurchase(taskIdx) {
 }
 
 export function attemptMakeChange(taskIdx) {
+  if (isDeathLinkLocked()) return; // F3
   const branches = state.taskCostAmounts[taskIdx] || [];
   if (branches.length <= 1) return;
   const current = state.taskPurchases[taskIdx];

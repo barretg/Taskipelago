@@ -116,3 +116,53 @@ export async function connect(slotData = BASIC_SLOT_DATA, { server = 'localhost:
   $('connect-btn').click();
   await wait(40);
 }
+
+// Minimal AP data storage for sync tests: Get, Set (replace/update/pop/max/default)
+// and SetNotify replies to every subscribed socket, echoing extra Set fields.
+export function fakeDataStorage(initial = {}) {
+  const store = { ...initial };
+  const subscribers = new Map(); // key -> Set(ws)
+  const apply = (value, op) => {
+    switch (op.operation) {
+      case 'replace': return op.value;
+      case 'default': return value;
+      case 'max': return Math.max(value ?? 0, op.value);
+      case 'update': return { ...(value || {}), ...op.value };
+      case 'pop': {
+        const next = { ...(value || {}) };
+        delete next[op.value];
+        return next;
+      }
+      default: throw new Error(`fake storage: unsupported operation ${op.operation}`);
+    }
+  };
+  const handler = (m, ws) => {
+    if (m.cmd === 'Get') {
+      if (handler.unreachable) return;
+      ws.recv([{ cmd: 'Retrieved', keys: Object.fromEntries(m.keys.map(k => [k, k in store ? store[k] : null])) }]);
+    } else if (m.cmd === 'SetNotify') {
+      for (const k of m.keys) {
+        if (!subscribers.has(k)) subscribers.set(k, new Set());
+        subscribers.get(k).add(ws);
+      }
+    } else if (m.cmd === 'Set') {
+      const { cmd: _c, key, default: def, want_reply: _w, operations, ...extra } = m;
+      const original = key in store ? store[key] : def;
+      let value = original;
+      for (const op of operations) value = apply(value, op);
+      store[key] = value;
+      for (const sub of subscribers.get(key) || []) {
+        sub.recv([{ cmd: 'SetReply', key, value, original_value: original, ...extra }]);
+      }
+    }
+  };
+  handler.store = store;
+  handler.unreachable = false;
+  /** Simulate a write from another client of the slot. */
+  handler.externalSet = (key, value) => {
+    const original = store[key];
+    store[key] = value;
+    for (const sub of subscribers.get(key) || []) sub.recv([{ cmd: 'SetReply', key, value, original_value: original }]);
+  };
+  return handler;
+}

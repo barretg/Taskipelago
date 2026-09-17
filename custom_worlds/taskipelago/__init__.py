@@ -166,8 +166,10 @@ class TaskipelagoWorld(World):
         # Items are an independent editor list from tasks (their own rows/counts);
         # only the summed totals need to match, so this is built without regard
         # to n_editor_tasks.
-        items_raw_editor, item_types_editor, item_consumable_editor, item_counts_editor = (
-            build_item_editor_rows(items_raw_input, item_types_raw, item_consumable_raw, item_count_raw)
+        items_raw_editor, item_types_editor, item_consumable_editor, item_counts_editor, item_fillers_editor = (
+            build_item_editor_rows(
+                items_raw_input, item_types_raw, item_consumable_raw, item_count_raw, item_fillers_raw
+            )
         )
         _n_defined_expanded = sum(item_counts_editor)
 
@@ -211,6 +213,7 @@ class TaskipelagoWorld(World):
         items_raw = expand_rows(items_raw_editor, item_counts_editor)
         item_types = expand_rows(item_types_editor, item_counts_editor)
         item_consumable = expand_rows(item_consumable_editor, item_counts_editor)
+        item_fillers = expand_rows(item_fillers_editor, item_counts_editor)
 
         # Pad/trim items to n_yaml_tasks
         items_raw = pad_or_trim_names(items_raw, n_yaml_tasks)
@@ -220,6 +223,10 @@ class TaskipelagoWorld(World):
         if len(item_consumable) < n_yaml_tasks:
             item_consumable += [False] * (n_yaml_tasks - len(item_consumable))
         item_consumable = item_consumable[:n_yaml_tasks]
+        # Padding entries are random filler flavor text (pad_or_trim_names).
+        if len(item_fillers) < n_yaml_tasks:
+            item_fillers += [True] * (n_yaml_tasks - len(item_fillers))
+        item_fillers = item_fillers[:n_yaml_tasks]
         rewards = list(items_raw)
 
         n = n_yaml_tasks
@@ -497,6 +504,11 @@ class TaskipelagoWorld(World):
         if len(raw_prog_groups) != len(set(raw_prog_groups)):
             raise Exception("Taskipelago: duplicate progressive group names.")
         prog_group_set = set(raw_prog_groups)
+
+        raw_pgcolors = [str(x).strip() for x in (self.options.progressive_group_colors.value or [])]
+        if len(raw_pgcolors) < len(raw_prog_groups):
+            raw_pgcolors += [""] * (len(raw_prog_groups) - len(raw_pgcolors))
+        progressive_group_colors = raw_pgcolors[:len(raw_prog_groups)]
 
         # Expand item progressive groups in parallel with items (own row count,
         # decoupled from task rows, same as items/item_types/item_consumable).
@@ -943,6 +955,7 @@ class TaskipelagoWorld(World):
         self._rewards = rewards
         self._reward_types = item_types
         self._item_consumable = item_consumable
+        self._item_fillers = item_fillers
 
         self._raw_prereqs = raw_prereqs_input
         self._parsed_prereqs = parsed_prereqs
@@ -955,6 +968,7 @@ class TaskipelagoWorld(World):
         self._lock_prereqs = bool(self.options.lock_prereqs)
 
         self._progressive_groups = raw_prog_groups
+        self._progressive_group_colors = progressive_group_colors
         self._reward_to_group = reward_to_group
         self._group_to_reward_indices = group_to_reward_indices
         self._task_progressive_reqs = task_progressive_reqs
@@ -1032,7 +1046,7 @@ class TaskipelagoWorld(World):
 
             # Items are an independent editor list from tasks (their own rows/counts),
             # matching how generate_early expands them.
-            items_raw_editor, _, _, item_counts_editor = build_item_editor_rows(
+            items_raw_editor, _, _, item_counts_editor, _ = build_item_editor_rows(
                 items_raw_input, [], [], item_count_raw
             )
             expanded_items = expand_rows(items_raw_editor, item_counts_editor)
@@ -1157,6 +1171,7 @@ class TaskipelagoWorld(World):
             "items": list(self._rewards),
             "item_types": list(self._reward_types),
             "item_consumable": list(self._item_consumable),
+            "item_fillers": list(self._item_fillers),
             "task_costs": list(self._raw_costs),
             "task_prereqs": list(self._raw_prereqs),
             "item_prereqs": list(self._raw_reward_prereqs),
@@ -1170,6 +1185,7 @@ class TaskipelagoWorld(World):
             "death_link_weights": list(self._death_link_weights),
             "death_link_amnesty": int(self._death_link_amnesty),
             "death_link_enabled": bool(self.options.death_link),
+            "death_link_lock_tasks": bool(self.options.death_link_lock_tasks),
             "base_reward_location_id": BASE_REWARD_LOC_ID + (self.player - 1) * MAX_TASKS,
             "base_complete_location_id": BASE_COMPLETE_LOC_ID + (self.player - 1) * MAX_TASKS,
             "base_item_id": BASE_ITEM_ID + (self.player - 1) * MAX_TASKS,
@@ -1180,6 +1196,7 @@ class TaskipelagoWorld(World):
             "goal_expression": self._raw_goal,
             "goal_region_reqs": list(self._goal_region_reqs),
             "progressive_groups": list(self._progressive_groups),
+            "progressive_group_colors": list(self._progressive_group_colors),
             "item_progressive_group": list(self._reward_to_group),
             "task_progressive_reqs": [
                 [{"group": g, "count": c} for g, c in reqs]

@@ -1,11 +1,13 @@
 // Progressive Groups panel (legacy client.py:2210-2235, 2568-2616). v1.1 F4:
 // rows with inline rename (offers to update item-prereq references) and Remove.
+// F6: a color swatch per group.
 import { h } from '../shared/dom.js';
 import { alertDialog } from '../shared/dialog.js';
 import { tipMarker } from '../shared/tooltip.js';
 import { TIPS } from './legacy_text.js';
 import { addProgGroup, checkGroupRename, removeProgGroup, renameProgGroup } from './model.js';
 import { commitNameChange, confirmNameRemoval } from './rename_refs.js';
+import { openColorPicker } from './regions.js';
 
 function groupRow(group, ctx) {
   const name = h('input', {
@@ -28,7 +30,17 @@ function groupRow(group, ctx) {
   };
   name.addEventListener('keydown', e => { if (e.key === 'Enter') name.blur(); });
   name.addEventListener('blur', commitName);
-  return h('div', { className: 'region-row group-row' },
+  const color = ctx.model.progGroupColors?.[group] || '';
+  return h('div', { className: 'region-row gen-group-row' },
+    h('button', {
+      type: 'button', className: 'color-swatch', style: { background: color || '#808080' },
+      'aria-label': `Change color of ${group}`,
+      title: 'Group color, used to color code this group in the client Items tab.',
+      onclick: () => openColorPicker(`Group Color: ${group}`, color, picked => {
+        ctx.model.progGroupColors[group] = picked;
+        ctx.changed({ groups: true });
+      }),
+    }),
     name,
     h('button', {
       type: 'button', className: 'remove-btn', 'aria-label': `Remove group ${group}`,

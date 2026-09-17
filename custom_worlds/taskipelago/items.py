@@ -1,5 +1,5 @@
 import random
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from BaseClasses import Item, ItemClassification
 
@@ -68,11 +68,13 @@ def build_item_editor_rows(
     item_types_raw: List[str],
     item_consumable_raw: List[str],
     item_count_raw: List[str],
-) -> Tuple[List[str], List[str], List[bool], List[int]]:
+    item_fillers_raw: Optional[List[str]] = None,
+) -> Tuple[List[str], List[str], List[bool], List[int], List[bool]]:
     """
-    Build per-editor-row item state (text/type/consumable/count). Item rows are an
-    independent list from task rows (their own count each); only the summed totals
-    need to match. Blank item text is replaced with random filler flavor text.
+    Build per-editor-row item state (text/type/consumable/count/filler). Item rows are
+    an independent list from task rows (their own count each); only the summed totals
+    need to match. Blank item text is replaced with random filler flavor text and
+    counts as filler, as does an explicit 'true' in item_fillers.
     """
     allowed_types = {"trap", "junk", "useful", "progression"}
     n = len(items_raw_input)
@@ -95,7 +97,13 @@ def build_item_editor_rows(
         for i in range(n)
     ]
 
-    return items_raw_editor, item_types_editor, item_consumable_editor, item_counts_editor
+    item_fillers_raw = item_fillers_raw or []
+    item_fillers_editor = [
+        (not items_raw_input[i]) or (i < len(item_fillers_raw) and item_fillers_raw[i].strip().lower() == "true")
+        for i in range(n)
+    ]
+
+    return items_raw_editor, item_types_editor, item_consumable_editor, item_counts_editor, item_fillers_editor
 
 
 def expand_rows(rows: List, counts: List[int]) -> List:

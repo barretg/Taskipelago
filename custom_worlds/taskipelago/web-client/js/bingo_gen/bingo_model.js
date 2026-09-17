@@ -8,13 +8,14 @@ import { isFillerExact, randomFiller } from '../shared/filler.js';
 import {
   PyError, isDict, pyGet, pyInt, pyListOr, pyStr, pyStrip, pyTruthy,
 } from '../shared/pyish.js';
-import { extractTaskipelagoBlock } from '../generator/yaml_import.js';
+import { extractTaskipelagoBlock, toggleOption } from '../generator/yaml_import.js';
 import { limitPlayerName } from '../generator/model.js';
 
 export function defaultBingoModel() {
   return {
     playerName: '', x: 5, y: 5, bingoal: 3, progressionBalancing: 50, accessibility: 'full',
     deathLinkEnabled: false, deathLinkAmnesty: 0, spaces: '', rewards: '', deathLinkPool: '',
+    deathLinkLockTasks: false, // v1.1 F3
   };
 }
 
@@ -301,6 +302,7 @@ export function buildBingoExport(model, rng = defaultRng) {
       death_link_pool: deathLinkPool,
       death_link_weights: [],
       death_link_amnesty: safeInt(model.deathLinkAmnesty, 0),
+      death_link_lock_tasks: !!model.deathLinkLockTasks,
       bingo_mode: true,
       bingo_dimension_x: X,
       bingo_dimension_y: Y,
@@ -323,6 +325,7 @@ export function bingoSettingsDoc(model) {
     accessibility: model.accessibility,
     death_link_enabled: !!model.deathLinkEnabled,
     death_link_amnesty: safeInt(model.deathLinkAmnesty, 0),
+    death_link_lock_tasks: !!model.deathLinkLockTasks,
     death_link_pool: nonEmptyLines(model.deathLinkPool),
   };
 }
@@ -349,6 +352,7 @@ function loadSettingsDoc(model, doc) {
   } catch (e) {
     if (!(e instanceof PyError)) throw e;
   }
+  model.deathLinkLockTasks = toggleOption(pyGet(doc, 'death_link_lock_tasks', false));
   model.deathLinkPool = linesOf(pyListOr(doc, 'death_link_pool'));
   model.spaces = linesOf(pyListOr(doc, 'spaces'));
   model.rewards = linesOf(pyListOr(doc, 'rewards'));
@@ -392,6 +396,7 @@ function loadYamlDoc(model, doc) {
   } catch (e) {
     if (!(e instanceof PyError)) throw e;
   }
+  model.deathLinkLockTasks = toggleOption(pyGet(block, 'death_link_lock_tasks', false));
   model.deathLinkPool = linesOf(pyListOr(block, 'death_link_pool'));
 
   const tasks = pyListOr(block, 'tasks');

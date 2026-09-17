@@ -10,7 +10,7 @@ import { getUiPref, setUiPref } from '../shared/ui_prefs.js';
 import { dumpYaml, loadYaml } from '../shared/yaml11.js';
 import { TIPS } from './legacy_text.js';
 import {
-  MAX_PLAYER_NAME_LEN, TASK_REWARD_PREVIEW_LABELS, defaultModel, limitPlayerName, normalizeModel, slotCounts,
+  DEATHLINK_LOCK_TIP, MAX_PLAYER_NAME_LEN, TASK_REWARD_PREVIEW_LABELS, defaultModel, limitPlayerName, normalizeModel, slotCounts,
 } from './model.js';
 import { buildExport } from './yaml_export.js';
 import { importDoc } from './yaml_import.js';
@@ -73,6 +73,7 @@ function loadModel(model) {
   els.progression.value = m.progressionBalancing;
   els.accessibility.value = m.accessibility;
   els.deathLinkEnabled.checked = !!m.deathLinkEnabled;
+  els.deathLinkLock.checked = !!m.deathLinkLockTasks;
   els.amnesty.value = m.deathLinkAmnesty;
   changed({ tasks: true, items: true, regions: true, groups: true, deathlink: true }, { save: false });
 }
@@ -239,11 +240,14 @@ function build(root) {
 
   els.deathLinkEnabled = h('input', { type: 'checkbox', onchange: setting('deathLinkEnabled') });
   els.amnesty = h('input', { type: 'number', min: 0, max: 999, className: 'count-input', oninput: setting('deathLinkAmnesty') });
+  els.deathLinkLock = h('input', { type: 'checkbox', onchange: setting('deathLinkLockTasks') });
   els.deathlink = h('div', { className: 'dl-table' });
   const deathlink = section('deathlink', 'DeathLink',
     h('div', { className: 'gen-settings' },
       h('label', { className: 'check-label' }, els.deathLinkEnabled, 'Enable DeathLink'),
-      h('label', { className: 'inline-label' }, 'Amnesty:', els.amnesty)),
+      h('label', { className: 'inline-label' }, 'Amnesty:', els.amnesty),
+      h('label', { className: 'check-label' },
+        els.deathLinkLock, tipHeader('Lock other tasks until DeathLink tasks are done', DEATHLINK_LOCK_TIP))),
     els.deathlink,
     h('div', { className: 'btn-row' }, h('button', { type: 'button', onclick: () => addDeathLink(ctx) }, 'Add DeathLink Task')));
 
