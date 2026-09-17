@@ -6,7 +6,7 @@
 * Hints tab
 * Deathlink alerts with noises that can be turned on and off
 * Deathlink lock mode
-* Detahlink task rows
+* Deathlink task rows
 * Item filtering on items tab
 * Find/replace on YAML Generator
 * Renaming something optionally updates all references for your convenience
@@ -15,4 +15,4 @@
 * Bingo now generates filler if no items are listed
 * Fixed case where names with trailing special characters made things a little funky
 
-Note: should be fully backwards comapatible with worlds generated at v1.0.2. Also Universal Tracker is still incompatible.
+Note: should be fully backwards compatible with worlds generated at v1.0.2. Also Universal Tracker is still incompatible.
