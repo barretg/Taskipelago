@@ -21,12 +21,14 @@ import { buildGroupAddRow, renderProgGroups } from './prog_groups.js';
 import { addDeathLink, renderDeathLinkTable } from './deathlink_rows.js';
 import { openTutorial } from './tutorial.js';
 import { openCommunityYamls } from './community.js';
+import { reorderUpdatesRefs, setReorderUpdatesRefs } from './reorder.js';
+import { openFindReplace } from './find_replace.js';
 
 export const DRAFT_KEY = 'taskipelago_draft_generator';
 const SAVE_DELAY_MS = 400;
 const SECTION_DEFAULTS = { regions: false, tasks: true, items: true, deathlink: false };
 
-const ctx = { model: defaultModel(), changed };
+const ctx = { model: defaultModel(), changed, root: null, openSection };
 const els = {};
 let saveTimer = null;
 
@@ -42,6 +44,7 @@ function changed(parts = {}, { save = true } = {}) {
   if (parts.regions) renderRegions(els.regions, ctx);
   if (parts.groups) renderProgGroups(els.groups, ctx);
   if (parts.deathlink) renderDeathLinkTable(els.deathlink, ctx);
+  if (parts.goal) els.goalTasks.value = ctx.model.goalTasks;
   updateCounter();
   if (parts.focusLast) {
     const rows = els[parts.focusLast].querySelectorAll('.gt-task, .gt-item, .dl-row:not(.gt-head)');
@@ -144,6 +147,11 @@ async function resetGenerator() {
 // Layout
 // ---------------------------------------------------------------------------
 
+/** Expand a collapsible section (F5 find); the toggle listener stores the change. */
+function openSection(key) {
+  if (els.sections?.[key]) els.sections[key].open = true;
+}
+
 function section(key, title, ...body) {
   let open = getUiPref('generatorSections', {})[key] ?? SECTION_DEFAULTS[key];
   const details = h('details', { className: 'gen-section', open },
@@ -157,6 +165,8 @@ function section(key, title, ...body) {
     prefs[key] = details.open;
     setUiPref('generatorSections', prefs);
   });
+  els.sections = els.sections || {};
+  els.sections[key] = details;
   return details;
 }
 
@@ -180,6 +190,14 @@ function build(root) {
     els.playerName,
     h('span', { className: 'muted-text' }, `(max ${MAX_PLAYER_NAME_LEN} chars)`),
     h('span', { className: 'spacer' }),
+    h('label', {
+      className: 'check-label',
+      title: 'When on, moving a task or item with the up/down carets also updates index references to it.',
+    }, h('input', {
+      type: 'checkbox', checked: reorderUpdatesRefs(), id: 'gen-reorder-refs',
+      onchange: e => setReorderUpdatesRefs(e.target.checked),
+    }), 'Reordering updates references'),
+    h('button', { type: 'button', onclick: () => openFindReplace(ctx) }, 'Find/Replace'),
     h('button', { type: 'button', onclick: () => openCommunityYamls(applyDoc) }, 'Community YAMLs'),
     h('button', { type: 'button', onclick: openTutorial }, 'Tutorial'));
 
@@ -190,7 +208,9 @@ function build(root) {
   els.hideUnreachable = h('input', { type: 'checkbox', onchange: setting('hideUnreachable') });
   els.rewardPreviews = h('select', { onchange: setting('taskRewardPreviews', Number) },
     TASK_REWARD_PREVIEW_LABELS.map((label, i) => h('option', { value: String(i) }, label)));
-  els.goalTasks = h('input', { type: 'text', spellcheck: false, className: 'goal-input', oninput: setting('goalTasks') });
+  els.goalTasks = h('input', {
+    type: 'text', spellcheck: false, className: 'goal-input', dataset: { field: 'goalTasks' }, oninput: setting('goalTasks'),
+  });
   els.tasks = h('div', { className: 'gen-table gen-task-table' });
   const tasks = section('tasks', 'Tasks',
     h('div', { className: 'gen-settings' },
@@ -206,7 +226,7 @@ function build(root) {
   els.accessibility = h('select', { onchange: setting('accessibility') },
     ['full', 'items', 'minimal'].map(v => h('option', { value: v }, v)));
   els.counter = h('span', { className: 'muted-text item-counter' });
-  els.groups = h('div', { className: 'chip-list' });
+  els.groups = h('div', { className: 'region-list' });
   els.items = h('div', { className: 'gen-table gen-item-table' });
   const items = section('items', 'Items',
     h('div', { className: 'gen-settings' },
@@ -238,7 +258,15 @@ function build(root) {
 
 export function initGenerator(root = $('generator-root')) {
   if (!root) return;
+  ctx.root = root;
   build(root);
+  document.addEventListener('keydown', e => {
+    const key = e.key.toLowerCase();
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || (key !== 'f' && key !== 'h')) return;
+    if (!document.getElementById('tab-generator')?.classList.contains('active')) return;
+    e.preventDefault();
+    openFindReplace(ctx, key === 'h' ? 'replace' : 'find');
+  });
   loadModel(normalizeModel(storage.get(DRAFT_KEY)));
   addEventListener('pagehide', () => {
     if (!saveTimer) return;

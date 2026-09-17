@@ -193,6 +193,185 @@ test('draft autosaves and reloads through normalizeModel', async () => {
   assert.equal(draft.items[0].name, 'Key');
 });
 
+test('F4: renaming a region or group offers to update references; remove warns', async () => {
+  const { buildExport } = await importModule('generator/yaml_export.js');
+  assert.equal(await applyDoc({
+    name: 'Refs', game: 'Taskipelago',
+    Taskipelago: {
+      regions: ['chores', 'fun'], region_default_pcts: [100, 100], region_prereqs: ['', 'chores-50'],
+      tasks: ['chores', 'B', 'C'], task_count: ['1', '1', '1'], task_region: ['chores', 'fun', ''],
+      task_prereqs: ['', 'chores*1', '"chores" || fun'], goal_tasks: ['chores && 3'],
+      progressive_groups: ['keys'], items: ['Key', 'Gem', 'Map'], item_count: ['1', '1', '1'],
+      item_progressive_group: ['keys', '', ''], item_prereqs: ['', 'keys-1', ''],
+    },
+  }), true);
+  const m = generatorModel();
+  const regions = root().querySelector('details.gen-section');
+  const regionName = () => regions.querySelector('.region-row:not(.region-head) .region-name');
+  const rename = async (el, value) => {
+    el.value = value;
+    el.dispatchEvent(new window.Event('blur'));
+    el.dispatchEvent(new window.Event('blur')); // a second blur while the prompt is open is ignored
+    await wait(5);
+  };
+
+  await rename(regionName(), 'house');
+  assert.match(dialogText(), /3 expressions reference 'chores'\. Update them to 'house'\?/);
+  assert.equal(doc.querySelectorAll('.dialog-overlay').length, 1);
+  await answer('Cancel');
+  assert.equal(regionName().value, 'chores');
+  assert.equal(m.regions[0].name, 'chores');
+
+  await rename(regionName(), 'house');
+  await answer('Rename only');
+  assert.equal(m.regions[0].name, 'house');
+  assert.equal(m.tasks[0].region, 'house');
+  assert.equal(m.tasks[1].prereq, 'chores*1');
+
+  await rename(regionName(), 'chores');
+  assert.equal(doc.querySelectorAll('.dialog-overlay').length, 0, 'no references to house, no prompt');
+  await rename(regionName(), 'house');
+  await answer('Update');
+  assert.deepEqual([m.tasks[1].prereq, m.tasks[2].prereq, m.regions[1].prereq, m.goalTasks],
+    ['house*1', '"chores" || fun', 'house-50', 'house && 3']);
+  assert.equal(root().querySelector('.goal-input').value, 'house && 3');
+  assert.equal(root().querySelectorAll('.gt-task')[1].querySelectorAll('input[type="text"]')[1].value, 'house*1');
+
+  const groupName = () => root().querySelector('.gen-groups .group-row .region-name');
+  await rename(groupName(), 'tools');
+  assert.match(dialogText(), /1 expression references 'keys'\. Update it to 'tools'\?/);
+  await answer('Update');
+  assert.deepEqual(m.progGroups, ['tools']);
+  assert.equal(m.items[0].progGroup, 'tools');
+  assert.equal(m.tasks[1].itemPrereq, 'tools-1');
+  assert.equal(root().querySelector('.gt-item').querySelectorAll('select')[1].value, 'tools');
+
+  const result = await buildExport(m, { confirm: async () => true });
+  assert.ok(result.data, JSON.stringify(result.error));
+
+  button(regions.querySelector('.region-row:not(.region-head)'), 'Remove').click();
+  await wait(5);
+  assert.match(dialogText(), /3 expressions still reference 'house' and will fail to export/);
+  await answer('No');
+  assert.equal(m.regions.length, 2);
+  button(root().querySelector('.gen-groups .group-row'), 'Remove').click();
+  await wait(5);
+  await answer('Yes');
+  assert.deepEqual(m.progGroups, []);
+  assert.equal(m.items[0].progGroup, '');
+});
+
+test('F10: carets move rows, keep focus, and follow the references toggle', async () => {
+  const m = generatorModel();
+  const taskRows = () => root().querySelectorAll('.gt-task');
+  const carets = i => taskRows()[i].querySelectorAll('.caret-btn');
+  assert.ok(carets(0)[0].disabled, 'first row cannot move up');
+  assert.ok(carets(taskRows().length - 1)[1].disabled, 'last row cannot move down');
+  const names = () => m.tasks.map(t => t.name);
+  const before = names();
+  const goal = m.goalTasks;
+  carets(2)[0].click();
+  assert.deepEqual(names(), [before[0], before[2], before[1]]);
+  assert.equal(doc.activeElement, carets(1)[0]);
+  assert.equal(root().querySelector('.goal-input').value, m.goalTasks);
+  assert.notEqual(m.goalTasks, goal);
+
+  const toggle = $('gen-reorder-refs');
+  assert.equal(toggle.checked, true);
+  change(toggle, { checked: false });
+  const goalNow = m.goalTasks;
+  carets(2)[0].click();
+  assert.deepEqual(names(), before);
+  assert.equal(m.goalTasks, goalNow);
+  carets(1)[0].click();
+  assert.equal(doc.activeElement, carets(0)[1], 'moved to the top: focus falls back to the down caret');
+  carets(0)[1].click();
+  assert.deepEqual(names(), before);
+  change(toggle, { checked: true });
+  assert.equal(JSON.parse(localStorage.getItem('taskipelago_ui')).reorderUpdatesRefs, true);
+});
+
+test('F5: find and replace panel', async () => {
+  assert.equal(await applyDoc({
+    name: 'Finder', game: 'Taskipelago',
+    Taskipelago: {
+      tasks: Array.from({ length: 40 }, (_, i) => `Task ${i + 1}`), task_count: Array(40).fill('1'),
+      task_description: Array.from({ length: 40 }, (_, i) => (i === 5 ? 'wash the dog' : '')),
+      task_prereqs: Array.from({ length: 40 }, (_, i) => (i === 39 ? '"Task 1" && "Task 12"' : '')),
+      items: ['Dog Treat', 'Treat'], item_count: ['39', '1'], item_fillers: [false, true],
+      death_link: { true: 50, false: 0 }, death_link_pool: ['Walk the dog'],
+    },
+  }), true);
+  const m = generatorModel();
+  const sections = [...root().querySelectorAll('details.gen-section')];
+  const deathlink = sections.find(d => d.querySelector('summary').textContent === 'DeathLink');
+  deathlink.open = false;
+  const scrolled = [];
+  window.Element.prototype.scrollIntoView = function scrollIntoView() { scrolled.push(this); };
+
+  // Ctrl+F only on the generator tab.
+  [...doc.querySelectorAll('#main-tabs .tab-btn')][0].click();
+  doc.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true, cancelable: true }));
+  assert.equal(doc.querySelector('.find-panel'), null);
+  [...doc.querySelectorAll('#main-tabs .tab-btn')].find(b => b.dataset.tab === 'generator').click();
+  const ev = new window.KeyboardEvent('keydown', { key: 'h', ctrlKey: true, bubbles: true, cancelable: true });
+  doc.dispatchEvent(ev);
+  assert.ok(ev.defaultPrevented);
+  const panel = doc.querySelector('.find-panel');
+  assert.ok(panel);
+  const [find, replace] = panel.querySelectorAll('input[type="text"]');
+  assert.equal(doc.activeElement, replace);
+  const status = () => panel.querySelector('.find-status').textContent;
+
+  input(find, 'dog');
+  button(panel, 'Find Next').click();
+  assert.match(status(), /Match 1 of 3: Task 6 description: wash the dog/);
+  assert.ok(root().querySelector('[data-field="tasks.5.desc"]').classList.contains('find-highlight'));
+  button(panel, 'Find Next').click();
+  assert.match(status(), /Match 2 of 3 \(Item 1 name\)/);
+  const itemName = root().querySelector('[data-field="items.0.name"]');
+  assert.equal(doc.activeElement, itemName);
+  assert.deepEqual([itemName.selectionStart, itemName.selectionEnd], [0, 3]);
+  button(panel, 'Find Next').click();
+  assert.equal(deathlink.open, true, 'collapsed section expands');
+  assert.equal(scrolled.at(-1), root().querySelector('[data-field="deathlink.0.text"]'));
+  button(panel, 'Find Previous').click();
+  assert.match(status(), /Match 2 of 3/);
+
+  input(find, 'Task 1');
+  change(panel.querySelector('input[data-scope="taskNames"]'), { checked: false });
+  change(panel.querySelectorAll('.find-options input')[1], { checked: true });
+  button(panel, 'Find Next').click();
+  assert.match(status(), /Match 1 of 1 \(Task 40 task prereqs\)/);
+  assert.equal(scrolled.at(-1), root().querySelector('[data-field="tasks.39.prereq"]'), 'far-down row scrolled into view');
+  input(replace, 'Task 2');
+  button(panel, 'Replace').click();
+  assert.equal(m.tasks[39].prereq, '"Task 2" && "Task 12"');
+  assert.match(status(), /Replaced 1\. No matches|^Replaced 1\. $/);
+
+  change(panel.querySelector('input[data-scope="taskNames"]'), { checked: true });
+  change(panel.querySelectorAll('.find-options input')[1], { checked: false });
+  input(find, 'task');
+  input(replace, 'Chore');
+  m.items[1].name = 'Task filler';
+  button(panel, 'Replace All').click();
+  await wait(5);
+  assert.match(dialogText(), /Replace 42 occurrences in 41 fields\?/);
+  await answer('Yes');
+  assert.equal(status(), 'Replaced 42');
+  assert.equal(m.tasks[0].name, 'Chore 1');
+  assert.equal(root().querySelector('[data-field="tasks.0.name"]').value, 'Chore 1');
+  assert.equal(m.items[1].name, 'Task filler', 'filler row untouched');
+
+  await wait(450);
+  const draft = JSON.parse(localStorage.getItem(DRAFT_KEY));
+  assert.equal(draft.tasks[39].prereq, '"Chore 2" && "Chore 12"');
+
+  panel.querySelector('input').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(doc.querySelector('.find-panel'), null);
+  [...doc.querySelectorAll('#main-tabs .tab-btn')][0].click();
+});
+
 test('import replaces the editor and reports unbalanced counts', async () => {
   const pending = applyDoc(loadYaml('name: Imported\nTaskipelago:\n  tasks: [A, A, B]\n  items: [X]\n'), 'Imported YAML from:\ntest.yaml');
   await wait(5);

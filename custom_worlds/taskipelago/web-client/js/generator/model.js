@@ -6,6 +6,7 @@
 // may be strings until export converts them. Each item keeps a `ui` object with
 // the ItemRow's saved values and disabled flags; it is never exported.
 import { RESERVED_WORDS, validateRefName } from '../shared/prereq_parser.js';
+import { remapCostIndices, remapPrereqIndices, renameNameRefs } from '../shared/expr_rewrite.js';
 import { isFillerExact, randomFiller as defaultRandomFiller } from '../shared/filler.js';
 import { pyInt, pyStrip } from '../shared/pyish.js';
 
@@ -268,21 +269,116 @@ export function syncTaskRegions(model) {
 }
 
 /**
- * Legacy rename semantics (v1.1_PLAN Phase U amendment): renames the region and
- * task-row assignments only; expression text is not rewritten until F4.
+ * Validate a region rename without applying it. Returns { newName, error };
+ * newName is null when there is nothing to do (unchanged, blank or invalid).
+ */
+export function checkRegionRename(model, oldName, rawNew) {
+  const newName = pyStrip(rawNew);
+  if (newName === oldName || !newName) return { newName: null, error: null };
+  const why = validateRefName(newName);
+  if (why) return { newName: null, error: ['Error', `Region name '${newName}' ${why}.`] };
+  if (model.regions.some(r => r.name === newName)) {
+    return { newName: null, error: ['Error', `Region '${newName}' already exists.`] };
+  }
+  return { newName, error: null };
+}
+
+/**
+ * Rename the region and task-row assignments. Expression text is rewritten
+ * separately (rewriteNameRefs) when the user chooses Update (F4).
  */
 export function renameRegion(model, oldName, rawNew) {
-  const newName = pyStrip(rawNew);
-  if (newName === oldName || !newName) return null;
-  const why = validateRefName(newName);
-  if (why) return ['Error', `Region name '${newName}' ${why}.`];
-  if (model.regions.some(r => r.name === newName)) return ['Error', `Region '${newName}' already exists.`];
+  const { newName, error } = checkRegionRename(model, oldName, rawNew);
+  if (!newName) return error;
   const region = model.regions.find(r => r.name === oldName);
   if (!region) return null;
   region.name = newName;
   for (const t of model.tasks) if (t.region === oldName) t.region = newName;
   syncTaskRegions(model);
   return null;
+}
+
+/** Group rename checks, mirroring checkRegionRename. */
+export function checkGroupRename(model, oldName, rawNew) {
+  const newName = pyStrip(rawNew);
+  if (newName === oldName || !newName) return { newName: null, error: null };
+  const why = validateRefName(newName);
+  if (why) return { newName: null, error: ['Error', `Group name '${newName}' ${why}.`] };
+  if (model.progGroups.includes(newName)) {
+    return { newName: null, error: ['Error', `Progressive group '${newName}' already exists.`] };
+  }
+  return { newName, error: null };
+}
+
+/** Rename a progressive group in the list and every item assignment, including saved ones. */
+export function renameProgGroup(model, oldName, rawNew) {
+  const { newName, error } = checkGroupRename(model, oldName, rawNew);
+  if (!newName) return error;
+  const idx = model.progGroups.indexOf(oldName);
+  if (idx < 0) return null;
+  model.progGroups[idx] = newName;
+  for (const it of model.items) {
+    if (it.progGroup === oldName) it.progGroup = newName;
+    if (it.ui?.savedGroup === oldName) it.ui.savedGroup = newName;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Name references in expressions (v1.1 F4). kind is 'region' or 'group'.
+// ---------------------------------------------------------------------------
+
+/** [object, key] pairs of every expression field that can name a region or group. */
+export function nameRefFields(model, kind) {
+  if (kind === 'group') return model.tasks.map(t => [t, 'itemPrereq']);
+  return [...model.tasks.map(t => [t, 'prereq']), ...model.regions.map(r => [r, 'prereq']), [model, 'goalTasks']];
+}
+
+/** Number of expression fields that reference name. */
+export function countNameRefFields(model, kind, name) {
+  return nameRefFields(model, kind).filter(([obj, key]) => renameNameRefs(obj[key], name, name).count > 0).length;
+}
+
+/** Rewrite name references in place; returns the number of fields changed. */
+export function rewriteNameRefs(model, kind, oldName, newName) {
+  let fields = 0;
+  for (const [obj, key] of nameRefFields(model, kind)) {
+    const { text, count } = renameNameRefs(obj[key], oldName, newName);
+    if (count) {
+      obj[key] = text;
+      fields++;
+    }
+  }
+  return fields;
+}
+
+/**
+ * v1.1 F10: swap editor rows i and j of model.tasks or model.items (row state
+ * such as filler, consumable and saved values moves with the row). With
+ * updateRefs, index references follow: task prereqs and goal tasks for tasks,
+ * item prereqs and costs for items. `prev` is relative and never remapped.
+ * Indices here are editor rows; rows with an empty name are skipped at export
+ * (legacy_client/client.py:2993-2994), which reordering does not change.
+ */
+export function moveRow(model, kind, i, j, updateRefs = true) {
+  const rows = model[kind];
+  if (i === j || i < 0 || j < 0 || i >= rows.length || j >= rows.length) return false;
+  [rows[i], rows[j]] = [rows[j], rows[i]];
+  if (!updateRefs) return true;
+  const indexMap = rows.map((_, k) => [k + 1]);
+  indexMap[i] = [j + 1];
+  indexMap[j] = [i + 1];
+  const prereq = text => remapPrereqIndices(text, indexMap, false);
+  if (kind === 'tasks') {
+    for (const t of model.tasks) t.prereq = prereq(t.prereq);
+    model.goalTasks = prereq(model.goalTasks);
+  } else {
+    for (const t of model.tasks) {
+      t.itemPrereq = prereq(t.itemPrereq);
+      t.cost = remapCostIndices(t.cost, indexMap);
+    }
+  }
+  return true;
 }
 
 /** _commit_region_pct: clamp to 0-100, keep the old value when not a number. */

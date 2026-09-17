@@ -8,7 +8,7 @@ export function renderDeathLinkTable(container, ctx) {
     h('div', { className: 'dl-row gt-head' }, h('span', {}, 'DeathLink Task'), h('span', {}, 'Weight'), h('span', {})),
     ...model.deathLink.map((row, i) => h('div', { className: 'dl-row' },
       h('input', {
-        type: 'text', value: row.text, spellcheck: false, 'aria-label': 'DeathLink task',
+        type: 'text', value: row.text, spellcheck: false, 'aria-label': 'DeathLink task', dataset: { field: `deathlink.${i}.text` },
         oninput: e => { row.text = e.target.value; ctx.changed(); },
       }),
       h('input', {
