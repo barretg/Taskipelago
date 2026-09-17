@@ -1,0 +1,36 @@
+# Hand-edited file: YAML 1.1 scalars (PyYAML reads these differently from YAML 1.2).
+name: Hand Edited Player Name Too Long
+game: Taskipelago
+description: hand edited
+Taskipelago:
+  progression_balancing: "30"
+  accessibility: items
+  death_link:
+    'true': 1
+    'false': 0
+  lock_prereqs: "false"
+  hide_unreachable_tasks: no
+  task_reward_previews: 7
+  goal_tasks: [1, "2"]
+  progressive_groups: keys
+  tasks:
+    - yes
+    - 1:30
+    - 017
+    - ~
+    - 1e5
+    - 2.50
+    - 0x1F
+    - 1_000
+  task_count: 3
+  items:
+    - on
+    - Gold
+    - nothing here, get pranked nerd
+  item_count: [2, "x", 1]
+  item_types: [legendary, useful]
+  item_consumable: [True, "TRUE"]
+  item_fillers: [no]
+  death_link_pool: [Pushups, "", Plank]
+  death_link_weights: [2, 3]
+  death_link_amnesty: "abc"

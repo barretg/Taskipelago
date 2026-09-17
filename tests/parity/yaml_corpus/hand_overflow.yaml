@@ -1,0 +1,4 @@
+name: Overflow
+Taskipelago:
+  task_reward_previews: .inf
+  tasks: [A]

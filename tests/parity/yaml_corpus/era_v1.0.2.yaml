@@ -1,0 +1,103 @@
+name: Barret
+game: Taskipelago
+description: YAML template for Taskipelago
+Taskipelago:
+  progression_balancing: 50
+  accessibility: full
+  death_link:
+    'true': 50
+    'false': 0
+  progressive_groups:
+  - tickets
+  item_progressive_group:
+  - ''
+  - ''
+  - ''
+  - tickets
+  - ''
+  regions:
+  - chores
+  - fun
+  region_default_pcts:
+  - 75
+  - 100
+  region_colors:
+  - '#e05c5c'
+  - ''
+  region_prereqs:
+  - ''
+  - chores-50
+  task_region:
+  - chores
+  - chores
+  - fun
+  task_priority:
+  - 'true'
+  - 'false'
+  - 'false'
+  tasks:
+  - Laundry
+  - Vacuum
+  - Game night
+  task_count:
+  - '2'
+  - '1'
+  - '2'
+  task_description:
+  - Sort by color
+  - ''
+  - Board games
+  items:
+  - Gold
+  - A big thumbs up
+  - Free dopamine
+  - Ticket
+  - Nap
+  item_types:
+  - progression
+  - junk
+  - junk
+  - progression
+  - useful
+  item_fillers:
+  - false
+  - true
+  - true
+  - false
+  - false
+  item_consumable:
+  - 'true'
+  - 'false'
+  - 'false'
+  - 'false'
+  - 'true'
+  item_count:
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  - '1'
+  task_prereqs:
+  - sequential
+  - prev
+  - 1 || 2
+  item_prereqs:
+  - '5'
+  - 4 || 2
+  - (3 || 4) && 1
+  task_cost:
+  - ''
+  - '"Gold"*2'
+  - 1 || 5
+  lock_prereqs: true
+  hide_unreachable_tasks: true
+  task_reward_previews: 2
+  goal_tasks:
+  - '3'
+  death_link_pool:
+  - Pushups
+  - Plank
+  death_link_weights:
+  - '1'
+  - '2'
+  death_link_amnesty: 1

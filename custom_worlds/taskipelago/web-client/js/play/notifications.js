@@ -1,5 +1,21 @@
 import { ap, state, els, MAX_NOTIFICATIONS } from './state.js';
 import { isFiller } from '../shared/filler.js';
+import { dpItemName, ownGame } from './datapackage.js';
+
+// Dedupe windows (legacy_client/client.py:6363, 6480)
+const DEATHLINK_DEDUPE_MS = 2000;
+const REWARD_DEDUPE_MS = 1500;
+
+let lastDeathLink = { key: null, at: 0 };
+let lastReward = { key: null, at: 0 };
+
+function isDuplicate(last, key, windowMs) {
+  const now = Date.now();
+  if (last.key === key && now - last.at < windowMs) return true;
+  last.key = key;
+  last.at = now;
+  return false;
+}
 
 export function enqueueNotification({ kind, title, body }) {
   state.notifications.push({ kind, title, body, createdAt: Date.now() });
@@ -71,9 +87,9 @@ export function showItemNotification(it) {
     if (off >= 0 && off < nTasks) return;
   }
 
-  // Resolve name
+  // Resolve name: DataPackage, then the YAML item text for our own items
+  let name = dpItemName(it.item, ownGame());
   const base = state.baseItemId;
-  let name = null;
   if (typeof base === 'number') {
     const idx = it.item - base;
     if (idx >= 0 && idx < state.items.length && state.items[idx]) {
@@ -81,7 +97,9 @@ export function showItemNotification(it) {
     }
   }
   if (!name || !name.trim() || isFiller(name)) return;
-  if (name.startsWith('Task Complete ')) return;
+  if (name.trim().startsWith('Task Complete ')) return;
+
+  if (isDuplicate(lastReward, JSON.stringify([it.item, it.player, it.location]), REWARD_DEDUPE_MS)) return;
 
   // Sender
   let sender = '';
@@ -98,10 +116,14 @@ export function handleDeathLinkBounce(tags, data) {
   if (!tags.includes('DeathLink')) return;
 
   // Ignore self-sent bounces
-  const ownSlot = (els.slotInput.value || '').trim() || 'Taskipelago';
+  const ownSlot = state.slotName || 'Taskipelago';
   if ((data.source || '') === ownSlot) return;
 
-  // Amnesty
+  if (isDuplicate(lastDeathLink, JSON.stringify([data.time, data.source, data.cause]), DEATHLINK_DEDUPE_MS)) return;
+
+  // Amnesty. Regression note: the counter resets only when a DeathLink actually
+  // triggers. The legacy client also reset it on every network update
+  // (legacy_client/client.py:4318); that bug is intentionally not ported.
   if (state.deathLinkAmnestyLeft > 0) {
     state.deathLinkAmnestyLeft--;
     return;

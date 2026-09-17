@@ -68,6 +68,7 @@ export class FakeWS {
   static instances = [];
   static onSent = null;
   static failUrls = new Set();
+  static roomInfo = { cmd: 'RoomInfo', seed_name: 'S' };
   constructor(url) {
     this.url = url;
     this.readyState = 0;
@@ -76,7 +77,7 @@ export class FakeWS {
       if (FakeWS.failUrls.has(url)) { this.onerror?.(); this.onclose?.(); return; }
       this.readyState = 1;
       this.onopen?.();
-      this.recv([{ cmd: 'RoomInfo', seed_name: 'S' }]);
+      this.recv([FakeWS.roomInfo]);
     }, 0);
   }
   static get last() { return FakeWS.instances[FakeWS.instances.length - 1]; }

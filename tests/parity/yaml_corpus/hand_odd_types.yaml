@@ -1,0 +1,29 @@
+# Odd value types the legacy client coerced with str()/int()/bool()/list().
+Weird Player:
+  game: Taskipelago
+  Taskipelago:
+    progression_balancing: ~
+    accessibility: "   "
+    death_link: true
+    death_link_amnesty: 2.9
+    lock_prereqs: ""
+    hide_unreachable_tasks: [x]
+    task_reward_previews: "2"
+    goal_tasks: "12"
+    progressive_groups: [keys, "", 7, ~]
+    regions: [chores, ~, "  fun  ", chores]
+    region_default_pcts: ["50", abc, 3.7]
+    region_colors: [~]
+    region_prereqs: [1, 2]
+    tasks: [Walk, Walk, Walk, 2001-12-14, 12:30, Cook]
+    task_prereqs: [~, "", "1"]
+    task_priority: [True, "TRUE", yes]
+    task_region: [fun, chores, nowhere]
+    rewards: [Gold, Gold, "nothing here, get pranked nerd", A big thumbs up, Key, Key]
+    reward_types: [progression, ~, junk, useful, bogus]
+    reward_progressive_group: ["", "", "", "", keys, keys]
+    item_consumable: ["true", "true"]
+    reward_prereqs: ["5", "2 || 3", "\"Key\""]
+    task_cost: ["1*2", "", "4"]
+    death_link_pool: "ab"
+    death_link_weights: [~, "  "]

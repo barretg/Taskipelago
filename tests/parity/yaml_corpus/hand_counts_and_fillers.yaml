@@ -1,0 +1,16 @@
+name: "  Count Keeper  "
+game: Taskipelago
+Taskipelago:
+  task_count: 3
+  tasks: [One, Two]
+  items: [Free dopamine, A nod of respect, Gold, Crisp, A crisp high five, Sword]
+  item_fillers: [~, "true", false, 1, true]
+  item_types: [junk, junk, useful, trap, junk, progression]
+  item_count: ["2", x, 3.5, [1], "1"]
+  item_consumable: [false, false, "True"]
+  item_progressive_group: ["", "", "", "", "", swords]
+  progressive_groups: [swords]
+  task_prereqs: ["", "1"]
+  item_prereqs: ["3 || 6", "2*1"]
+  task_cost: ["3*1 || 1", "\"Gold\"*2"]
+  task_reward_previews: 5

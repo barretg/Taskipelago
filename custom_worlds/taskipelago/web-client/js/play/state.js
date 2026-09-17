@@ -6,6 +6,11 @@ export const ap = new ArchipelagoClient();
 export const state = {
   connState: 'disconnected', // 'disconnected' | 'connecting' | 'connected'
 
+  // Captured at connect; every storage key uses these, not the live inputs
+  serverAddr: '',
+  slotName: '',
+  seedName: '',
+
   // Slot data
   tasks: [],
   items: [],
@@ -54,9 +59,11 @@ export const state = {
   // Notify dedup (mirrors legacy _last_item_index logic)
   lastItemIndex: 0,
   notifyIndexLoaded: false,
-  pendingNotifyIndex: null,
+  notifyReady: false,          // server notify key retrieved (or fallback timer fired)
+  notifyQueue: [],             // ReceivedItems packets held until notifyReady
+  serverNotifyIndex: null,     // taskipelago_notify value from the server
 
-  // UI toggles
+  // UI toggles (enforce locally and hide completed persist in taskipelago_ui)
   localEnforce: false,
   showLocked: false,
   hideCompleted: false,

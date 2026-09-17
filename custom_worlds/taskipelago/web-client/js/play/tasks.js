@@ -7,6 +7,7 @@ import {
 } from './logic.js';
 import { renderBingo } from './bingo_board.js';
 import { ap } from './state.js';
+import { getUiPref, setUiPref } from '../shared/ui_prefs.js';
 
 // =============================================================
 // Region helpers
@@ -340,9 +341,31 @@ function resolveItemPrereqDisplay(prereqText) {
   }).join(', ');
 }
 
+function setRegionProgressExpanded(expanded) {
+  regionProgressExpanded = expanded;
+  const list = $('region-progress-list');
+  const btn = $('region-progress-toggle');
+  if (expanded) {
+    list.classList.remove('hidden');
+    btn.textContent = '▼ Regions';
+    renderRegionProgress();
+  } else {
+    list.classList.add('hidden');
+    btn.textContent = '▶ Regions';
+  }
+}
+
 export function initTasks() {
+  // Per-device UI toggles (UNIFY 3.2)
+  state.localEnforce = !!getUiPref('enforceLocally', false);
+  state.hideCompleted = !!getUiPref('hideCompleted', false);
+  els.enforceCb.checked = state.localEnforce;
+  els.hideCompletedCb.checked = state.hideCompleted;
+  if (getUiPref('regionsCollapsed', false)) setRegionProgressExpanded(false);
+
   els.enforceCb.addEventListener('change', () => {
     state.localEnforce = els.enforceCb.checked;
+    setUiPref('enforceLocally', state.localEnforce);
     if (!state.localEnforce) {
       state.showLocked = false;
       els.showLockedCb.checked = false;
@@ -357,20 +380,12 @@ export function initTasks() {
 
   els.hideCompletedCb.addEventListener('change', () => {
     state.hideCompleted = els.hideCompletedCb.checked;
+    setUiPref('hideCompleted', state.hideCompleted);
     renderTasks();
   });
 
   $('region-progress-toggle').addEventListener('click', () => {
-    regionProgressExpanded = !regionProgressExpanded;
-    const list = $('region-progress-list');
-    const btn = $('region-progress-toggle');
-    if (regionProgressExpanded) {
-      list.classList.remove('hidden');
-      btn.textContent = '▼ Regions';
-      renderRegionProgress();
-    } else {
-      list.classList.add('hidden');
-      btn.textContent = '▶ Regions';
-    }
+    setRegionProgressExpanded(!regionProgressExpanded);
+    setUiPref('regionsCollapsed', !regionProgressExpanded);
   });
 }

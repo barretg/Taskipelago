@@ -1,39 +1,44 @@
 import { ap, state, els, CLIENT_ID } from './state.js';
 import { consumableBalance, consumableReceivedCounts, consumableSpentCounts } from './logic.js';
 import * as storage from '../shared/storage.js';
+import { sanitizeCounts, writeManualConsumptions } from '../shared/server_state.js';
 
 // =============================================================
 // Manual consumption persistence + cross-client sync
 // =============================================================
+// Local changes write device storage, the server key (replace) and the
+// TaskipelagoSync Bounce (kept for v1.0.x clients, UNIFY 3.1). Values that come
+// in from the server or a Bounce only update the device copy, so they never echo
+// back as another Set (legacy client.py:1471-1493).
 function manualConsumptionsKey() {
-  const server = (els.serverInput.value || '').trim().toLowerCase();
-  const slot   = (els.slotInput.value  || '').trim();
-  const seed   = state.seedName || '';
-  return `taskipelago_manual_v1::${server}::${slot}::${seed}`;
+  return `taskipelago_manual_v1::${state.serverAddr.toLowerCase()}::${state.slotName}::${state.seedName}`;
 }
 
-export function manualConsumptionsServerKey() {
-  const slot = (els.slotInput.value || '').trim();
-  const seed = state.seedName || '';
-  return `taskipelago_manual::${slot}::${seed}`;
-}
-
-export function applyManualConsumptions(incoming) {
-  if (!incoming || typeof incoming !== 'object') return;
-  state.manualConsumptions = incoming;
-  saveManualConsumptions();
+function applyManualConsumptions(incoming) {
+  state.manualConsumptions = sanitizeCounts(incoming);
+  storage.set(manualConsumptionsKey(), state.manualConsumptions);
   renderConsumables();
 }
 
-export function loadManualConsumptions() {
-  const parsed = storage.get(manualConsumptionsKey());
-  state.manualConsumptions = parsed && typeof parsed === 'object' ? parsed : {};
+/** Retrieved (fromGet) or SetReply value of taskipelago_manual. */
+export function applyServerManualConsumptions(value, fromGet) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    applyManualConsumptions(value);
+  } else if (fromGet && value == null && Object.keys(state.manualConsumptions).length) {
+    // Server key empty: push the device copy (includes migrated legacy state, UNIFY 3.3).
+    writeManualConsumptions(state.manualConsumptions);
+  }
 }
 
-function saveManualConsumptions() {
+export function loadManualConsumptions() {
+  state.manualConsumptions = sanitizeCounts(storage.get(manualConsumptionsKey()));
+}
+
+function saveLocalManualChange() {
   storage.set(manualConsumptionsKey(), state.manualConsumptions);
   if (state.connState === 'connected') {
-    ap.sendSet(manualConsumptionsServerKey(), { ...state.manualConsumptions }, {});
+    writeManualConsumptions(state.manualConsumptions);
+    sendManualSync();
   }
 }
 
@@ -42,7 +47,7 @@ function sendManualSync() {
     type: 'taskipelago_manual_sync',
     client_id: CLIENT_ID,
     seed: state.seedName,
-    slot_name: (els.slotInput.value || '').trim(),
+    slot_name: state.slotName,
     manual_consumptions: { ...state.manualConsumptions },
   });
 }
@@ -52,7 +57,8 @@ export function handleManualSyncBounce(tags, data) {
       data.type === 'taskipelago_manual_sync' &&
       data.client_id !== CLIENT_ID &&
       data.seed === state.seedName &&
-      data.slot_name === (els.slotInput.value || '').trim()) {
+      data.slot_name === state.slotName &&
+      data.manual_consumptions && typeof data.manual_consumptions === 'object') {
     applyManualConsumptions(data.manual_consumptions);
   }
 }
@@ -109,8 +115,7 @@ export function renderConsumables() {
       btnMinus.disabled = b < 1;
       btnMinus.addEventListener('click', () => {
         state.manualConsumptions[name] = (state.manualConsumptions[name] || 0) + 1;
-        saveManualConsumptions();
-        sendManualSync();
+        saveLocalManualChange();
         renderConsumables();
       });
 
@@ -119,9 +124,10 @@ export function renderConsumables() {
       btnPlus.textContent = '+1';
       btnPlus.disabled = m < 1;
       btnPlus.addEventListener('click', () => {
-        state.manualConsumptions[name] = Math.max(0, (state.manualConsumptions[name] || 0) - 1);
-        saveManualConsumptions();
-        sendManualSync();
+        const next = Math.max(0, (state.manualConsumptions[name] || 0) - 1);
+        if (next) state.manualConsumptions[name] = next;
+        else delete state.manualConsumptions[name];
+        saveLocalManualChange();
         renderConsumables();
       });
 

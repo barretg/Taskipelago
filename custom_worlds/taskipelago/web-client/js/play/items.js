@@ -1,5 +1,6 @@
 import { ap, state, els } from './state.js';
 import { progressiveGroupCounts, consumableItemNames, consumableReceivedCounts } from './logic.js';
+import { dpItemName, ownGame } from './datapackage.js';
 
 export function renderItems() {
   const baseToken  = state.baseTokenId;
@@ -54,8 +55,8 @@ export function renderItems() {
       if (off >= 0 && off < nTasks) continue;
     }
 
-    // Resolve name
-    let name = `Item #${it.item}`;
+    // Resolve name: YAML item text, DataPackage, then the id
+    let name = dpItemName(it.item, ownGame()) || `Item #${it.item}`;
     if (typeof base === 'number') {
       const idx = it.item - base;
       if (idx >= 0 && idx < state.items.length && state.items[idx]) {

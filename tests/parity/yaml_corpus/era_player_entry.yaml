@@ -1,0 +1,92 @@
+Barret:
+  game: Taskipelago
+  Taskipelago:
+    progression_balancing: 50
+    accessibility: full
+    death_link:
+      'true': 50
+      'false': 0
+    progressive_groups:
+    - tickets
+    item_progressive_group:
+    - ''
+    - ''
+    - ''
+    - tickets
+    regions:
+    - chores
+    - fun
+    region_default_pcts:
+    - 75
+    - 100
+    region_colors:
+    - '#e05c5c'
+    - ''
+    region_prereqs:
+    - ''
+    - chores-50
+    task_region:
+    - chores
+    - chores
+    - fun
+    tasks:
+    - Laundry
+    - Vacuum
+    - Game night
+    task_count:
+    - '2'
+    - '1'
+    - '1'
+    task_description:
+    - Sort by color
+    - ''
+    - Board games
+    items:
+    - Gold
+    - A big thumbs up
+    - Free dopamine
+    - Ticket
+    item_types:
+    - progression
+    - junk
+    - junk
+    - progression
+    item_fillers:
+    - false
+    - true
+    - true
+    - false
+    item_consumable:
+    - 'true'
+    - 'false'
+    - 'false'
+    - 'false'
+    item_count:
+    - '1'
+    - '1'
+    - '1'
+    - '1'
+    task_prereqs:
+    - ''
+    - chores-50
+    - chores && 1
+    item_prereqs:
+    - ''
+    - '4'
+    - tickets*1 || 1
+    task_cost:
+    - ''
+    - '"Gold"*1'
+    - 1*1
+    lock_prereqs: true
+    hide_unreachable_tasks: true
+    task_reward_previews: 2
+    goal_tasks:
+    - '3'
+    death_link_pool:
+    - Pushups
+    - Plank
+    death_link_weights:
+    - '1'
+    - '2'
+    death_link_amnesty: 1

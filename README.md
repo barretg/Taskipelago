@@ -34,5 +34,19 @@
 
 * Congrats, your setup is complete!
 
+### Launcher client vs hosted web client
+
+* They are the same app. The launcher serves it locally and opens it in an app window, preferring a Chromium-based browser (Chrome, Edge, Chromium) and falling back to your default browser.
+
+* The hosted web client can only connect to secure (`wss://`) servers such as archipelago.gg. For a local or LAN server (`ws://`), use the client from the launcher.
+
+* Per-seed progress (notification history, purchases, manual consumable use) is stored on the Archipelago server, so it follows you between the two clients and across devices. Generator drafts and UI preferences stay on the device that made them.
+
 ## Community YAML Submission
 [Submit your YAML Here!](https://script.google.com/macros/s/AKfycbxDgukz7NG9emJOODU2-HOMCHPJJyoIH_kSHHnpJwSEHvBSjWewhHWAG1Cd4qhH9YsuUg/exec)
+
+## Development
+
+* Run the regression suite after any major change: `python tests/run_tests.py` (or `python tests/run_tests.py python` / `js`). It needs Python with PyYAML and Node 20+; jsdom installs into `tests/node_modules` on first run.
+
+* The web client's prereq parser, YAML import/export, Taskipelabingo generator and help text are checked against the legacy Python client. See `tests/parity/README.md`.

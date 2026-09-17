@@ -1,0 +1,28 @@
+name: Barret
+game: Taskipelago
+description: YAML template for Taskipelago
+Taskipelago:
+  progression_balancing: 50
+  accessibility: full
+  death_link:
+    'true': 50
+    'false': 0
+  tasks:
+  - Wash dishes
+  - Cook dinner
+  - Read 10 pages
+  rewards:
+  - Cookie
+  - nothing here, get pranked nerd
+  - Nap
+  task_prereqs:
+  - ''
+  - '1'
+  - 1, 2
+  lock_prereqs: false
+  death_link_pool:
+  - Pushups
+  - Plank
+  death_link_weights:
+  - '3'
+  death_link_amnesty: 2

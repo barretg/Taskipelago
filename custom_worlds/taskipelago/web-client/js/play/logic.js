@@ -5,6 +5,7 @@ import { showModal } from '../shared/modal.js';
 import { enqueueNotification } from './notifications.js';
 import { renderTasks } from './tasks.js';
 import { renderConsumables } from './consumables.js';
+import { writePurchase } from '../shared/server_state.js';
 
 // Port of legacy_client/client.py _bingo_lines
 export function bingoLines(X, Y) {
@@ -285,6 +286,7 @@ export function attemptPurchase(taskIdx) {
 
   const doWithBranch = branch => {
     state.taskPurchases[taskIdx] = Object.fromEntries(branch);
+    writePurchase(taskIdx, state.taskPurchases[taskIdx]);
     renderTasks();
     renderConsumables();
   };
@@ -334,6 +336,7 @@ export function attemptMakeChange(taskIdx) {
   showModal('Make Change', `Currently paid: ${currentLabel}\n\nSwitch payment to:`, labels, idx => {
     if (idx !== null) {
       state.taskPurchases[taskIdx] = Object.fromEntries(alternatives[idx]);
+      writePurchase(taskIdx, state.taskPurchases[taskIdx]);
       renderTasks();
       renderConsumables();
     }

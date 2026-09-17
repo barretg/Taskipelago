@@ -53,6 +53,16 @@ export function get(key, fallback = null) {
   }
 }
 
+export function keys() {
+  const out = new Set(Object.keys(mem));
+  if (!service) {
+    try {
+      for (let i = 0; i < localStorage.length; i++) out.add(localStorage.key(i));
+    } catch (_) {}
+  }
+  return [...out];
+}
+
 export function set(key, value) {
   mem[key] = clone(value);
   if (service) {

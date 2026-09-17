@@ -8,7 +8,7 @@ await bootApp();
 test('boot renders disconnected placeholders', () => {
   assert.match($('tasks-list').textContent, /Connect to a server/);
   assert.match($('notif-list').textContent, /No notifications/);
-  assert.equal($('console-input').disabled, true);
+  assert.equal($('console-input').disabled, false); // /connect and /help work while disconnected
 });
 
 test('connect renders tasks with prereq lock hints', async () => {

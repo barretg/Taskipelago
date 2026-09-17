@@ -26,7 +26,7 @@ jobs:
             (git worktree add --detach gh-pages-out && git -C gh-pages-out checkout --orphan gh-pages && git -C gh-pages-out rm -rf . 2>/dev/null || true)
 
           mkdir -p gh-pages-out/beta
-          rsync -a --delete web-client/ gh-pages-out/beta/
+          rsync -a --delete custom_worlds/taskipelago/web-client/ gh-pages-out/beta/
 
           cd gh-pages-out
           git add -A

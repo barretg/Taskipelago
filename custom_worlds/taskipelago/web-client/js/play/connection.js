@@ -2,26 +2,30 @@ import { ap, state, els } from './state.js';
 import { recalcPurchasesFromCompleted, maybeSendGoal } from './logic.js';
 import { showItemNotification, handleDeathLinkBounce } from './notifications.js';
 import {
-  loadManualConsumptions, manualConsumptionsServerKey, applyManualConsumptions,
-  handleManualSyncBounce,
+  loadManualConsumptions, applyServerManualConsumptions, handleManualSyncBounce,
 } from './consumables.js';
+import { requestDataPackages, handleDataPackage } from './datapackage.js';
 import { updateConsoleConnected } from '../console/console.js';
 import { renderAll } from './render.js';
 import * as storage from '../shared/storage.js';
 import { cfg } from '../shared/config.js';
+import {
+  serverKeys, subscribeServerState, sanitizePurchases, isOwnWrite,
+  writeNotifyCursor, flushNotifyCursor, resetNotifyCursor,
+} from '../shared/server_state.js';
+
+// How long ReceivedItems notifications wait for the server notify cursor.
+const NOTIFY_FALLBACK_MS = 3000;
 
 // =============================================================
-// Notify index persistence (device storage)
+// Notify cursor (UNIFY 3.1): server key, device fallback (3.2)
 // =============================================================
-function notifyKey() {
-  const server = (els.serverInput.value || '').trim().toLowerCase();
-  const slot   = (els.slotInput.value  || '').trim();
-  const seed   = state.seedName || '';
-  return `taskipelago_notify_v3::${server}::${slot}::${seed}`;
+function deviceNotifyKey() {
+  return `taskipelago_notify_v3::${state.serverAddr.toLowerCase()}::${state.slotName}::${state.seedName}`;
 }
 
-function loadNotifyIndex() {
-  const v = storage.get(notifyKey());
+function loadDeviceNotifyIndex() {
+  const v = storage.get(deviceNotifyKey());
   if (v !== null && v !== undefined) {
     const n = parseInt(v, 10);
     if (n >= 0) return n;
@@ -30,12 +34,70 @@ function loadNotifyIndex() {
 }
 
 function saveNotifyIndex(idx, force = false) {
-  const key = notifyKey();
-  if (!force) {
-    const cur = loadNotifyIndex();
-    if (cur !== null && cur > idx) return;
+  const cur = loadDeviceNotifyIndex();
+  if (force || cur === null || cur <= idx) storage.set(deviceNotifyKey(), idx);
+  if (force) resetNotifyCursor(idx);
+  else writeNotifyCursor(idx);
+}
+
+let notifyFallbackTimer = null;
+
+function beginNotifySync() {
+  clearTimeout(notifyFallbackTimer);
+  state.notifyReady = false;
+  state.notifyQueue = [];
+  state.serverNotifyIndex = null;
+  state.notifyIndexLoaded = false;
+  notifyFallbackTimer = setTimeout(markNotifyReady, NOTIFY_FALLBACK_MS);
+}
+
+function markNotifyReady() {
+  clearTimeout(notifyFallbackTimer);
+  notifyFallbackTimer = null;
+  if (state.notifyReady || state.connState !== 'connected') return;
+  state.notifyReady = true;
+  const queue = state.notifyQueue;
+  state.notifyQueue = [];
+  for (const { items, packetIndex } of queue) processNotify(items, packetIndex);
+}
+
+// Port of the legacy _last_item_index logic (legacy_client/client.py:1498).
+function processNotify(items, packetIndex) {
+  const packetEnd = packetIndex + items.length;
+
+  if (!state.notifyIndexLoaded) {
+    state.notifyIndexLoaded = true;
+    // Baseline: the furthest known cursor (server, or device incl. migrated legacy
+    // state); with neither, skip all history.
+    const known = [state.serverNotifyIndex, loadDeviceNotifyIndex()].filter(v => v !== null);
+    state.lastItemIndex = known.length ? Math.max(...known) : packetEnd;
+    saveNotifyIndex(state.lastItemIndex);
   }
-  storage.set(key, idx);
+
+  // Server restart: packet ends before our cursor
+  if (packetEnd < state.lastItemIndex) {
+    state.lastItemIndex = packetIndex;
+    saveNotifyIndex(state.lastItemIndex, true);
+  }
+
+  if (packetEnd <= state.lastItemIndex) return;
+
+  const alreadyNotified = Math.max(0, state.lastItemIndex - packetIndex);
+  const newItems = items.slice(alreadyNotified);
+  state.lastItemIndex = packetEnd;
+  saveNotifyIndex(state.lastItemIndex);
+
+  for (const it of newItems) showItemNotification(it);
+}
+
+// =============================================================
+// Purchases (UNIFY 3.1): server entries win, min-cost default for the rest
+// =============================================================
+function applyServerPurchases(value) {
+  const incoming = sanitizePurchases(value);
+  for (const [idx, deduction] of Object.entries(incoming)) state.taskPurchases[idx] = deduction;
+  recalcPurchasesFromCompleted();
+  renderAll();
 }
 
 // Persist last server/slot
@@ -67,7 +129,7 @@ function applySlotData(sd) {
   state.deathLinkWeights    = sd.death_link_weights || [];
   state.deathLinkAmnesty    = parseInt(sd.death_link_amnesty || 0);
   state.deathLinkEnabled    = !!sd.death_link_enabled;
-  state.seedName            = sd.seed_name || '';
+  state.seedName            = sd.seed_name || (ap.roomInfo && ap.roomInfo.seed_name) || '';
   state.sentItemNames       = sd.sent_item_names || [];
   state.sentPlayerNames     = sd.sent_player_names || [];
   state.taskRewardPreviews  = parseInt(sd.task_reward_previews || 0);
@@ -91,29 +153,32 @@ function applySlotData(sd) {
 // =============================================================
 // Connect / disconnect
 // =============================================================
-function startConnect() {
+export function startConnect() {
   const server = els.serverInput.value.trim();
   const slot   = els.slotInput.value.trim();
   const pass   = els.passInput.value.trim() || null;
 
   if (!server || !slot) {
     setStatus('Server and Slot Name are required.');
-    return;
+    return false;
   }
 
   saveLastConnection(server, slot);
   state.connState = 'connecting';
+  state.serverAddr = server;
+  state.slotName = slot;
   state.sentGoal  = false;
   state.notifyIndexLoaded = false;
-  state.pendingNotifyIndex = null;
 
   setStatus(`Connecting to ${server} as ${slot}...`);
   els.connectBtn.textContent = 'Disconnect';
 
   ap.connect(server, slot, pass);
+  return true;
 }
 
-function startDisconnect() {
+export function startDisconnect() {
+  flushNotifyCursor();
   state.connState = 'disconnected';
   setStatus('Disconnected.');
   els.connectBtn.textContent = 'Connect';
@@ -124,7 +189,31 @@ function startDisconnect() {
   renderAll();
 }
 
+/** Console /connect: optional address (host:port or archipelago://slot:pw@host:port). */
+export function connectTo(address = '') {
+  let addr = address.trim();
+  const m = /^archipelago:\/\/(?:([^:@/]*)(?::([^@/]*))?@)?([^/]+)\/?$/i.exec(addr);
+  if (m) {
+    if (m[1]) els.slotInput.value = decodeURIComponent(m[1]);
+    if (m[2] !== undefined) els.passInput.value = decodeURIComponent(m[2]);
+    addr = m[3];
+  }
+  if (addr) els.serverInput.value = addr;
+  if (state.connState !== 'disconnected') startDisconnect();
+  return startConnect();
+}
+
+export function hasServerAddress() {
+  return !!els.serverInput.value.trim();
+}
+
+export function getConnectStatus() {
+  return els.connectStatus.textContent;
+}
+
 function clearPlayState() {
+  clearTimeout(notifyFallbackTimer);
+  notifyFallbackTimer = null;
   // Slot data
   state.tasks = [];
   state.items = [];
@@ -167,14 +256,12 @@ function clearPlayState() {
   state.deathLinkAmnestyLeft = 0;
   state.lastItemIndex    = 0;
   state.notifyIndexLoaded = false;
-  state.pendingNotifyIndex = null;
-  // UI toggles
-  state.localEnforce     = false;
+  state.notifyReady      = false;
+  state.notifyQueue      = [];
+  state.serverNotifyIndex = null;
+  // Session-only toggle (enforce locally / hide completed persist, UNIFY 3.2)
   state.showLocked       = false;
-  state.hideCompleted    = false;
-  els.enforceCb.checked  = false;
   els.showLockedCb.checked = false;
-  els.hideCompletedCb.checked = false;
   // AP client received items
   ap.itemsReceived = [];
 }
@@ -204,7 +291,7 @@ export function initConnection() {
     if (state.connState !== 'connected') return;
     ap.sendBounce(['DeathLink'], {
       time: Date.now() / 1000,
-      source: els.slotInput.value.trim() || 'Taskipelago',
+      source: state.slotName || 'Taskipelago',
     });
   });
 
@@ -216,12 +303,14 @@ export function initConnection() {
     for (const c of checkedLocs) state.checkedLocations.add(c);
 
     applySlotData(slotData);
-    loadManualConsumptions();        // seed from localStorage as initial value
-    ap.sendGet([manualConsumptionsServerKey()]); // server value overrides via onRetrieved
-
     state.connState = 'connected';
     setStatus('Connected.');
     els.connectBtn.textContent = 'Disconnect';
+
+    loadManualConsumptions();  // device copy first; the server value overrides via onRetrieved
+    beginNotifySync();         // before the Get, so an immediate Retrieved is handled
+    subscribeServerState();
+    requestDataPackages();
 
     state.deathLinkAmnestyLeft = state.deathLinkAmnesty;
 
@@ -249,40 +338,9 @@ export function initConnection() {
   };
 
   ap.onReceivedItems = (items, packetIndex) => {
-    const packetEnd = packetIndex + items.length;
-
-    if (!state.notifyIndexLoaded) {
-      state.notifyIndexLoaded = true;
-      const saved = loadNotifyIndex();
-      if (saved !== null) {
-        state.lastItemIndex = Math.max(0, saved);
-      } else {
-        state.lastItemIndex = packetEnd;
-      }
-      saveNotifyIndex(state.lastItemIndex);
-    }
-
-    // Server restart: packet ends before our cursor
-    if (packetEnd < state.lastItemIndex) {
-      state.lastItemIndex = packetIndex;
-      saveNotifyIndex(state.lastItemIndex, true);
-    }
-
-    if (packetEnd <= state.lastItemIndex) {
-      recalcPurchasesFromCompleted();
-      renderAll();
-      return;
-    }
-
-    const alreadyNotified = Math.max(0, state.lastItemIndex - packetIndex);
-    const newItems = items.slice(alreadyNotified);
-    state.lastItemIndex = packetEnd;
-    saveNotifyIndex(state.lastItemIndex);
-
-    for (const it of newItems) {
-      showItemNotification(it);
-    }
-
+    // Notifications wait for the server notify cursor; the item list renders now.
+    if (state.notifyReady) processNotify(items, packetIndex);
+    else state.notifyQueue.push({ items, packetIndex });
     recalcPurchasesFromCompleted();
     renderAll();
   };
@@ -297,11 +355,33 @@ export function initConnection() {
     renderAll();
   };
 
-  ap.onRetrieved = (keys) => {
-    const serverKey = manualConsumptionsServerKey();
-    if (serverKey in keys && keys[serverKey] && typeof keys[serverKey] === 'object') {
-      applyManualConsumptions(keys[serverKey]);
+  ap.onRetrieved = keys => {
+    const k = serverKeys();
+    if (k.manual in keys) applyServerManualConsumptions(keys[k.manual], true);
+    if (k.purchases in keys) applyServerPurchases(keys[k.purchases]);
+    if (k.notify in keys) {
+      const v = keys[k.notify];
+      state.serverNotifyIndex = Number.isInteger(v) && v >= 0 ? v : null;
+      markNotifyReady();
+      renderAll();
     }
+  };
+
+  ap.onSetReply = (key, value, msg) => {
+    const k = serverKeys();
+    if (key === k.notify) {
+      // Recorded only: another client showing an item does not hide it here.
+      if (Number.isInteger(value) && value >= 0) state.serverNotifyIndex = value;
+      return;
+    }
+    if (isOwnWrite(msg)) return;
+    if (key === k.manual) applyServerManualConsumptions(value, false);
+    else if (key === k.purchases) applyServerPurchases(value);
+  };
+
+  ap.onDataPackage = games => {
+    handleDataPackage(games);
+    renderAll();
   };
 
   ap.onBounced = (tags, data) => {

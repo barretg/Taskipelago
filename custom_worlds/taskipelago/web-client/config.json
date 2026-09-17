@@ -1,7 +1,7 @@
 {
   "mode": "hosted",
   "version": "1.1.0",
-  "communityEndpoint": "",
+  "communityEndpoint": "https://script.google.com/macros/s/AKfycbxDgukz7NG9emJOODU2-HOMCHPJJyoIH_kSHHnpJwSEHvBSjWewhHWAG1Cd4qhH9YsuUg/exec",
   "features": {
     "insecureWs": false,
     "localStorageService": false

@@ -47,7 +47,9 @@ def run_js() -> int:
     for root, _dirs, names in os.walk(os.path.join(TESTS, "js")):
         files += [os.path.join(root, n) for n in names if n.endswith(".test.mjs")]
     # --test-force-exit: the app's heartbeat timers and jsdom keep test processes alive.
-    return subprocess.run([node, "--test", "--test-force-exit", *sorted(files)], cwd=TESTS).returncode
+    # PYTHON: the generator parity test reads JS export text back with PyYAML.
+    env = {**os.environ, "PYTHON": sys.executable}
+    return subprocess.run([node, "--test", "--test-force-exit", *sorted(files)], cwd=TESTS, env=env).returncode
 
 
 def main(argv: list) -> int:

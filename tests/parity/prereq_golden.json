@@ -1,0 +1,2850 @@
+{
+ "cases": [
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "",
+   "result": {
+    "ast": null
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "   ",
+   "result": {
+    "ast": null
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1",
+   "result": {
+    "ast": 0
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": " 3 ",
+   "result": {
+    "ast": 2
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1,2",
+   "result": {
+    "ast": [
+     "and",
+     [
+      0,
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1 && 2",
+   "result": {
+    "ast": [
+     "and",
+     [
+      0,
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1||2",
+   "result": {
+    "ast": [
+     "or",
+     [
+      0,
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1 || 2 && 3",
+   "result": {
+    "ast": [
+     "or",
+     [
+      0,
+      [
+       "and",
+       [
+        1,
+        2
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "(1 || 2) && 3",
+   "result": {
+    "ast": [
+     "and",
+     [
+      [
+       "or",
+       [
+        0,
+        1
+       ]
+      ],
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "((1))",
+   "result": {
+    "ast": 0
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1, (2 || (3 && 4)), 5",
+   "result": {
+    "ast": [
+     "and",
+     [
+      0,
+      [
+       "or",
+       [
+        1,
+        [
+         "and",
+         [
+          2,
+          3
+         ]
+        ]
+       ]
+      ],
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1 &&2||3,4",
+   "result": {
+    "ast": [
+     "or",
+     [
+      [
+       "and",
+       [
+        0,
+        1
+       ]
+      ],
+      [
+       "and",
+       [
+        2,
+        3
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "\t1\n&&\r2　",
+   "result": {
+    "ast": [
+     "and",
+     [
+      0,
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "\u001c1\u001f",
+   "result": {
+    "ast": 0
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "01",
+   "result": {
+    "ast": 0
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "10",
+   "result": {
+    "ast": 9
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "11",
+   "result": {
+    "error": "Taskipelago: task prereq index '11' on task 5 is out of range (1..10)."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "0",
+   "result": {
+    "error": "Taskipelago: task prereq index '0' on task 5 is out of range (1..10)."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "99999999999999999999",
+   "result": {
+    "error": "Taskipelago: task prereq index '99999999999999999999' on task 5 is out of range (1..10)."
+   }
+  },
+  {
+   "n": 0,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1",
+   "result": {
+    "error": "Taskipelago: task prereq index '1' on task 5 is out of range (1..0)."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons",
+   "result": {
+    "ast": [
+     "group_ref",
+     "weapons",
+     null
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons-2",
+   "result": {
+    "ast": [
+     "group_ref",
+     "weapons",
+     2
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons*3",
+   "result": {
+    "ast": [
+     "group_count",
+     "weapons",
+     3
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons-2 && chores-50 || armor_set*2",
+   "result": {
+    "ast": [
+     "or",
+     [
+      [
+       "and",
+       [
+        [
+         "group_ref",
+         "weapons",
+         2
+        ],
+        [
+         "region_ref",
+         "chores",
+         50
+        ]
+       ]
+      ],
+      [
+       "group_count",
+       "armor_set",
+       2
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores",
+   "result": {
+    "ast": [
+     "region_ref",
+     "chores",
+     null
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores-50",
+   "result": {
+    "ast": [
+     "region_ref",
+     "chores",
+     50
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores*2",
+   "result": {
+    "ast": [
+     "region_abs",
+     "chores",
+     2
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "side-quests-25",
+   "result": {
+    "ast": [
+     "region_ref",
+     "side-quests",
+     25
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "shared-1",
+   "result": {
+    "ast": [
+     "group_ref",
+     "shared",
+     1
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "shared*1",
+   "result": {
+    "ast": [
+     "group_count",
+     "shared",
+     1
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "my-group",
+   "result": {
+    "ast": [
+     "group_ref",
+     "my-group",
+     null
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "my-group-3",
+   "f8": true,
+   "result": {
+    "ast": [
+     "group_ref",
+     "my-group",
+     3
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons+",
+   "f8": true,
+   "result": {
+    "ast": [
+     "group_ref",
+     "weapons+",
+     null
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons+*3",
+   "f8": true,
+   "result": {
+    "error": "Taskipelago: unknown name 'weapons+*3' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons+-2",
+   "f8": true,
+   "result": {
+    "error": "Taskipelago: unknown name 'weapons+-2' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weap-*2",
+   "f8": true,
+   "result": {
+    "error": "Taskipelago: unknown name 'weap-*2' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "café-2",
+   "result": {
+    "error": "Taskipelago: unknown name 'café-2' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "ünï",
+   "result": {
+    "error": "Taskipelago: unknown name 'ünï' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "__",
+   "result": {
+    "error": "Taskipelago: unknown name '__' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "unknown",
+   "result": {
+    "error": "Taskipelago: unknown name 'unknown' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "unknown-3",
+   "result": {
+    "error": "Taskipelago: unknown name 'unknown' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons-",
+   "result": {
+    "error": "Taskipelago: unknown name 'weapons-' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons*",
+   "result": {
+    "error": "Taskipelago: unknown name 'weapons*' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": null,
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores",
+   "result": {
+    "error": "Taskipelago: unknown name 'chores' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": null,
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons",
+   "result": {
+    "error": "Taskipelago: unknown name 'weapons' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "prev",
+   "result": {
+    "ast": 3
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "prev && 2",
+   "result": {
+    "ast": [
+     "and",
+     [
+      3,
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 0,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "prev",
+   "result": {
+    "error": "Taskipelago: 'prev' used on task 1 but there is no previous task."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "item prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "prev",
+   "result": {
+    "error": "Taskipelago: 'prev' can only be used in task prereqs (used in item prereq on task 5)."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "sequential",
+   "result": {
+    "ast": [
+     "seq_flag"
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "sequential && prev || 1",
+   "result": {
+    "ast": [
+     "or",
+     [
+      [
+       "and",
+       [
+        [
+         "seq_flag"
+        ],
+        3
+       ]
+      ],
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 0,
+   "label": "goal tasks",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "sequential",
+   "result": {
+    "error": "Taskipelago: 'sequential' can only be used in task prereqs (used in goal tasks on task 1)."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "prev-2",
+   "result": {
+    "error": "Taskipelago: unknown name 'prev' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "region prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": "region 'chores'",
+   "kind": "prereq",
+   "text": "x",
+   "result": {
+    "error": "Taskipelago: unknown name 'x' in region prereq on region 'chores'."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "region prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": "region 'chores'",
+   "kind": "prereq",
+   "text": "11",
+   "result": {
+    "error": "Taskipelago: region prereq index '11' on region 'chores' is out of range (1..10)."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1 2",
+   "result": {
+    "error": "Taskipelago: unexpected token '2' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "(1",
+   "result": {
+    "error": "list index out of range"
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "(1 2)",
+   "result": {
+    "error": "Taskipelago: expected ')' but got '2' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1)",
+   "result": {
+    "error": "Taskipelago: unexpected token ')' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "()",
+   "result": {
+    "error": "Taskipelago: unexpected token ')' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "&&",
+   "result": {
+    "error": "Taskipelago: unexpected token '&&' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1 &&",
+   "result": {
+    "error": "Taskipelago: unexpected end of task prereq expression on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "&& 1",
+   "result": {
+    "error": "Taskipelago: unexpected token '&&' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1 ,, 2",
+   "result": {
+    "error": "Taskipelago: unexpected token ',' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "-1",
+   "result": {
+    "error": "Taskipelago: unexpected character '-' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1 * 2",
+   "result": {
+    "error": "Taskipelago: unexpected character '*' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "!1",
+   "result": {
+    "error": "Taskipelago: unexpected character '!' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "\"Wash\"",
+   "result": {
+    "error": "Taskipelago: unexpected character '\"' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1&2",
+   "result": {
+    "error": "Taskipelago: unexpected character '&' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1|2",
+   "result": {
+    "error": "Taskipelago: unexpected character '|' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons(1)",
+   "result": {
+    "error": "Taskipelago: unexpected token '(' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons&&chores||1",
+   "result": {
+    "ast": [
+     "or",
+     [
+      [
+       "and",
+       [
+        [
+         "group_ref",
+         "weapons",
+         null
+        ],
+        [
+         "region_ref",
+         "chores",
+         null
+        ]
+       ]
+      ],
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "a|b",
+   "result": {
+    "error": "Taskipelago: unknown name 'a|b' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "𝒳",
+   "result": {
+    "error": "Taskipelago: unknown name '𝒳' in task prereq on task 5."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "",
+   "result": {
+    "ast": null
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Gold\"",
+   "result": {
+    "ast": [
+     "cost_group",
+     "Gold",
+     1
+    ]
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Gold\"*3",
+   "result": {
+    "ast": [
+     "cost_group",
+     "Gold",
+     3
+    ]
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Gold\" * 3",
+   "result": {
+    "error": "Taskipelago: unexpected character '*' in cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Gold\"*",
+   "result": {
+    "error": "Taskipelago: unexpected character '*' in cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Gold\"*0",
+   "result": {
+    "error": "Taskipelago: cost count for 'Gold' must be at least 1."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Gold\"*2*3",
+   "result": {
+    "error": "Taskipelago: unexpected character '*' in cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "2",
+   "result": {
+    "ast": [
+     "cost_group",
+     "Gold",
+     1
+    ]
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "2*4",
+   "result": {
+    "ast": [
+     "cost_group",
+     "Gold",
+     4
+    ]
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "007",
+   "result": {
+    "error": "Taskipelago: '7' in cost expression is not a known consumable item name."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "9",
+   "result": {
+    "error": "Taskipelago: '9' in cost expression is not a known consumable item name."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": null,
+   "kind": "cost",
+   "text": "2",
+   "result": {
+    "error": "Taskipelago: '2' in cost expression is not a known consumable item name."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [],
+   "kind": "cost",
+   "text": "2",
+   "result": {
+    "error": "Taskipelago: '2' in cost expression is not a known consumable item name."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "1",
+   "result": {
+    "error": "Taskipelago: 'Key' in cost expression is not a known consumable item name."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "3*2 && \"Gold\"",
+   "result": {
+    "ast": [
+     "and",
+     [
+      [
+       "cost_group",
+       "Gem",
+       2
+      ],
+      [
+       "cost_group",
+       "Gold",
+       1
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Gold\"*2 || \"Gem\"*1",
+   "result": {
+    "ast": [
+     "or",
+     [
+      [
+       "cost_group",
+       "Gold",
+       2
+      ],
+      [
+       "cost_group",
+       "Gem",
+       1
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "(\"Gold\" || \"Gem\") && \"Big Coin\"*2",
+   "result": {
+    "ast": [
+     "and",
+     [
+      [
+       "or",
+       [
+        [
+         "cost_group",
+         "Gold",
+         1
+        ],
+        [
+         "cost_group",
+         "Gem",
+         1
+        ]
+       ]
+      ],
+      [
+       "cost_group",
+       "Big Coin",
+       2
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Gold\",\"Gem\"",
+   "result": {
+    "ast": [
+     "and",
+     [
+      [
+       "cost_group",
+       "Gold",
+       1
+      ],
+      [
+       "cost_group",
+       "Gem",
+       1
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Key\"",
+   "result": {
+    "error": "Taskipelago: 'Key' in cost expression is not a known consumable item name."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Nope\"*2",
+   "result": {
+    "error": "Taskipelago: 'Nope' in cost expression is not a known consumable item name."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"\"",
+   "result": {
+    "error": "Taskipelago: '' in cost expression is not a known consumable item name."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Gold",
+   "result": {
+    "error": "Taskipelago: unclosed quote in cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"it's\"*2",
+   "result": {
+    "ast": [
+     "cost_group",
+     "it's",
+     2
+    ]
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"a\tb\"",
+   "result": {
+    "ast": [
+     "cost_group",
+     "a\tb",
+     1
+    ]
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Gold\" \"Gem\"",
+   "result": {
+    "error": "Taskipelago: unexpected trailing token ('cost_item', 'Gem', 1) in cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Gold\" \"it's\"",
+   "result": {
+    "error": "Taskipelago: unexpected trailing token ('cost_item', \"it's\", 1) in cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Gold\" \"a\tb\"",
+   "result": {
+    "error": "Taskipelago: unexpected trailing token ('cost_item', 'a\\tb', 1) in cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"it's\" )",
+   "result": {
+    "error": "Taskipelago: unexpected trailing token ')' in cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "(\"Gold\"",
+   "result": {
+    "error": "list index out of range"
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "(\"Gold\" \"Gem\")",
+   "result": {
+    "error": "Taskipelago: cost expression expected ')' but got '('cost_item', 'Gem', 1)'."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "(\"Gold\" ,)",
+   "result": {
+    "error": "Taskipelago: unexpected token ')' in cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "||",
+   "result": {
+    "error": "Taskipelago: unexpected token '||' in cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "\"Gold\" ||",
+   "result": {
+    "error": "Taskipelago: unexpected end of cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": ")",
+   "result": {
+    "error": "Taskipelago: unexpected token ')' in cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": "Gold",
+   "result": {
+    "error": "Taskipelago: unexpected character 'G' in cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "kind": "cost",
+   "text": " \"Gold\" ",
+   "result": {
+    "ast": [
+     "cost_group",
+     "Gold",
+     1
+    ]
+   }
+  }
+ ]
+}

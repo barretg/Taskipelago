@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Taskipelago Web Client</title>
-  <link rel="stylesheet" href="style.css?v=3">
+  <title>Taskipelago</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='2' width='28' height='28' rx='6' fill='%23252526' stroke='%235c8de0' stroke-width='3'/%3E%3Cpath d='M9 16.5l5 5 9-11' fill='none' stroke='%238de05c' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
   <div id="app">
@@ -12,6 +13,8 @@
     <nav id="main-tabs">
       <button class="tab-btn active" data-tab="play">Connect and Play</button>
       <button class="tab-btn" data-tab="console">Text Console</button>
+      <button class="tab-btn" data-tab="generator">YAML Generator</button>
+      <button class="tab-btn" data-tab="bingo-gen">Taskipelabingo</button>
     </nav>
 
     <!-- ===== Connect and Play ===== -->
@@ -112,6 +115,16 @@
       </div>
     </section>
 
+    <!-- ===== YAML Generator (built by js/generator/generator.js) ===== -->
+    <section id="tab-generator" class="tab-pane">
+      <div id="generator-root" class="gen-root"></div>
+    </section>
+
+    <!-- ===== Taskipelabingo generator (built by js/bingo_gen/bingo_gen.js) ===== -->
+    <section id="tab-bingo-gen" class="tab-pane">
+      <div id="bingo-gen-root" class="gen-root"></div>
+    </section>
+
   </div><!-- #app -->
 
   <!-- Modal for purchase / make-change dialogs -->
@@ -123,6 +136,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js?v=3"></script>
+  <script type="module" src="js/app.js?v=4"></script>
 </body>
 </html>
