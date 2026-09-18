@@ -21,6 +21,7 @@ const pair = (chars, i) => chars[i] + (chars[i + 1] ?? '');
  * Port of _remap_prereq_indices: several targets become an OR group. With
  * collapse false (one-to-one maps, F10 reorder) the legacy "(n || n)" cleanup
  * is skipped so untouched text stays exactly as typed.
+ * INDEX*Y keeps its count: several targets become an AND of the first Y.
  */
 export function remapPrereqIndices(text, indexMap, collapse = true) {
   if (!text) return text;
@@ -36,7 +37,11 @@ export function remapPrereqIndices(text, indexMap, collapse = true) {
     if (c === '(' || c === ')' || c === ',') { out.push(c); i++; continue; }
     if (c === '"') {
       const q = findQuote(chars, i + 1);
-      const j = q < 0 ? n : q + 1;
+      let j = q < 0 ? n : q + 1;
+      // "Name"*Y: the count is not an index
+      let k = j + 1;
+      while (k < n && isDigit(chars[k])) k++;
+      if (chars[j] === '*' && k > j + 1) j = k;
       out.push(chars.slice(i, j).join(''));
       i = j;
       continue;
@@ -60,6 +65,19 @@ export function remapPrereqIndices(text, indexMap, collapse = true) {
       const run = chars.slice(i, j).join('');
       const old = Number(run);
       const next = old >= 1 && old <= indexMap.length ? indexMap[old - 1] : [];
+      let k = j + 1;
+      while (k < n && isDigit(chars[k])) k++;
+      if (chars[j] === '*' && k > j + 1) {
+        const countText = chars.slice(j + 1, k).join('');
+        const y = Number(countText);
+        if (next.length === 1) out.push(`${next[0]}*${countText}`);
+        else if (next.length > 1 && y >= 1) {
+          const take = next.slice(0, y);
+          out.push(take.length === 1 ? String(take[0]) : '(' + take.join(' && ') + ')');
+        } else out.push(`${run}*${countText}`);
+        i = k;
+        continue;
+      }
       if (next.length === 1) out.push(String(next[0]));
       else if (next.length > 1) out.push('(' + next.join(' || ') + ')');
       else out.push(run);
@@ -76,9 +94,36 @@ export function remapPrereqIndices(text, indexMap, collapse = true) {
   let prev = null;
   while (prev !== result) {
     prev = result;
-    result = result.replace(/(\b\d+\b)(?:\s*\|\|\s*\1\b)+/g, '$1');
+    // Counts of INDEX*Y / "Name"*Y are not indices (legacy NAME*N handling is kept as it was).
+    result = result.replace(/(?<![\d"]\*)(\b\d+\b)(?!\*)(?:\s*\|\|\s*\1\b(?!\*))+/g, '$1');
   }
   return result.replace(/\(\s*(\d+)\s*\)/g, '$1');
+}
+
+/**
+ * Import-side inverse of the INDEX*Y expansion: "(a && b && ...)" whose
+ * indices are exactly the first m >= 2 flat entries of one row (flatToRow
+ * as in remapPrereqIndices) becomes "a*m". Run before remapPrereqIndices.
+ * Quoted names are left alone.
+ */
+export function collapseCopyGroups(text, flatToRow) {
+  if (!text) return text;
+  const rowFlats = new Map();
+  flatToRow.forEach((rows, k) => {
+    if (rows.length !== 1) return;
+    if (!rowFlats.has(rows[0])) rowFlats.set(rows[0], []);
+    rowFlats.get(rows[0]).push(k + 1);
+  });
+  return text.split(/("[^"]*")/).map((part, p) => (p % 2 ? part : part.replace(
+    /\(\s*\d+(?:\s*&&\s*\d+)+\s*\)/g,
+    group => {
+      const nums = group.match(/\d+/g).map(Number);
+      const rows = flatToRow[nums[0] - 1];
+      if (!rows || rows.length !== 1) return group;
+      const flats = rowFlats.get(rows[0]);
+      return nums.every((v, x) => flats[x] === v) ? `${nums[0]}*${nums.length}` : group;
+    },
+  ))).join('');
 }
 
 /** Port of _remap_cost_indices: a digit run right after '*' is a count, not an index. */
