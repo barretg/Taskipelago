@@ -6,7 +6,7 @@
 // shared/pyish.js. That keeps every YAML exported by any released version
 // (tests/parity/yaml_corpus/) importing exactly as it did in the Tk client.
 import { isFillerExact, randomFiller as defaultRandomFiller } from '../shared/filler.js';
-import { remapPrereqIndices, remapCostIndices } from '../shared/expr_rewrite.js';
+import { collapseCopyGroups, remapPrereqIndices, remapCostIndices } from '../shared/expr_rewrite.js';
 import {
   PyError, isDict, pyGet, pyInt, pyList, pyListOr, pyStr, pyStrip, pyTruthy,
 } from '../shared/pyish.js';
@@ -246,7 +246,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
   // Numeric item references are one per exported row; shift them onto collapsed rows.
   if (flatToRow.some((rows, k) => rows.length !== 1 || rows[0] !== k + 1)) {
     for (const t of tasks) {
-      t.itemPrereq = remapPrereqIndices(t.itemPrereq, flatToRow);
+      t.itemPrereq = remapPrereqIndices(collapseCopyGroups(t.itemPrereq, flatToRow), flatToRow);
       t.cost = remapCostIndices(t.cost, flatToRow);
     }
   }

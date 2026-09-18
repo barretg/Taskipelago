@@ -11,6 +11,7 @@
 //   ['group_ref', name, n|null]  ['group_count', name, n]
 //   ['region_ref', name, pct|null]  ['region_abs', name, n]
 //   ['seq_flag']
+//   ['item_copies', idx, y]      first y copies of item idx (INDEX*Y, item prereqs only)
 //   ['cost_group', name, count]  (cost expressions)
 //
 // Python details kept for parity: str.isspace()/strip() character set,
@@ -111,6 +112,9 @@ function simplify(op, nodes) {
 // Prereq expressions
 // ---------------------------------------------------------------------------
 
+// Token as written, for error messages (copies tokens back to INDEX*Y).
+const tokText = tok => (Array.isArray(tok) && tok[0] === 'copies' ? `${tok[1]}*${tok[2]}` : String(tok));
+
 function tokenize(chars, taskIndex, label, locationLabel) {
   const loc = locationLabel || `task ${taskIndex + 1}`;
   const tokens = [];
@@ -124,6 +128,16 @@ function tokenize(chars, taskIndex, label, locationLabel) {
     if (isDigit(c)) {
       let j = i;
       while (j < chars.length && isDigit(chars[j])) j++;
+      // INDEX*Y copy count (no spaces around '*')
+      if (chars[j] === '*') {
+        let k = j + 1;
+        while (k < chars.length && isDigit(chars[k])) k++;
+        if (k > j + 1) {
+          tokens.push(['copies', BigInt(chars.slice(i, j).join('')), BigInt(chars.slice(j + 1, k).join(''))]);
+          i = k;
+          continue;
+        }
+      }
       tokens.push(BigInt(chars.slice(i, j).join(''))); // ints are bigint, names are strings
       i = j;
       continue;
@@ -174,7 +188,7 @@ export function parsePrereq(text, nTasks, taskIndex, label,
     if (pos >= tokens.length) fail(INDEX_ERROR);
     const tok = tokens[pos];
     if (expected !== null && tok !== expected) {
-      fail(`Taskipelago: expected '${expected}' but got '${tok}' in ${label} on ${loc}.`);
+      fail(`Taskipelago: expected '${expected}' but got '${tokText(tok)}' in ${label} on ${loc}.`);
     }
     pos++;
     return tok;
@@ -218,6 +232,18 @@ export function parsePrereq(text, nTasks, taskIndex, label,
       }
       return Number(tok) - 1;
     }
+    if (Array.isArray(tok) && tok[0] === 'copies') {
+      consume();
+      const [, idx, y] = tok;
+      if (label !== 'item prereq') {
+        fail(`Taskipelago: '${idx}*${y}' copy counts can only be used in item prereqs (used in ${label} on ${loc}).`);
+      }
+      if (idx < 1n || idx > BigInt(nTasks)) {
+        fail(`Taskipelago: ${label} index '${idx}' on ${loc} is out of range (1..${nTasks}).`);
+      }
+      if (y < 1n) fail(`Taskipelago: copy count in '${idx}*${y}' on ${loc} must be at least 1.`);
+      return ['item_copies', Number(idx) - 1, Number(y)];
+    }
     if (typeof tok === 'string' && !['&&', '||', '(', ')', ','].includes(tok)) {
       consume();
       if (RESERVED_WORDS.has(tok)) {
@@ -246,7 +272,7 @@ export function parsePrereq(text, nTasks, taskIndex, label,
 
   const result = parseExpr();
   if (pos !== tokens.length) {
-    fail(`Taskipelago: unexpected token '${tokens[pos]}' in ${label} on ${loc}.`);
+    fail(`Taskipelago: unexpected token '${tokText(tokens[pos])}' in ${label} on ${loc}.`);
   }
   return result;
 }
