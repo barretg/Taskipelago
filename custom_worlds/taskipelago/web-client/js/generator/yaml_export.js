@@ -34,6 +34,14 @@ export function convertCostIdxToQuote(costText, itemNames) {
   });
 }
 
+/** [idx, y] for every INDEX*Y node in a prereq AST. */
+function itemCopyRefs(node) {
+  if (!Array.isArray(node)) return [];
+  if (node[0] === 'item_copies') return [[node[1], node[2]]];
+  if (node[0] === 'and' || node[0] === 'or') return node[1].flatMap(itemCopyRefs);
+  return [];
+}
+
 function duplicates(names) {
   const seen = new Map();
   for (const n of names) seen.set(n, (seen.get(n) || 0) + 1);
@@ -82,6 +90,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
 
   const rawItemNames = [];
   const rawItemConsumables = [];
+  const rawItemCounts = [];
   // itemRowExportIdxs[row] = 1-based indices the editor row occupies in the exported list.
   const itemRowExportIdxs = [];
   const items = [];
@@ -93,6 +102,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   for (const row of model.items) {
     const it = itemData(row);
     rawItemNames.push(it.name);
+    rawItemCounts.push(it.count);
     const isFillerRow = it.filler || !it.name;
     rawItemConsumables.push(isFillerRow ? false : it.consumable);
     const start = items.length + 1;
@@ -216,7 +226,14 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   itemPrereqsRaw.forEach((ipr, i) => {
     if (!ipr) return;
     const [resolved] = resolveNameRefs(ipr, rawItemNames);
-    attempt(() => parsePrereq(resolved, nItems, i, 'item prereq', groupSet));
+    attempt(() => {
+      for (const [idx, y] of itemCopyRefs(parsePrereq(resolved, nItems, i, 'item prereq', groupSet))) {
+        if (y > rawItemCounts[idx]) {
+          throw new Error(`Taskipelago: '${idx + 1}*${y}' in item prereq on task ${i + 1} asks for ${y} copies `
+            + `but item ${idx + 1} has a count of ${rawItemCounts[idx]}.`);
+        }
+      }
+    });
   });
   taskCosts.forEach((cost, i) => {
     if (cost) attempt(() => parseCostExpr(cost, consumableSet, rawItemNames), `Task ${i + 1} cost: `);

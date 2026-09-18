@@ -294,7 +294,8 @@ class TaskipelagoWorld(World):
                 raw_task_prereqs_editor[i], editor_to_yaml_task, and_multi=True
             )
             translated_ip = _translate_prereq_indices(
-                raw_item_prereqs_editor[i], editor_to_yaml_item, and_multi=False
+                _resolve_quoted_copy_names(raw_item_prereqs_editor[i], items_raw_editor),
+                editor_to_yaml_item, and_multi=False
             )
             yaml_idxs = editor_to_yaml_task[i]
             for c in range(count):
@@ -1251,6 +1252,18 @@ def _resolve_quoted_names(text: str, names: list) -> Tuple[str, List[str]]:
     return result, errors
 
 
+def _resolve_quoted_copy_names(text: str, names: list) -> str:
+    """Replace "Quoted Name"*Y with INDEX*Y (first matching editor row); unknown names are left
+    for _resolve_quoted_names to report."""
+    def _replacer(m: "_re.Match") -> str:
+        name = m.group(1)
+        for i, n in enumerate(names):
+            if n == name:
+                return f"{i + 1}*{m.group(2)}"
+        return m.group(0)
+    return _re.sub(r'"([^"]*)"\*(\d+)', _replacer, text) if text else text
+
+
 def _translate_prereq_indices(
     text: str,
     editor_to_yaml: List[List[int]],
@@ -1261,6 +1274,7 @@ def _translate_prereq_indices(
     editor_to_yaml[i] = list of 0-based YAML indices for editor row i.
     If and_multi=True, multi-copy tasks become an AND expression (all copies required).
     If and_multi=False, multi-copy items become an OR expression (any copy sufficient).
+    INDEX*Y always becomes an AND of the first Y copies of row INDEX.
     Integers in name tokens (e.g. "group-50") are left untouched.
     """
     if not text:
@@ -1307,6 +1321,26 @@ def _translate_prereq_indices(
                 j += 1
             editor_idx_1 = int(text[i:j])
             editor_idx_0 = editor_idx_1 - 1
+            k = j + 1
+            while k < len(text) and text[k].isdigit():
+                k += 1
+            if j < len(text) and text[j] == '*' and k > j + 1:
+                # INDEX*Y: the first Y copies of this row
+                y = int(text[j+1:k])
+                if not 0 <= editor_idx_0 < len(editor_to_yaml):
+                    raise Exception(f"Taskipelago: prereq index '{editor_idx_1}' in '{text}' is out of range.")
+                copies_1 = [c + 1 for c in editor_to_yaml[editor_idx_0]]
+                if not 1 <= y <= len(copies_1):
+                    raise Exception(
+                        f"Taskipelago: '{editor_idx_1}*{y}' in '{text}' asks for {y} copies "
+                        f"but row {editor_idx_1} has a count of {len(copies_1)}."
+                    )
+                if y == 1:
+                    result.append(str(copies_1[0]))
+                else:
+                    result.append("(" + " && ".join(str(c) for c in copies_1[:y]) + ")")
+                i = k
+                continue
             if 0 <= editor_idx_0 < len(editor_to_yaml):
                 yaml_idxs_0 = editor_to_yaml[editor_idx_0]
                 yaml_idxs_1 = [k + 1 for k in yaml_idxs_0]

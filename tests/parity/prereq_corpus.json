@@ -114,6 +114,17 @@
   {"kind": "cost", "text": "\"Gold\" ||"},
   {"kind": "cost", "text": ")"},
   {"kind": "cost", "text": "Gold"},
-  {"kind": "cost", "text": "\u00a0\"Gold\"\u2003"}
+  {"kind": "cost", "text": "\u00a0\"Gold\"\u2003"},
+  {"kind": "prereq", "text": "3*2", "label": "item prereq"},
+  {"kind": "prereq", "text": "3*1 && (1 || 2*4)", "label": "item prereq"},
+  {"kind": "prereq", "text": "3*0", "label": "item prereq"},
+  {"kind": "prereq", "text": "11*2", "label": "item prereq"},
+  {"kind": "prereq", "text": "3*", "label": "item prereq"},
+  {"kind": "prereq", "text": "3 *2", "label": "item prereq"},
+  {"kind": "prereq", "text": "1 2*3", "label": "item prereq"},
+  {"kind": "prereq", "text": "(1 2*3)", "label": "item prereq"},
+  {"kind": "prereq", "text": "weapons*2 && 4*3", "label": "item prereq"},
+  {"kind": "prereq", "text": "3*2"},
+  {"kind": "prereq", "text": "3*2", "label": "goal tasks"}
  ]
 }

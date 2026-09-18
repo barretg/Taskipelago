@@ -2979,6 +2979,319 @@
      1
     ]
    }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "item prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "3*2",
+   "result": {
+    "ast": [
+     "item_copies",
+     2,
+     2
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "item prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "3*1 && (1 || 2*4)",
+   "result": {
+    "ast": [
+     "and",
+     [
+      [
+       "item_copies",
+       2,
+       1
+      ],
+      [
+       "or",
+       [
+        0,
+        [
+         "item_copies",
+         1,
+         4
+        ]
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "item prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "3*0",
+   "result": {
+    "error": "Taskipelago: copy count in '3*0' on task 5 must be at least 1."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "item prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "11*2",
+   "result": {
+    "error": "Taskipelago: item prereq index '11' on task 5 is out of range (1..10)."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "item prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "3*",
+   "result": {
+    "error": "Taskipelago: unexpected character '*' in item prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "item prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "3 *2",
+   "result": {
+    "error": "Taskipelago: unexpected character '*' in item prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "item prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "1 2*3",
+   "result": {
+    "error": "Taskipelago: unexpected token '2*3' in item prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "item prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "(1 2*3)",
+   "result": {
+    "error": "Taskipelago: expected ')' but got '2*3' in item prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "item prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons*2 && 4*3",
+   "result": {
+    "ast": [
+     "and",
+     [
+      [
+       "group_count",
+       "weapons",
+       2
+      ],
+      [
+       "item_copies",
+       3,
+       3
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "3*2",
+   "result": {
+    "error": "Taskipelago: '3*2' copy counts can only be used in item prereqs (used in task prereq on task 5)."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "goal tasks",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "3*2",
+   "result": {
+    "error": "Taskipelago: '3*2' copy counts can only be used in item prereqs (used in goal tasks on task 5)."
+   }
   }
  ]
 }

@@ -16,11 +16,13 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from pathlib import Path
 
 import yaml
 
 import legacy_generator as lg
+import prereq_parity
 
 HERE = Path(__file__).resolve().parent
 CORPUS_DIR = HERE / "yaml_corpus"
@@ -250,6 +252,43 @@ def apply_v11_changes(m: dict, result: dict) -> dict:
             return {"data": None, "messages": [["error", "Invalid Progressive Group Names",
                     "The following progressive group names are invalid and cannot be exported:\n\n"
                     + "\n".join(bad(m["progGroups"]))]]}
+    return apply_v11_item_copies(m, result)
+
+
+COPIES_ERROR = re.compile(r"^Taskipelago: unexpected character '\*' in item prereq on task (\d+)\.$")
+
+
+def apply_v11_item_copies(m: dict, result: dict) -> dict:
+    # Item prereqs accept INDEX*Y / "Name"*Y (first Y copies of a row), which legacy rejected.
+    errors = [msg for msg in result["messages"] if msg[0] == "error"]
+    if not (errors and errors[0][1] == "Invalid Expressions"):
+        return result
+    parser = prereq_parity.load_parser()
+    tasks = [t for t in m["tasks"] if str(t.get("name") or "").strip()]
+    names = [str(it.get("name") or "").strip() for it in m["items"]]
+    counts = [max(1, int(it.get("count") or 1)) for it in m["items"]]
+
+    def accepted(k: int) -> bool:
+        text = re.sub(r'"([^"]*)"', lambda mt: str(names.index(mt.group(1)) + 1), tasks[k - 1]["itemPrereq"])
+        try:
+            ast = parser.parse_prereq(text, len(names), k - 1, "item prereq", set(m["progGroups"]))
+        except Exception:
+            return False
+        stack = [ast]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, tuple) and node[0] == "item_copies" and node[2] > counts[node[1]]:
+                return False
+            if isinstance(node, tuple) and node[0] in ("and", "or"):
+                stack.extend(node[1])
+        return True
+
+    head, body = errors[0][2].split("\n\n", 1)
+    lines = [ln for ln in body.split("\n")
+             if not ((mt := COPIES_ERROR.match(ln)) and accepted(int(mt.group(1))))]
+    if not lines:
+        raise NotImplementedError("an export now succeeds only because of INDEX*Y; add a real v1.1 export step")
+    errors[0][2] = head + "\n\n" + "\n".join(lines)
     return result
 
 

@@ -7509,7 +7509,7 @@
      [
       "error",
       "Invalid Expressions",
-      "The following expressions could not be parsed and must be fixed before exporting:\n\nTaskipelago: unexpected character '*' in item prereq on task 2.\nTask 1 cost: Taskipelago: '<random filler>' in cost expression is not a known consumable item name."
+      "The following expressions could not be parsed and must be fixed before exporting:\n\nTask 1 cost: Taskipelago: '<random filler>' in cost expression is not a known consumable item name."
      ]
     ]
    }

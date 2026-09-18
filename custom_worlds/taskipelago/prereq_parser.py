@@ -5,9 +5,10 @@ Grammar:
     expr     := or_expr
     or_expr  := and_expr ('||' and_expr)*
     and_expr := atom ('&&' atom | ',' atom)*
-    atom     := INTEGER | NAME | NAME*INTEGER | NAME-INTEGER | '(' expr ')'
+    atom     := INTEGER | INTEGER*INTEGER | NAME | NAME*INTEGER | NAME-INTEGER | '(' expr ')'
 
     INTEGER   - 1-based task/item index
+    INDEX*Y   - item prereqs only: the first Y copies of item INDEX (a row with count > 1)
     NAME      - group or region reference (resolved against known_groups / known_regions)
     NAME*N    - group count mode (N items from group) or region absolute count (N tasks)
     NAME-N    - group ordering mode (N-th position) or region percentage (N%)
@@ -31,6 +32,8 @@ Output AST nodes:
     ("group", name, count)      - resolved ordering group ref (count is threshold int)
     ("region", name, pct)       - resolved region percentage ref (pct is int)
     ("seq_flag",)               - "sequential" marker; always true, carries no dependency
+    ("item_copies", idx, y)     - first y copies of item idx (0-based); expanded to an AND of
+                                  YAML indices by _translate_prereq_indices before generation
 
 group_count and region_abs nodes are already resolved (count embedded) and pass through
 resolve_ast_refs unchanged.
@@ -103,7 +106,7 @@ def parse_prereq(
         tok = tokens[pos[0]]
         if expected is not None and tok != expected:
             raise Exception(
-                f"Taskipelago: expected '{expected}' but got '{tok}' "
+                f"Taskipelago: expected '{expected}' but got '{_tok_text(tok)}' "
                 f"in {label} on {loc}."
             )
         pos[0] += 1
@@ -148,6 +151,24 @@ def parse_prereq(
                     f"is out of range (1..{n_tasks})."
                 )
             return idx_1 - 1  # 0-based
+        if isinstance(tok, tuple) and tok[0] == "copies":
+            consume()
+            _, idx_1, y = tok
+            if label != "item prereq":
+                raise Exception(
+                    f"Taskipelago: '{idx_1}*{y}' copy counts can only be used in item prereqs "
+                    f"(used in {label} on {loc})."
+                )
+            if idx_1 < 1 or idx_1 > n_tasks:
+                raise Exception(
+                    f"Taskipelago: {label} index '{idx_1}' on {loc} "
+                    f"is out of range (1..{n_tasks})."
+                )
+            if y < 1:
+                raise Exception(
+                    f"Taskipelago: copy count in '{idx_1}*{y}' on {loc} must be at least 1."
+                )
+            return ("item_copies", idx_1 - 1, y)
         if isinstance(tok, str) and tok not in ("&&", "||", "(", ")", ","):
             consume()
             if tok in RESERVED_WORDS:
@@ -184,7 +205,7 @@ def parse_prereq(
 
     if pos[0] != len(tokens):
         raise Exception(
-            f"Taskipelago: unexpected token '{tokens[pos[0]]}' in {label} on {loc}."
+            f"Taskipelago: unexpected token '{_tok_text(tokens[pos[0]])}' in {label} on {loc}."
         )
 
     return result
@@ -202,7 +223,7 @@ def resolve_ast_refs(node: Node | None, group_thresh: dict, region_pct: dict) ->
     if op == "region_ref":
         _, name, _ = node
         return ("region", name, region_pct[name])
-    if op in ("group_count", "region_abs", "seq_flag"):
+    if op in ("group_count", "region_abs", "seq_flag", "item_copies"):
         return node  # already resolved / no children
     tag, children = node
     return (tag, [resolve_ast_refs(c, group_thresh, region_pct) for c in children])
@@ -259,7 +280,17 @@ def _fold_to_text(node: Node | None) -> Tuple[str, str]:
     if op == "region_abs":
         _, name, n = node
         return ("atom", f"{name}*{n}")
+    if op == "item_copies":
+        _, idx, y = node
+        return ("atom", f"{idx + 1}*{y}")
     raise ValueError(f"Cannot serialize AST op: {op}")
+
+
+def _tok_text(tok) -> str:
+    """Token as written, for error messages (copies tokens back to INDEX*Y)."""
+    if isinstance(tok, tuple) and tok[0] == "copies":
+        return f"{tok[1]}*{tok[2]}"
+    return str(tok)
 
 
 def _tokenize(text: str, task_index: int, label: str, location_label: str | None = None) -> list:
@@ -281,6 +312,15 @@ def _tokenize(text: str, task_index: int, label: str, location_label: str | None
             j = i
             while j < len(text) and text[j].isdigit():
                 j += 1
+            # INDEX*Y copy count (no spaces around '*')
+            if j < len(text) and text[j] == '*':
+                k = j + 1
+                while k < len(text) and text[k].isdigit():
+                    k += 1
+                if k > j + 1:
+                    tokens.append(("copies", int(text[i:j]), int(text[j+1:k])))
+                    i = k
+                    continue
             tokens.append(int(text[i:j]))
             i = j
             continue
@@ -327,6 +367,8 @@ def collect_leaves(node: Node | None) -> List[int]:
     if isinstance(node, int):
         return [node]
     op = node[0]
+    if op == "item_copies":
+        return [node[1]]
     if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region", "seq_flag"):
         return []
     _, children = node
@@ -343,7 +385,7 @@ def has_seq_flag(node: Node | None) -> bool:
     op = node[0]
     if op == "seq_flag":
         return True
-    if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region"):
+    if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region", "item_copies"):
         return False
     _, children = node
     return any(has_seq_flag(child) for child in children)
@@ -356,7 +398,7 @@ def collect_group_refs(node: Node | None) -> List[Tuple]:
     op = node[0]
     if op == "group_ref":
         return [(node[1], node[2])]
-    if op in ("group", "group_count", "region_ref", "region_abs", "region", "seq_flag"):
+    if op in ("group", "group_count", "region_ref", "region_abs", "region", "seq_flag", "item_copies"):
         return []
     _, children = node
     result = []
@@ -372,7 +414,7 @@ def collect_group_count_refs(node: Node | None) -> List[Tuple]:
     op = node[0]
     if op == "group_count":
         return [(node[1], node[2])]
-    if op in ("group", "group_ref", "region_ref", "region_abs", "region", "seq_flag"):
+    if op in ("group", "group_ref", "region_ref", "region_abs", "region", "seq_flag", "item_copies"):
         return []
     _, children = node
     result = []
@@ -388,7 +430,7 @@ def collect_region_refs(node: Node | None) -> List[Tuple]:
     op = node[0]
     if op == "region_ref":
         return [(node[1], node[2])]
-    if op in ("region", "region_abs", "group_ref", "group_count", "group", "seq_flag"):
+    if op in ("region", "region_abs", "group_ref", "group_count", "group", "seq_flag", "item_copies"):
         return []
     _, children = node
     result = []
@@ -404,7 +446,7 @@ def collect_region_abs_refs(node: Node | None) -> List[Tuple]:
     op = node[0]
     if op == "region_abs":
         return [(node[1], node[2])]
-    if op in ("region", "region_ref", "group_ref", "group_count", "group", "seq_flag"):
+    if op in ("region", "region_ref", "group_ref", "group_count", "group", "seq_flag", "item_copies"):
         return []
     _, children = node
     result = []
@@ -452,6 +494,9 @@ def eval_node(
         return state.has_from_list(tokens, player, n)
     if op == "seq_flag":
         return True
+    if op == "item_copies":
+        # Normally expanded before parsing; a lone copy list only knows its first copy here.
+        return state.has(item_names[node[1]], player)
     raise ValueError(f"Unknown AST op: {op}")
 
 
@@ -722,7 +767,7 @@ def _has_or(node: Node | None) -> bool:
     if node is None or isinstance(node, int):
         return False
     op = node[0]
-    if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region", "seq_flag"):
+    if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region", "seq_flag", "item_copies"):
         return False
     if op == "or":
         return True
