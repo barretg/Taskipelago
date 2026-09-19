@@ -51,6 +51,34 @@ export function resolvePick(pick, count, label) {
   return n;
 }
 
+/**
+ * Final per-seed task and item counts after random selection, for balance warnings.
+ * taskRows: [{ count, region }], itemRows: [{ count, group, filler }]. Invalid picks count as keep-all.
+ */
+export function finalCounts(model, taskRows, itemRows) {
+  const keep = (text, count) => {
+    try {
+      const pick = parsePick(text, '');
+      return pick ? Math.min(resolvePick(pick, count, ''), count) : count;
+    } catch (_) { return count; }
+  };
+  let tasks = taskRows.reduce((a, t) => a + t.count, 0);
+  for (const name of model.regions.map(r => r.name)) {
+    const rr = regionRandom(model, name);
+    if (!rr.on) continue;
+    const count = taskRows.reduce((a, t) => a + (t.region === name ? t.count : 0), 0);
+    tasks -= count - keep(rr.pick, count);
+  }
+  let items = itemRows.reduce((a, r) => a + r.count, 0);
+  for (const g of model.progGroups) {
+    const s = groupSetting(model, g);
+    if (s.type !== 'random-choice' || !s.pick) continue;
+    const count = itemRows.reduce((a, r) => a + (!r.filler && r.group === g ? r.count : 0), 0);
+    items -= count - keep(s.pick, count);
+  }
+  return { tasks, items };
+}
+
 function walk(node, fn) {
   if (node === null || node === undefined) return;
   fn(node);
