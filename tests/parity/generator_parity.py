@@ -353,6 +353,28 @@ def apply_v11_import(doc, result: dict) -> dict:
                 group_settings[g] = st
     m["regionRandom"] = region_random
     m["groupSettings"] = group_settings
+    # The import balance warning uses the final per-seed counts when randomized.
+    if region_random or any(s["type"] == "random-choice" and s["pick"] for s in group_settings.values()):
+        def keep(text, count):
+            try:
+                return min(_resolve_pick(text, count), count) if int(text.rstrip("%")) >= 1 else count
+            except ValueError:
+                return count
+        tasks = sum(t["count"] for t in m["tasks"])
+        for name, r in region_random.items():
+            count = sum(t["count"] for t in m["tasks"] if t["region"] == name)
+            tasks -= count - keep(r["pick"], count)
+        items = sum(it["count"] for it in m["items"])
+        for g, s in group_settings.items():
+            if s["type"] == "random-choice" and s["pick"]:
+                count = sum(it["count"] for it in m["items"] if it["progGroup"] == g and not it["filler"])
+                items -= count - keep(s["pick"], count)
+        msgs = [x for x in result["messages"] if x[:2] != ["warning", "Unbalanced Counts"]]
+        if tasks != items:
+            msgs.insert(0, ["warning", "Unbalanced Counts",
+                            "Unbalanced item and task counts can lead to generation failures.\n\n"
+                            f"Task slots: {tasks}  |  Item slots: {items}"])
+        result["messages"] = msgs
     return result
 
 
@@ -365,8 +387,58 @@ def apply_v11_export_keys(m: dict, result: dict) -> dict:
     block = _insert_after(block, "progressive_groups", "progressive_group_colors",
                           [colors.get(g, "") for g in m["progGroups"]])
     block = _insert_after(block, "death_link_amnesty", "death_link_lock_tasks", bool(m.get("deathLinkLockTasks")))
+    block = _apply_randomize_keys(m, block, result)
     result["data"]["Taskipelago"] = block
     return result
+
+
+def _resolve_pick(text: str, count: int) -> int:
+    n, pct = int(text.rstrip("%")), text.endswith("%")
+    return max(1, -(-count * n // 100)) if pct else n
+
+
+def _apply_randomize_keys(m: dict, block: dict, result: dict) -> dict:
+    # Randomized regions and item group types: keys emitted only when used, and the balance
+    # confirm uses the final per-seed counts. Settings here are assumed valid.
+    rr = m.get("regionRandom") or {}
+    gs = m.get("groupSettings") or {}
+    setting = lambda g: {"type": "progressive", "pick": "", "pct": "", **gs.get(g, {})}
+    use_regions = any(rr.get(n, {}).get("on") for n in block["regions"])
+    use_groups = any(setting(g)["type"] != "progressive" or setting(g)["pct"] for g in m["progGroups"])
+    if not (use_regions or use_groups):
+        return block
+    if use_groups:
+        block = _insert_after(block, "item_progressive_group", "group_types",
+                              [setting(g)["type"] for g in m["progGroups"]])
+        block = _insert_after(block, "group_types", "group_random_pick",
+                              [setting(g)["pick"] if setting(g)["type"] == "random-choice" else ""
+                               for g in m["progGroups"]])
+        block = _insert_after(block, "group_random_pick", "group_default_pcts",
+                              [setting(g)["pct"] for g in m["progGroups"]])
+    if use_regions:
+        block = _insert_after(block, "region_prereqs", "region_random_pick",
+                              [rr[n]["pick"] if rr.get(n, {}).get("on") else "" for n in block["regions"]])
+    task_counts = [int(c) for c in block["task_count"]]
+    tasks = sum(task_counts)
+    for n in block["regions"]:
+        if rr.get(n, {}).get("on"):
+            count = sum(c for c, r in zip(task_counts, block["task_region"]) if r == n)
+            tasks -= count - _resolve_pick(rr[n]["pick"], count)
+    item_counts = [int(c) for c in block["item_count"]]
+    items = sum(item_counts)
+    for g in m["progGroups"]:
+        s = setting(g)
+        if s["type"] == "random-choice" and s["pick"]:
+            count = sum(c for c, grp, f in zip(item_counts, block["item_progressive_group"], block["item_fillers"])
+                        if grp == g and not f)
+            items -= count - _resolve_pick(s["pick"], count)
+    msgs = [x for x in result["messages"] if x[:2] != ["confirm", "Unbalanced Counts"]]
+    if tasks != items:
+        msgs.insert(0, ["confirm", "Unbalanced Counts",
+                        "Warning: Unbalanced item and task slot counts will cause generation failures.\n\n"
+                        f"Task slots: {tasks}  |  Item slots: {items}\n\nExport anyway?"])
+    result["messages"] = msgs
+    return block
 
 
 def apply_v11_bingo_export(m: dict, result: dict) -> dict:

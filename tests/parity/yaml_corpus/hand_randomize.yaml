@@ -1,0 +1,50 @@
+# Randomized regions and item group types, for manual play verification.
+# Per seed: chores keeps 3 of 7 candidates (Dust has Count 2), fitness keeps 50% of 4 = 2,
+# gems keeps 2 of 4. Final: 9 tasks, 9 items (balanced).
+# Goal: "Final review" && ("Run" || "Yoga"); one of Run / Yoga is always kept.
+# Item groups: keys progressive (x3), gems random-choice, snacks aesthetic (default 50% = 2 of 3).
+name: Randomize Test
+game: Taskipelago
+description: Randomized regions and item group types
+Taskipelago:
+  progression_balancing: 50
+  accessibility: full
+  progressive_groups: [keys, gems, snacks]
+  progressive_group_colors: ['#d4a017', '#3fa7d6', '#e07a5f']
+  item_progressive_group: [keys, gems, gems, gems, gems, snacks, snacks, snacks, '']
+  group_types: [progressive, random-choice, aesthetic]
+  group_random_pick: ['', '2', '']
+  group_default_pcts: ['', '', '50']
+  regions: [chores, fitness, projects]
+  region_default_pcts: [100, 100, 100]
+  region_colors: ['#e05c5c', '#5cb85c', '#8e7cc3']
+  region_prereqs: ['', '', 'fitness*1']
+  region_random_pick: ['3', '50%', '']
+  tasks:
+  - Morning coffee
+  - Dishes
+  - Laundry
+  - Vacuum
+  - Trash
+  - Mop
+  - Dust
+  - Pushups
+  - Run
+  - Yoga
+  - Stretch
+  - Write report
+  - Fix bike
+  - Final review
+  task_count: ['1', '1', '1', '1', '1', '1', '2', '1', '1', '1', '1', '1', '1', '1']
+  task_region: ['', chores, chores, chores, chores, chores, chores, fitness, fitness, fitness, fitness, projects, projects, '']
+  task_description: ['', '', '', '', '', '', 'Count 2: both copies are candidates', '', 'Needs Morning coffee', '', '', '', '', '']
+  task_prereqs: ['', '', '', '', '', '', '', '', '1', '', '', 'chores*2', '"Morning coffee" && fitness', '"Write report" && "Fix bike"']
+  item_prereqs: ['', '', '', '', '', '', '', '', '', '', '', 'keys*1', 'gems*1', 'snacks && keys*3']
+  task_cost: ['', '', '', '', '', '', '', '', '', '', '', '', '"Gold"', '']
+  items: [Key, Ruby, Sapphire, Emerald, Topaz, Chips, Cookie, Candy, Gold]
+  item_count: ['3', '1', '1', '1', '1', '1', '1', '1', '1']
+  item_types: [progression, progression, progression, progression, progression, useful, useful, useful, progression]
+  item_fillers: [false, false, false, false, false, false, false, false, false]
+  item_consumable: ['false', 'false', 'false', 'false', 'false', 'false', 'false', 'false', 'true']
+  goal_tasks:
+  - '"Final review" && ("Run" || "Yoga")'

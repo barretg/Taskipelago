@@ -14,7 +14,7 @@ import {
   REGION_COLOR_PALETTE, REWARD_TYPE_VALUES, limitPlayerName,
   newItem, newTask, newDeathLink, onFillerToggle, onConsumableToggle, setItemProgGroup,
 } from './model.js';
-import { normalizeGroupType } from './randomize_check.js';
+import { finalCounts, normalizeGroupType } from './randomize_check.js';
 
 export const NO_BLOCK_MESSAGE = "Could not find a 'Taskipelago' section in this YAML.\n"
   + 'Expected either:\n'
@@ -269,8 +269,8 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     }
   }
 
-  const totalTaskSlots = tasks.reduce((a, t) => a + t.count, 0);
-  const totalItemSlots = items.reduce((a, it) => a + it.count, 0);
+  // Randomized regions and random-choice groups balance on the final per-seed counts.
+  const { tasks: totalTaskSlots, items: totalItemSlots } = finalCounts(model, tasks, items);
   if (totalTaskSlots !== totalItemSlots) {
     messages.push(['warning', 'Unbalanced Counts',
       'Unbalanced item and task counts can lead to generation failures.\n\n'

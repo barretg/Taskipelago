@@ -62,7 +62,8 @@ The harnesses still run the v1.0.2 code, then apply one named step per feature:
   `regionRandom` and `groupSettings` (only non-default entries). Exports add `group_types`,
   `group_random_pick` and `group_default_pcts` after `item_progressive_group`, and
   `region_random_pick` after `region_prereqs`, only when a setting is used, so older YAML exports
-  are unchanged.
+  are unchanged. `apply_v11_export_keys` mirrors this and balances against the final
+  per-seed counts. `hand_randomize.yaml` exercises every new key and doubles as a manual play test.
 - Randomized regions and item group types (`legacy_text.py` `V11_TIP_CHANGES`, `V11_NEW_TIPS`,
   `V11_STEP_CHANGES`, `V11_TITLE_CHANGES`): the Regions, Item Types and Progressive Groups steps
   (retitled "Item Groups (Progressive, Random-Choice, Aesthetic)") and the region, group, prereq

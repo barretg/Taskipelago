@@ -1598,6 +1598,296 @@
    }
   },
   {
+   "file": "hand_randomize.yaml",
+   "result": {
+    "ok": true,
+    "exception": null,
+    "model": {
+     "playerName": "Randomize Test",
+     "progressionBalancing": 50,
+     "accessibility": "full",
+     "deathLinkEnabled": false,
+     "deathLinkAmnesty": 0,
+     "lockPrereqs": true,
+     "hideUnreachable": true,
+     "taskRewardPreviews": 0,
+     "goalTasks": "\"Final review\" && (\"Run\" || \"Yoga\")",
+     "progGroups": [
+      "keys",
+      "gems",
+      "snacks"
+     ],
+     "regions": [
+      {
+       "name": "chores",
+       "pct": 100,
+       "color": "#e05c5c",
+       "prereq": ""
+      },
+      {
+       "name": "fitness",
+       "pct": 100,
+       "color": "#5cb85c",
+       "prereq": ""
+      },
+      {
+       "name": "projects",
+       "pct": 100,
+       "color": "#8e7cc3",
+       "prereq": "fitness*1"
+      }
+     ],
+     "nextColorIdx": 3,
+     "tasks": [
+      {
+       "name": "Morning coffee",
+       "prereq": "",
+       "itemPrereq": "",
+       "cost": "",
+       "region": "",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      },
+      {
+       "name": "Dishes",
+       "prereq": "",
+       "itemPrereq": "",
+       "cost": "",
+       "region": "chores",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      },
+      {
+       "name": "Laundry",
+       "prereq": "",
+       "itemPrereq": "",
+       "cost": "",
+       "region": "chores",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      },
+      {
+       "name": "Vacuum",
+       "prereq": "",
+       "itemPrereq": "",
+       "cost": "",
+       "region": "chores",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      },
+      {
+       "name": "Trash",
+       "prereq": "",
+       "itemPrereq": "",
+       "cost": "",
+       "region": "chores",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      },
+      {
+       "name": "Mop",
+       "prereq": "",
+       "itemPrereq": "",
+       "cost": "",
+       "region": "chores",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      },
+      {
+       "name": "Dust",
+       "prereq": "",
+       "itemPrereq": "",
+       "cost": "",
+       "region": "chores",
+       "priority": false,
+       "count": 2,
+       "desc": "Count 2: both copies are candidates"
+      },
+      {
+       "name": "Pushups",
+       "prereq": "",
+       "itemPrereq": "",
+       "cost": "",
+       "region": "fitness",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      },
+      {
+       "name": "Run",
+       "prereq": "1",
+       "itemPrereq": "",
+       "cost": "",
+       "region": "fitness",
+       "priority": false,
+       "count": 1,
+       "desc": "Needs Morning coffee"
+      },
+      {
+       "name": "Yoga",
+       "prereq": "",
+       "itemPrereq": "",
+       "cost": "",
+       "region": "fitness",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      },
+      {
+       "name": "Stretch",
+       "prereq": "",
+       "itemPrereq": "",
+       "cost": "",
+       "region": "fitness",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      },
+      {
+       "name": "Write report",
+       "prereq": "chores*2",
+       "itemPrereq": "keys*1",
+       "cost": "",
+       "region": "projects",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      },
+      {
+       "name": "Fix bike",
+       "prereq": "\"Morning coffee\" && fitness",
+       "itemPrereq": "gems*1",
+       "cost": "\"Gold\"",
+       "region": "projects",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      },
+      {
+       "name": "Final review",
+       "prereq": "\"Write report\" && \"Fix bike\"",
+       "itemPrereq": "snacks && keys*3",
+       "cost": "",
+       "region": "",
+       "priority": false,
+       "count": 1,
+       "desc": ""
+      }
+     ],
+     "items": [
+      {
+       "name": "Key",
+       "filler": false,
+       "type": "progression",
+       "progGroup": "keys",
+       "consumable": false,
+       "count": 3
+      },
+      {
+       "name": "Ruby",
+       "filler": false,
+       "type": "progression",
+       "progGroup": "gems",
+       "consumable": false,
+       "count": 1
+      },
+      {
+       "name": "Sapphire",
+       "filler": false,
+       "type": "progression",
+       "progGroup": "gems",
+       "consumable": false,
+       "count": 1
+      },
+      {
+       "name": "Emerald",
+       "filler": false,
+       "type": "progression",
+       "progGroup": "gems",
+       "consumable": false,
+       "count": 1
+      },
+      {
+       "name": "Topaz",
+       "filler": false,
+       "type": "progression",
+       "progGroup": "gems",
+       "consumable": false,
+       "count": 1
+      },
+      {
+       "name": "Chips",
+       "filler": false,
+       "type": "progression",
+       "progGroup": "snacks",
+       "consumable": false,
+       "count": 1
+      },
+      {
+       "name": "Cookie",
+       "filler": false,
+       "type": "progression",
+       "progGroup": "snacks",
+       "consumable": false,
+       "count": 1
+      },
+      {
+       "name": "Candy",
+       "filler": false,
+       "type": "progression",
+       "progGroup": "snacks",
+       "consumable": false,
+       "count": 1
+      },
+      {
+       "name": "Gold",
+       "filler": false,
+       "type": "progression",
+       "progGroup": "",
+       "consumable": true,
+       "count": 1
+      }
+     ],
+     "deathLink": [],
+     "progGroupColors": {
+      "keys": "#d4a017",
+      "gems": "#3fa7d6",
+      "snacks": "#e07a5f"
+     },
+     "deathLinkLockTasks": false,
+     "regionRandom": {
+      "chores": {
+       "on": true,
+       "pick": "3"
+      },
+      "fitness": {
+       "on": true,
+       "pick": "50%"
+      }
+     },
+     "groupSettings": {
+      "gems": {
+       "type": "random-choice",
+       "pick": "2",
+       "pct": ""
+      },
+      "snacks": {
+       "type": "aesthetic",
+       "pick": "",
+       "pct": "50"
+      }
+     }
+    },
+    "messages": []
+   }
+  },
+  {
    "file": "hand_v11_keys.yaml",
    "result": {
     "ok": true,
@@ -7773,6 +8063,562 @@
       "The following progressive group names are invalid and cannot be exported:\n\n7 (must not contain digits)"
      ]
     ]
+   }
+  },
+  {
+   "name": "reexport:hand_randomize.yaml",
+   "confirm": true,
+   "model": {
+    "playerName": "Randomize Test",
+    "progressionBalancing": 50,
+    "accessibility": "full",
+    "deathLinkEnabled": false,
+    "deathLinkAmnesty": 0,
+    "lockPrereqs": true,
+    "hideUnreachable": true,
+    "taskRewardPreviews": 0,
+    "goalTasks": "\"Final review\" && (\"Run\" || \"Yoga\")",
+    "progGroups": [
+     "keys",
+     "gems",
+     "snacks"
+    ],
+    "regions": [
+     {
+      "name": "chores",
+      "pct": 100,
+      "color": "#e05c5c",
+      "prereq": ""
+     },
+     {
+      "name": "fitness",
+      "pct": 100,
+      "color": "#5cb85c",
+      "prereq": ""
+     },
+     {
+      "name": "projects",
+      "pct": 100,
+      "color": "#8e7cc3",
+      "prereq": "fitness*1"
+     }
+    ],
+    "nextColorIdx": 3,
+    "tasks": [
+     {
+      "name": "Morning coffee",
+      "prereq": "",
+      "itemPrereq": "",
+      "cost": "",
+      "region": "",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     },
+     {
+      "name": "Dishes",
+      "prereq": "",
+      "itemPrereq": "",
+      "cost": "",
+      "region": "chores",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     },
+     {
+      "name": "Laundry",
+      "prereq": "",
+      "itemPrereq": "",
+      "cost": "",
+      "region": "chores",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     },
+     {
+      "name": "Vacuum",
+      "prereq": "",
+      "itemPrereq": "",
+      "cost": "",
+      "region": "chores",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     },
+     {
+      "name": "Trash",
+      "prereq": "",
+      "itemPrereq": "",
+      "cost": "",
+      "region": "chores",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     },
+     {
+      "name": "Mop",
+      "prereq": "",
+      "itemPrereq": "",
+      "cost": "",
+      "region": "chores",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     },
+     {
+      "name": "Dust",
+      "prereq": "",
+      "itemPrereq": "",
+      "cost": "",
+      "region": "chores",
+      "priority": false,
+      "count": 2,
+      "desc": "Count 2: both copies are candidates"
+     },
+     {
+      "name": "Pushups",
+      "prereq": "",
+      "itemPrereq": "",
+      "cost": "",
+      "region": "fitness",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     },
+     {
+      "name": "Run",
+      "prereq": "1",
+      "itemPrereq": "",
+      "cost": "",
+      "region": "fitness",
+      "priority": false,
+      "count": 1,
+      "desc": "Needs Morning coffee"
+     },
+     {
+      "name": "Yoga",
+      "prereq": "",
+      "itemPrereq": "",
+      "cost": "",
+      "region": "fitness",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     },
+     {
+      "name": "Stretch",
+      "prereq": "",
+      "itemPrereq": "",
+      "cost": "",
+      "region": "fitness",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     },
+     {
+      "name": "Write report",
+      "prereq": "chores*2",
+      "itemPrereq": "keys*1",
+      "cost": "",
+      "region": "projects",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     },
+     {
+      "name": "Fix bike",
+      "prereq": "\"Morning coffee\" && fitness",
+      "itemPrereq": "gems*1",
+      "cost": "\"Gold\"",
+      "region": "projects",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     },
+     {
+      "name": "Final review",
+      "prereq": "\"Write report\" && \"Fix bike\"",
+      "itemPrereq": "snacks && keys*3",
+      "cost": "",
+      "region": "",
+      "priority": false,
+      "count": 1,
+      "desc": ""
+     }
+    ],
+    "items": [
+     {
+      "name": "Key",
+      "filler": false,
+      "type": "progression",
+      "progGroup": "keys",
+      "consumable": false,
+      "count": 3
+     },
+     {
+      "name": "Ruby",
+      "filler": false,
+      "type": "progression",
+      "progGroup": "gems",
+      "consumable": false,
+      "count": 1
+     },
+     {
+      "name": "Sapphire",
+      "filler": false,
+      "type": "progression",
+      "progGroup": "gems",
+      "consumable": false,
+      "count": 1
+     },
+     {
+      "name": "Emerald",
+      "filler": false,
+      "type": "progression",
+      "progGroup": "gems",
+      "consumable": false,
+      "count": 1
+     },
+     {
+      "name": "Topaz",
+      "filler": false,
+      "type": "progression",
+      "progGroup": "gems",
+      "consumable": false,
+      "count": 1
+     },
+     {
+      "name": "Chips",
+      "filler": false,
+      "type": "progression",
+      "progGroup": "snacks",
+      "consumable": false,
+      "count": 1
+     },
+     {
+      "name": "Cookie",
+      "filler": false,
+      "type": "progression",
+      "progGroup": "snacks",
+      "consumable": false,
+      "count": 1
+     },
+     {
+      "name": "Candy",
+      "filler": false,
+      "type": "progression",
+      "progGroup": "snacks",
+      "consumable": false,
+      "count": 1
+     },
+     {
+      "name": "Gold",
+      "filler": false,
+      "type": "progression",
+      "progGroup": "",
+      "consumable": true,
+      "count": 1
+     }
+    ],
+    "deathLink": [],
+    "progGroupColors": {
+     "keys": "#d4a017",
+     "gems": "#3fa7d6",
+     "snacks": "#e07a5f"
+    },
+    "deathLinkLockTasks": false,
+    "regionRandom": {
+     "chores": {
+      "on": true,
+      "pick": "3"
+     },
+     "fitness": {
+      "on": true,
+      "pick": "50%"
+     }
+    },
+    "groupSettings": {
+     "gems": {
+      "type": "random-choice",
+      "pick": "2",
+      "pct": ""
+     },
+     "snacks": {
+      "type": "aesthetic",
+      "pick": "",
+      "pct": "50"
+     }
+    }
+   },
+   "result": {
+    "data": {
+     "name": "Randomize Test",
+     "game": "Taskipelago",
+     "description": "YAML template for Taskipelago",
+     "Taskipelago": {
+      "progression_balancing": 50,
+      "accessibility": "full",
+      "death_link": {
+       "true": 0,
+       "false": 50
+      },
+      "progressive_groups": [
+       "keys",
+       "gems",
+       "snacks"
+      ],
+      "progressive_group_colors": [
+       "#d4a017",
+       "#3fa7d6",
+       "#e07a5f"
+      ],
+      "item_progressive_group": [
+       "keys",
+       "gems",
+       "gems",
+       "gems",
+       "gems",
+       "snacks",
+       "snacks",
+       "snacks",
+       ""
+      ],
+      "group_types": [
+       "progressive",
+       "random-choice",
+       "aesthetic"
+      ],
+      "group_random_pick": [
+       "",
+       "2",
+       ""
+      ],
+      "group_default_pcts": [
+       "",
+       "",
+       "50"
+      ],
+      "regions": [
+       "chores",
+       "fitness",
+       "projects"
+      ],
+      "region_default_pcts": [
+       100,
+       100,
+       100
+      ],
+      "region_colors": [
+       "#e05c5c",
+       "#5cb85c",
+       "#8e7cc3"
+      ],
+      "region_prereqs": [
+       "",
+       "",
+       "fitness*1"
+      ],
+      "region_random_pick": [
+       "3",
+       "50%",
+       ""
+      ],
+      "task_region": [
+       "",
+       "chores",
+       "chores",
+       "chores",
+       "chores",
+       "chores",
+       "chores",
+       "fitness",
+       "fitness",
+       "fitness",
+       "fitness",
+       "projects",
+       "projects",
+       ""
+      ],
+      "task_priority": [
+       "false",
+       "false",
+       "false",
+       "false",
+       "false",
+       "false",
+       "false",
+       "false",
+       "false",
+       "false",
+       "false",
+       "false",
+       "false",
+       "false"
+      ],
+      "tasks": [
+       "Morning coffee",
+       "Dishes",
+       "Laundry",
+       "Vacuum",
+       "Trash",
+       "Mop",
+       "Dust",
+       "Pushups",
+       "Run",
+       "Yoga",
+       "Stretch",
+       "Write report",
+       "Fix bike",
+       "Final review"
+      ],
+      "task_count": [
+       "1",
+       "1",
+       "1",
+       "1",
+       "1",
+       "1",
+       "2",
+       "1",
+       "1",
+       "1",
+       "1",
+       "1",
+       "1",
+       "1"
+      ],
+      "task_description": [
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "Count 2: both copies are candidates",
+       "",
+       "Needs Morning coffee",
+       "",
+       "",
+       "",
+       "",
+       ""
+      ],
+      "items": [
+       "Key",
+       "Ruby",
+       "Sapphire",
+       "Emerald",
+       "Topaz",
+       "Chips",
+       "Cookie",
+       "Candy",
+       "Gold"
+      ],
+      "item_types": [
+       "progression",
+       "progression",
+       "progression",
+       "progression",
+       "progression",
+       "progression",
+       "progression",
+       "progression",
+       "progression"
+      ],
+      "item_fillers": [
+       false,
+       false,
+       false,
+       false,
+       false,
+       false,
+       false,
+       false,
+       false
+      ],
+      "item_consumable": [
+       "false",
+       "false",
+       "false",
+       "false",
+       "false",
+       "false",
+       "false",
+       "false",
+       "true"
+      ],
+      "item_count": [
+       "3",
+       "1",
+       "1",
+       "1",
+       "1",
+       "1",
+       "1",
+       "1",
+       "1"
+      ],
+      "task_prereqs": [
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "1",
+       "",
+       "",
+       "chores*2",
+       "\"Morning coffee\" && fitness",
+       "\"Write report\" && \"Fix bike\""
+      ],
+      "item_prereqs": [
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "keys*1",
+       "gems*1",
+       "snacks && keys*3"
+      ],
+      "task_cost": [
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "\"Gold\"",
+       ""
+      ],
+      "lock_prereqs": true,
+      "hide_unreachable_tasks": true,
+      "task_reward_previews": 0,
+      "goal_tasks": [
+       "\"Final review\" && (\"Run\" || \"Yoga\")"
+      ],
+      "death_link_pool": [],
+      "death_link_weights": [],
+      "death_link_amnesty": 0,
+      "death_link_lock_tasks": false
+     }
+    },
+    "messages": []
    }
   },
   {
