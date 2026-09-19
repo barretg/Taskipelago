@@ -1,4 +1,4 @@
-# Taskipelago/Taskipelabingo Version 1.1.0
+# Taskipelago/Taskipelabingo Version 1.1.1
 *One client to rule them all and also I fixed the bug with item count syntax*
 
 Quick bug fix patch because * syntax wasn't supported for duplicate items.
