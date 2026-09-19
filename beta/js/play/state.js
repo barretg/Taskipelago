@@ -34,6 +34,7 @@ export const state = {
   taskRewardPreviews: 0,
   progressiveGroups: [],
   progressiveGroupColors: [],  // v1.1 F6, parallel to progressiveGroups
+  groupTypes: [],              // parallel to progressiveGroups; missing = progressive
   itemFillers: null,           // v1.1 F7, expanded item_fillers; null for older seeds
   rewardProgressiveGroup: [],
   taskProgressiveReqs: [],

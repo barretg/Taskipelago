@@ -18,13 +18,54 @@ const HOSTED_VS_LAUNCHER = [
   + 'from the Archipelago Launcher.',
 ];
 
+const GROUPS_TITLE = 'Item Groups (Progressive, Random-Choice, Aesthetic)';
+
 // v1.1 steps, each inserted after the legacy step with the given title.
 const V11_STEPS = [
-  ['Progressive Groups', [
+  ['Regions', [
+    'Randomized Regions and Dependencies',
+    'A randomized region keeps only some of its tasks in each seed, so references into it '
+    + 'follow stricter rules.\n\n'
+    + 'Allowed:\n'
+    + '  chores            default % of the kept tasks done\n'
+    + '  chores-75         75% of the kept tasks done\n'
+    + '  chores*5          5 of the kept tasks done (at most the Keep value)\n'
+    + 'Tasks inside a randomized region may depend on tasks in normal regions.\n\n'
+    + 'Not allowed: referencing an individual task in or from inside a randomized region, by '
+    + "number, quoted name, 'prev' or 'sequential'. Reference the region as a whole instead.\n\n"
+    + 'Goal Tasks may name individual tasks in a randomized region. Generation guarantees at least '
+    + 'one way to meet the goal: with 4 || 10, at least one of tasks 4 and 10 is kept. Export '
+    + 'fails if no way to meet the goal fits within the Keep values.\n\n'
+    + 'Task numbers are renumbered in the final seed and the kept tasks of a randomized region '
+    + 'are shuffled, so the numbers seen while playing differ from the generator.',
+  ]],
+  [GROUPS_TITLE, [
+    'Group Types, Keep and Default %',
+    'Each group row has a Type:\n'
+    + '  progressive     items are interchangeable; power-2 is the 2nd position, power*2 is any\n'
+    + '                  2 items (the original behavior)\n'
+    + '  random-choice   each seed keeps only some of the items; the rest are removed\n'
+    + '  aesthetic       color and inventory grouping only\n'
+    + 'Items in random-choice and aesthetic groups are normal, distinct items.\n\n'
+    + 'Keep (random-choice only): N or N% of the items to keep per seed. Percent rounds up, with '
+    + 'a minimum of 1. Blank keeps every item.\n\n'
+    + 'Default %: the share of the group required by a bare group reference. Blank on a '
+    + 'progressive group keeps the original behavior (fills the lowest unused position). Blank on '
+    + 'other types means 100%.\n\n'
+    + 'Item Prereqs for random-choice and aesthetic groups:\n'
+    + '  gems              default % of the group\n'
+    + '  gems-50           any 50% of the group\n'
+    + '  gems*2            any 2 items from the group\n'
+    + 'For random-choice groups these count only the kept items, and items inside the group '
+    + 'cannot be referenced individually.\n\n'
+    + 'Progressive group items are always Progression. Random-choice and aesthetic items are '
+    + 'Progression only when an Item Prereq references them or their group.',
+  ]],
+  [GROUPS_TITLE, [
     'Group Colors and Renaming',
-    'Each progressive group gets a color from the same palette as regions. Click the swatch on a '
+    'Each item group gets a color from the same palette as regions. Click the swatch on a '
     + "group's row to change it. In the client's Items tab, received items are grouped under their "
-    + 'progressive group and marked with its color.\n\n'
+    + 'item group and marked with its color.\n\n'
     + 'Region and group names can be edited inline. Names must start with a letter or underscore and '
     + 'cannot contain digits, spaces, quotes, parentheses, commas, && or ||.\n\n'
     + 'When you rename a region or group that expressions already use (Task Prereqs, Item Prereqs, '
@@ -75,7 +116,7 @@ const V11_STEPS = [
     + 'items you receive, set the status to Priority, No Priority or Avoid. Use !hint <item> in the '
     + 'Text Console to request a hint.\n\n'
     + 'In the Items tab, Filter hides items by type (Progression, Useful, Junk, Trap, Filler, '
-    + 'Consumable) and by progressive group. The last line shows how many received items are hidden.',
+    + 'Consumable) and by item group. The last line shows how many received items are hidden.',
   ]],
 ];
 

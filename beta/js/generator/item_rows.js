@@ -79,7 +79,7 @@ export function renderItemTable(container, ctx) {
       cell(tipHeader('Type', TIPS.type)),
       cell(tipHeader('Filler', TIPS.filler)),
       cell(tipHeader('Consumable', TIPS.consumable)),
-      cell(tipHeader('Prog. Group', TIPS.prog_group)),
+      cell(tipHeader('Item Group', TIPS.prog_group)),
       cell(tipHeader('Count', TIPS.count_item)),
       cell('')),
     h('div', { className: 'gt-row gt-hint muted-text' },

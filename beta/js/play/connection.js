@@ -139,6 +139,7 @@ function applySlotData(sd) {
   state.taskRewardPreviews  = parseInt(sd.task_reward_previews || 0);
   state.progressiveGroups   = sd.progressive_groups || [];
   state.progressiveGroupColors = Array.isArray(sd.progressive_group_colors) ? sd.progressive_group_colors : [];
+  state.groupTypes          = Array.isArray(sd.group_types) ? sd.group_types : [];
   state.itemFillers         = Array.isArray(sd.item_fillers) ? sd.item_fillers : null;
   state.rewardProgressiveGroup = sd.item_progressive_group || sd.reward_progressive_group || [];
   state.taskProgressiveReqs = sd.task_progressive_reqs || [];
@@ -241,6 +242,7 @@ function clearPlayState() {
   state.taskRewardPreviews = 0;
   state.progressiveGroups = [];
   state.progressiveGroupColors = [];
+  state.groupTypes = [];
   state.itemFillers = null;
   state.rewardProgressiveGroup = [];
   state.taskProgressiveReqs = [];

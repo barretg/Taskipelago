@@ -234,7 +234,7 @@ function build(root) {
       h('label', { className: 'inline-label' }, 'Progression Balancing (0-99):', els.progression),
       h('label', { className: 'inline-label' }, 'Accessibility:', els.accessibility),
       els.counter),
-    h('fieldset', { className: 'panel gen-groups' }, h('legend', {}, 'Progressive Groups'), els.groups, buildGroupAddRow(ctx)),
+    h('fieldset', { className: 'panel gen-groups' }, h('legend', {}, 'Item Groups'), els.groups, buildGroupAddRow(ctx)),
     h('div', { className: 'gen-table-scroll' }, els.items),
     h('div', { className: 'btn-row' }, h('button', { type: 'button', onclick: () => addItem(ctx) }, 'Add Item')));
 

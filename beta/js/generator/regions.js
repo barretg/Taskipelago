@@ -9,6 +9,7 @@ import {
   REGION_COLOR_PALETTE, addRegion, checkRegionRename, commitRegionPct, removeRegion, renameRegion,
 } from './model.js';
 import { commitNameChange, confirmNameRemoval } from './rename_refs.js';
+import { regionRandom } from './randomize_check.js';
 
 const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
@@ -53,6 +54,32 @@ export function openColorPicker(title, currentColor, onPick) {
       { label: 'Cancel', value: false },
     ],
   });
+}
+
+/** Randomize checkbox and pick field (N or N%) for one region. */
+function randomizeCells(region, ctx) {
+  const rr = regionRandom(ctx.model, region.name);
+  const pick = h('input', {
+    type: 'text', value: rr.pick, placeholder: 'N or N%', className: 'count-input region-pick',
+    spellcheck: false, disabled: !rr.on, 'aria-label': `Tasks kept from ${region.name}`,
+    dataset: { field: `regions.${region.name}.pick` },
+    oninput: e => {
+      ctx.model.regionRandom[region.name] = { ...regionRandom(ctx.model, region.name), pick: e.target.value.trim() };
+      ctx.changed();
+    },
+  });
+  const box = h('input', {
+    type: 'checkbox', checked: rr.on, 'aria-label': `Randomize ${region.name}`,
+    onchange: e => {
+      ctx.model.regionRandom[region.name] = { ...regionRandom(ctx.model, region.name), on: e.target.checked };
+      pick.disabled = !e.target.checked;
+      ctx.changed();
+    },
+  });
+  return [
+    h('label', { className: 'check-label region-random' }, box, 'Randomize', tipMarker(TIPS.rg_random)),
+    pick,
+  ];
 }
 
 function regionRow(region, i, ctx) {
@@ -101,6 +128,7 @@ function regionRow(region, i, ctx) {
       'aria-label': 'Depends on', dataset: { field: `regions.${i}.prereq` },
       oninput: e => { region.prereq = e.target.value.trim(); ctx.changed(); },
     }),
+    ...randomizeCells(region, ctx),
     h('button', {
       type: 'button', className: 'remove-btn',
       onclick: async () => {
@@ -120,7 +148,8 @@ export function renderRegions(container, ctx) {
   container.replaceChildren(
     h('div', { className: 'region-row region-head muted-text' },
       h('span', { className: 'col-color' }, 'Color'), h('span', { className: 'col-name' }, 'Name'),
-      h('span', { className: 'col-pct' }, 'Default %'), h('span', { className: 'col-prereq' }, 'Depends on')),
+      h('span', { className: 'col-pct' }, 'Default %'), h('span', { className: 'col-prereq' }, 'Depends on'),
+      h('span', { className: 'col-random' }, 'Randomize'), h('span', { className: 'col-pick' }, 'Keep')),
     ...model.regions.map((r, i) => regionRow(r, i, ctx)),
   );
 }

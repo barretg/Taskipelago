@@ -70,6 +70,8 @@ export function defaultModel() {
     // v1.1 (appended so older drafts and parity shapes keep their key order)
     progGroupColors: {}, // F6: group name -> hex color ('' = no color)
     deathLinkLockTasks: false, // F3
+    regionRandom: {},  // region name -> { on, pick } ('N' or 'N%')
+    groupSettings: {}, // group name -> { type, pick, pct } (see randomize_check.js)
   };
 }
 
@@ -103,6 +105,9 @@ export function normalizeModel(raw) {
   const colors = model.progGroupColors;
   model.progGroupColors = colors && typeof colors === 'object' && !Array.isArray(colors) ? colors : {};
   model.deathLinkLockTasks = !!model.deathLinkLockTasks;
+  const plainObj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+  model.regionRandom = plainObj(model.regionRandom);
+  model.groupSettings = plainObj(model.groupSettings);
   return model;
 }
 
@@ -244,6 +249,7 @@ export function removeProgGroup(model, name) {
   const idx = model.progGroups.indexOf(name);
   if (idx >= 0) model.progGroups.splice(idx, 1);
   if (model.progGroupColors) delete model.progGroupColors[name];
+  if (model.groupSettings) delete model.groupSettings[name];
   for (const it of model.items) if (it.progGroup === name) setItemProgGroup(it, '');
   syncItemGroups(model);
 }
@@ -269,6 +275,7 @@ export function addRegion(model, rawName, pct) {
 
 export function removeRegion(model, name) {
   model.regions = model.regions.filter(r => r.name !== name);
+  if (model.regionRandom) delete model.regionRandom[name];
   for (const t of model.tasks) if (t.region === name) t.region = '';
   syncTaskRegions(model);
 }
@@ -305,9 +312,17 @@ export function renameRegion(model, oldName, rawNew) {
   const region = model.regions.find(r => r.name === oldName);
   if (!region) return null;
   region.name = newName;
+  moveKey(model.regionRandom, oldName, newName);
   for (const t of model.tasks) if (t.region === oldName) t.region = newName;
   syncTaskRegions(model);
   return null;
+}
+
+function moveKey(obj, oldName, newName) {
+  if (obj && Object.hasOwn(obj, oldName)) {
+    obj[newName] = obj[oldName];
+    delete obj[oldName];
+  }
 }
 
 /** Group rename checks, mirroring checkRegionRename. */
@@ -329,10 +344,8 @@ export function renameProgGroup(model, oldName, rawNew) {
   const idx = model.progGroups.indexOf(oldName);
   if (idx < 0) return null;
   model.progGroups[idx] = newName;
-  if (model.progGroupColors && Object.hasOwn(model.progGroupColors, oldName)) {
-    model.progGroupColors[newName] = model.progGroupColors[oldName];
-    delete model.progGroupColors[oldName];
-  }
+  moveKey(model.progGroupColors, oldName, newName);
+  moveKey(model.groupSettings, oldName, newName);
   for (const it of model.items) {
     if (it.progGroup === oldName) it.progGroup = newName;
     if (it.ui?.savedGroup === oldName) it.ui.savedGroup = newName;

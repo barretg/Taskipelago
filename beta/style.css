@@ -956,6 +956,10 @@ button.primary { border-color: var(--accent); }
 .region-head .col-pct { width: 64px; }
 .region-name { width: 160px; }
 .region-prereq { width: 200px; }
+.region-head .col-prereq { width: 200px; }
+.region-head .col-random { width: 110px; }
+.region-random { gap: 4px; }
+.region-pick, .group-pick, .group-pct { width: 64px; }
 .empty-note { font-size: 13px; }
 
 .color-swatch {
