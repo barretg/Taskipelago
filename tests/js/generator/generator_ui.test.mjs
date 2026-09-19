@@ -426,6 +426,21 @@ test('tooltips carry the legacy help text', () => {
   assert.ok(tips.some(t => t.startsWith('Mark this item as a consumable (currency).')));
 });
 
+test('item counter uses per-seed counts when regions or groups are randomized', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { loadYaml } = await importModule('shared/yaml11.js');
+  const text = readFileSync(new URL('../../parity/yaml_corpus/hand_randomize.yaml', import.meta.url), 'utf8');
+  assert.equal(await applyDoc(loadYaml(text)), true);
+  const counter = () => root().querySelector('.item-counter');
+  assert.equal(counter().textContent, '9/9 items');
+  assert.equal(counter().classList.contains('warning-text'), false);
+  const box = root().querySelector('input[aria-label="Randomize chores"]');
+  box.checked = false;
+  box.dispatchEvent(new window.Event('change'));
+  assert.equal(counter().textContent, '9/13 items'); // chores keeps all 7 of its tasks
+  assert.equal(counter().classList.contains('warning-text'), true);
+});
+
 test('community YAMLs list and import through the endpoint', async () => {
   button(root(), 'Community YAMLs').click();
   await wait(20);

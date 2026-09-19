@@ -4,7 +4,7 @@ import * as storage from '../shared/storage.js';
 import { $, h } from '../shared/dom.js';
 import { alertDialog, confirmDialog } from '../shared/dialog.js';
 import { downloadText, pickTextFile, safeFileName } from '../shared/files.js';
-import { PyError } from '../shared/pyish.js';
+import { PyError, pyInt } from '../shared/pyish.js';
 import { tipHeader } from '../shared/tooltip.js';
 import { getUiPref, setUiPref } from '../shared/ui_prefs.js';
 import { dumpYaml, loadYaml } from '../shared/yaml11.js';
@@ -12,6 +12,7 @@ import { TIPS } from './legacy_text.js';
 import {
   DEATHLINK_LOCK_TIP, MAX_PLAYER_NAME_LEN, TASK_REWARD_PREVIEW_LABELS, defaultModel, limitPlayerName, normalizeModel, slotCounts,
 } from './model.js';
+import { finalCounts, usesRandomization } from './randomize_check.js';
 import { buildExport } from './yaml_export.js';
 import { importDoc } from './yaml_import.js';
 import { addTask, renderTaskTable } from './task_rows.js';
@@ -56,9 +57,21 @@ function changed(parts = {}, { save = true } = {}) {
 }
 
 function updateCounter() {
-  const { tasks, items } = slotCounts(ctx.model);
+  const { tasks, items } = counterCounts(ctx.model);
   els.counter.textContent = `${items}/${tasks} items`;
   els.counter.classList.toggle('warning-text', items !== tasks);
+}
+
+/** Slot counts for the header; per-seed final counts when regions or groups are randomized. */
+function counterCounts(model) {
+  const used = usesRandomization(model);
+  if (!used.regions && !used.groups) return slotCounts(model);
+  const count = r => { try { return Math.max(1, pyInt(r.count)); } catch (_) { return 1; } };
+  return finalCounts(
+    model,
+    model.tasks.map(t => ({ count: count(t), region: t.region })),
+    model.items.map(it => ({ count: count(it), group: it.progGroup, filler: !!it.filler })),
+  );
 }
 
 /** Show a whole new model (reset, import, draft restore). Callers save when it is a change. */
