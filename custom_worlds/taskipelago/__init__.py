@@ -34,6 +34,10 @@ from .prereq_parser import (
     has_seq_flag, ast_to_text, RESERVED_WORDS,
 )
 from .rules import set_rules as _set_rules
+from .randomize import (
+    parse_pick, resolve_pick, normalize_group_type, goal_minimal_sets,
+    remap_int_tokens, remap_goal_ast, cost_indices_to_names,
+)
 
 
 class TaskipelagoWeb(WebWorld):
@@ -112,6 +116,31 @@ class TaskipelagoWorld(World):
         if not tasks_raw:
             raise Exception("Taskipelago: tasks list is empty.")
 
+        # Randomization options (all optional, parallel to regions / item groups).
+        # When none is configured, generation follows the exact pre-randomization path.
+        _opt_regions = [str(g).strip() for g in (self.options.regions.value or []) if str(g).strip()]
+        _opt_groups = [str(g).strip() for g in (self.options.progressive_groups.value or []) if str(g).strip()]
+        _rrp = [str(x).strip() for x in (self.options.region_random_pick.value or [])]
+        region_picks: Dict[str, Tuple[int, bool]] = {}
+        for _ri, _rname in enumerate(_opt_regions):
+            _pk = parse_pick(_rrp[_ri] if _ri < len(_rrp) else "", f"region '{_rname}'")
+            if _pk is not None:
+                region_picks[_rname] = _pk
+        _gt_raw = [str(x).strip() for x in (self.options.group_types.value or [])]
+        group_types: Dict[str, str] = {
+            g: normalize_group_type(_gt_raw[gi] if gi < len(_gt_raw) else "")
+            for gi, g in enumerate(_opt_groups)
+        }
+        _grp_raw = [str(x).strip() for x in (self.options.group_random_pick.value or [])]
+        group_picks: Dict[str, Tuple[int, bool]] = {}
+        for _gi, _gname in enumerate(_opt_groups):
+            if group_types[_gname] != "random-choice":
+                continue
+            _pk = parse_pick(_grp_raw[_gi] if _gi < len(_grp_raw) else "", f"item group '{_gname}'")
+            if _pk is not None:
+                group_picks[_gname] = _pk
+        randomize_on = bool(region_picks or group_picks)
+
         # Duplicate name validation
         _task_name_seen: set = set()
         _task_name_dups: set = set()
@@ -173,8 +202,8 @@ class TaskipelagoWorld(World):
         )
         _n_defined_expanded = sum(item_counts_editor)
 
-        # Warn using expanded counts, not editor slot counts
-        if _n_defined_expanded != _n_yaml_tasks_expected:
+        # Warn using expanded counts, not editor slot counts (final counts when randomized)
+        if not randomize_on and _n_defined_expanded != _n_yaml_tasks_expected:
             print(
                 f"[Taskipelago] WARNING: Unbalanced item and task counts can lead to generation failures. "
                 f"Tasks: {_n_yaml_tasks_expected}, Items: {_n_defined_expanded}.",
@@ -214,6 +243,11 @@ class TaskipelagoWorld(World):
         item_types = expand_rows(item_types_editor, item_counts_editor)
         item_consumable = expand_rows(item_consumable_editor, item_counts_editor)
         item_fillers = expand_rows(item_fillers_editor, item_counts_editor)
+        # Unpadded copies: randomized selection draws from these and pads afterwards.
+        items_full = list(items_raw)
+        item_types_full = list(item_types)
+        item_consumable_full = list(item_consumable)
+        item_fillers_full = list(item_fillers)
 
         # Pad/trim items to n_yaml_tasks
         items_raw = pad_or_trim_names(items_raw, n_yaml_tasks)
@@ -322,13 +356,205 @@ class TaskipelagoWorld(World):
 
         # Quoted item name references in item prereqs
         for _j, _txt in enumerate(raw_reward_prereqs_input):
-            _resolved, _errs = _resolve_quoted_names(_txt, items_raw)
+            _resolved, _errs = _resolve_quoted_names(_txt, items_full if randomize_on else items_raw)
             if _errs:
                 raise Exception(
                     f"Taskipelago: item prereq for task {_j + 1} references unknown item name(s): "
                     + "; ".join(_errs)
                 )
             raw_reward_prereqs_input[_j] = _resolved
+
+        # ------------------------------------------------------------------ #
+        # 5b. Randomized selection and renumbering                           #
+        # ------------------------------------------------------------------ #
+        # Expanded (unpadded) item group per YAML item; step 8 uses the selected copy.
+        raw_ipg_editor = [str(x).strip() for x in (self.options.item_progressive_group.value or [])]
+        if len(raw_ipg_editor) < n_editor_items:
+            raw_ipg_editor += [""] * (n_editor_items - len(raw_ipg_editor))
+        raw_ipg_editor = raw_ipg_editor[:n_editor_items]
+        item_group_selected: List[str] | None = None
+        goal_text_override: str | None = None
+
+        if randomize_on:
+            item_group_full: List[str] = expand_rows(raw_ipg_editor, item_counts_editor)
+            _region_names_set = set(_opt_regions)
+            _group_names_set = set(_opt_groups)
+
+            def _rand_region(j: int) -> str:
+                r = raw_task_region[j]
+                return r if r in region_picks else ""
+
+            # Forbidden refs, checked against the original YAML indices.
+            for _j, _txt in enumerate(raw_prereqs_input):
+                if not _txt:
+                    continue
+                _ast = parse_prereq(_txt, n, _j, "task prereq", known_regions=_region_names_set)
+                if _ast is None:
+                    continue
+                if has_seq_flag(_ast) and _rand_region(_j):
+                    raise Exception(
+                        f"Taskipelago: task {_j + 1} uses 'sequential' inside randomized region "
+                        f"'{_rand_region(_j)}'."
+                    )
+                for _leaf in collect_leaves(_ast):
+                    if _rand_region(_leaf):
+                        raise Exception(
+                            f"Taskipelago: task {_j + 1} references task {_leaf + 1} inside randomized "
+                            f"region '{_rand_region(_leaf)}'. Reference the region as a whole instead."
+                        )
+            _n_item_range = max(n, len(items_full))
+            for _j, _txt in enumerate(raw_reward_prereqs_input):
+                if not _txt:
+                    continue
+                _ast = parse_prereq(_txt, _n_item_range, _j, "reward prereq", known_groups=_group_names_set)
+                for _leaf in collect_leaves(_ast):
+                    _g = item_group_full[_leaf] if _leaf < len(item_group_full) else ""
+                    if _g and group_types.get(_g) == "random-choice":
+                        raise Exception(
+                            f"Taskipelago: task {_j + 1} item prereq references item {_leaf + 1} inside "
+                            f"random-choice group '{_g}'. Reference the group instead."
+                        )
+
+            # Region draws, with one satisfying goal set pinned.
+            region_members: Dict[str, List[int]] = {
+                r: [j for j in range(n) if raw_task_region[j] == r] for r in region_picks
+            }
+            region_keep_n: Dict[str, int] = {}
+            for _rname in _opt_regions:
+                if _rname not in region_picks:
+                    continue
+                _cnt = len(region_members[_rname])
+                region_keep_n[_rname] = resolve_pick(region_picks[_rname], _cnt, f"region '{_rname}'")
+                if region_keep_n[_rname] == _cnt:
+                    print(
+                        f"[Taskipelago] WARNING: randomized region '{_rname}' keeps all {_cnt} task(s).",
+                        file=_sys.stderr,
+                    )
+
+            _raw_goal_parts = [str(x).strip() for x in list(self.options.goal_tasks.value or []) if str(x).strip()]
+            _raw_goal = ", ".join(_raw_goal_parts)
+            _goal_ast0 = None
+            if _raw_goal:
+                _goal_res, _goal_errs = _resolve_quoted_names(_raw_goal, tasks)
+                if _goal_errs:
+                    raise Exception(
+                        "Taskipelago: goal_tasks references unknown task name(s): " + "; ".join(_goal_errs)
+                    )
+                _goal_ast0 = parse_prereq(_goal_res, n, 0, "goal_tasks", known_regions=_region_names_set)
+
+            pinned: set = set()
+            if _goal_ast0 is not None and region_picks:
+                _feasible = [
+                    gs for gs in goal_minimal_sets(_goal_ast0)
+                    if all(
+                        sum(1 for t in gs if raw_task_region[t] == r) <= region_keep_n[r]
+                        for r in region_picks
+                    )
+                ]
+                if not _feasible:
+                    raise Exception(
+                        "Taskipelago: goal_tasks cannot be satisfied: every way to meet the goal needs "
+                        "more tasks from a randomized region than it keeps."
+                    )
+                _chosen = _feasible[0] if len(_feasible) == 1 else self.random.choice(_feasible)
+                pinned = {t for t in _chosen if _rand_region(t)}
+
+            region_kept_order: Dict[str, List[int]] = {}
+            for _rname in _opt_regions:
+                if _rname not in region_picks:
+                    continue
+                _members = region_members[_rname]
+                _pins = [t for t in _members if t in pinned]
+                _rest = [t for t in _members if t not in pinned]
+                _kept = _pins + self.random.sample(_rest, region_keep_n[_rname] - len(_pins))
+                _kept.sort()
+                _shuffled = list(_kept)
+                self.random.shuffle(_shuffled)
+                region_kept_order[_rname] = _shuffled
+            _kept_sets = {r: set(v) for r, v in region_kept_order.items()}
+            _region_iters = {r: iter(v) for r, v in region_kept_order.items()}
+
+            task_order: List[int] = []
+            for _j in range(n):
+                _r = _rand_region(_j)
+                if not _r:
+                    task_order.append(_j)
+                elif _j in _kept_sets[_r]:
+                    task_order.append(next(_region_iters[_r]))
+            task_map: Dict[int, int] = {old: new for new, old in enumerate(task_order)}
+
+            # Random-choice item draws; kept items stay in original relative order.
+            _dropped_items: set = set()
+            for _gname in _opt_groups:
+                if _gname not in group_picks:
+                    continue
+                _members = [k for k, g in enumerate(item_group_full) if g == _gname]
+                _keep_n = resolve_pick(group_picks[_gname], len(_members), f"item group '{_gname}'")
+                if _keep_n == len(_members):
+                    print(
+                        f"[Taskipelago] WARNING: random-choice group '{_gname}' keeps all "
+                        f"{len(_members)} item(s).",
+                        file=_sys.stderr,
+                    )
+                    continue
+                _keep = set(self.random.sample(_members, _keep_n))
+                _dropped_items.update(k for k in _members if k not in _keep)
+            item_order = [k for k in range(len(items_full)) if k not in _dropped_items]
+            item_map: Dict[int, int] = {old: new for new, old in enumerate(item_order)}
+            # Refs past the defined items point at padding filler; keep their offset.
+            for _k in range(len(items_full), _n_item_range):
+                item_map[_k] = len(item_order) + (_k - len(items_full))
+
+            # Rewrite task-level lists into the final order.
+            _new_prereqs: List[str] = []
+            _new_seq_prev: List[int | None] = []
+            for _old in task_order:
+                _txt = raw_prereqs_input[_old]
+                if _re.search(r'\bprev\b', _txt) and _old < 1:
+                    raise Exception(
+                        f"Taskipelago: 'prev' used on task {_old + 1} but there is no previous task."
+                    )
+                _new_prereqs.append(remap_int_tokens(_txt, task_map, prev_old=_old - 1 if _old > 0 else None))
+                _sp = task_seq_prev_idx[_old]
+                _new_seq_prev.append(task_map[_sp] if _sp is not None and _sp in task_map else None)
+            raw_prereqs_input = _new_prereqs
+            task_seq_prev_idx = _new_seq_prev
+            raw_reward_prereqs_input = [
+                remap_int_tokens(raw_reward_prereqs_input[_old], item_map) for _old in task_order
+            ]
+            if _dropped_items:
+                raw_costs_input = [
+                    cost_indices_to_names(raw_costs_input[_old], rewards) for _old in task_order
+                ]
+            else:
+                raw_costs_input = [raw_costs_input[_old] for _old in task_order]
+            tasks = [tasks[_old] for _old in task_order]
+            raw_task_region = [raw_task_region[_old] for _old in task_order]
+            raw_task_description = [raw_task_description[_old] for _old in task_order]
+            raw_task_priority = [raw_task_priority[_old] for _old in task_order]
+
+            if _goal_ast0 is not None:
+                goal_text_override = ast_to_text(remap_goal_ast(_goal_ast0, task_map))
+
+            n_yaml_tasks = len(task_order)
+            n = n_yaml_tasks
+
+            # Final item lists, padded/trimmed to the final task count.
+            items_raw = pad_or_trim_names([items_full[k] for k in item_order], n)
+            item_types = [item_types_full[k] for k in item_order]
+            item_consumable = [item_consumable_full[k] for k in item_order]
+            item_fillers = [item_fillers_full[k] for k in item_order]
+            item_group_selected = [item_group_full[k] for k in item_order]
+            if len(item_order) != n:
+                print(
+                    f"[Taskipelago] WARNING: Unbalanced item and task counts can lead to generation "
+                    f"failures. Tasks: {n}, Items: {len(item_order)}.",
+                    file=_sys.stderr,
+                )
+            item_types = (item_types + ["junk"] * n)[:n]
+            item_consumable = (item_consumable + [False] * n)[:n]
+            item_fillers = (item_fillers + [True] * n)[:n]
+            rewards = list(items_raw)
 
         # ------------------------------------------------------------------ #
         # 6. DeathLink validation                                             #
@@ -513,12 +739,10 @@ class TaskipelagoWorld(World):
 
         # Expand item progressive groups in parallel with items (own row count,
         # decoupled from task rows, same as items/item_types/item_consumable).
-        raw_ipg_editor = [str(x).strip() for x in (self.options.item_progressive_group.value or [])]
-        if len(raw_ipg_editor) < n_editor_items:
-            raw_ipg_editor += [""] * (n_editor_items - len(raw_ipg_editor))
-        raw_ipg_editor = raw_ipg_editor[:n_editor_items]
-
-        raw_rpg: List[str] = expand_rows(raw_ipg_editor, item_counts_editor)
+        raw_rpg: List[str] = (
+            list(item_group_selected) if item_group_selected is not None
+            else expand_rows(raw_ipg_editor, item_counts_editor)
+        )
         if len(raw_rpg) < n:
             raw_rpg += [""] * (n - len(raw_rpg))
         raw_rpg = raw_rpg[:n]
@@ -534,6 +758,26 @@ class TaskipelagoWorld(World):
                 group_to_reward_indices[gname].append(i)
             reward_to_group.append(gname)
 
+        # Item group types and default percentages (blank progressive default = legacy).
+        raw_gdp = [str(x).strip() for x in (self.options.group_default_pcts.value or [])]
+        group_default_pcts: Dict[str, int | None] = {}
+        for gi, gname in enumerate(raw_prog_groups):
+            gtype = group_types.get(gname, "progressive")
+            pct_str = raw_gdp[gi] if gi < len(raw_gdp) else ""
+            if not pct_str:
+                group_default_pcts[gname] = None if gtype == "progressive" else 100
+                continue
+            try:
+                pct = int(pct_str)
+            except ValueError:
+                raise Exception(
+                    f"Taskipelago: invalid default percentage '{pct_str}' for item group '{gname}'."
+                )
+            if pct < 0 or pct > 100:
+                raise Exception(
+                    f"Taskipelago: item group '{gname}' default percentage {pct} must be 0-100."
+                )
+            group_default_pcts[gname] = pct
         # ------------------------------------------------------------------ #
         # 9. Parse item prereqs (reward prereqs)                             #
         # ------------------------------------------------------------------ #
@@ -542,6 +786,27 @@ class TaskipelagoWorld(World):
             parsed_reward_prereqs_unresolved.append(
                 parse_prereq(txt, n, i, "reward prereq", known_groups=prog_group_set)
             )
+
+        # Typed group refs (random-choice, aesthetic, progressive with a default %) resolve
+        # to plain counts of the group's items; the prereq text is rewritten to NAME*C so
+        # every client evaluates the same count.
+        if any(t != "progressive" for t in group_types.values()) or any(
+            v is not None for v in group_default_pcts.values()
+        ):
+            for i, ast in enumerate(parsed_reward_prereqs_unresolved):
+                for leaf in collect_leaves(ast):
+                    g = reward_to_group[leaf] if leaf < len(reward_to_group) else ""
+                    if g and group_types.get(g) == "random-choice":
+                        raise Exception(
+                            f"Taskipelago: task {i + 1} item prereq references item {leaf + 1} inside "
+                            f"random-choice group '{g}'. Reference the group instead."
+                        )
+                typed, changed = _resolve_typed_group_refs(
+                    ast, i, group_types, group_default_pcts, group_to_reward_indices
+                )
+                if changed:
+                    parsed_reward_prereqs_unresolved[i] = typed
+                    raw_reward_prereqs_input[i] = ast_to_text(typed)
 
         # Collect ordering refs (group_ref: - notation or bare) and count refs (group_count: * notation)
         task_group_refs: List[List[Tuple[str, int | None]]] = [
@@ -892,6 +1157,8 @@ class TaskipelagoWorld(World):
         # ------------------------------------------------------------------ #
         raw_goal_parts = [str(x).strip() for x in list(self.options.goal_tasks.value or []) if str(x).strip()]
         raw_goal = ", ".join(raw_goal_parts)
+        if goal_text_override is not None:
+            raw_goal = goal_text_override
 
         _goal_resolved, _goal_errs = _resolve_quoted_names(raw_goal, tasks)
         if _goal_errs:
@@ -934,7 +1201,7 @@ class TaskipelagoWorld(World):
         self._raw_goal = raw_goal
         self._goal_ast = goal_ast
         self._goal_region_reqs = goal_region_reqs
-        self._goal_indices = sorted(set(collect_leaves(goal_ast))) if goal_ast else []
+        self._goal_indices = sorted(set(collect_leaves(goal_ast))) if goal_ast is not None else []
 
         # ------------------------------------------------------------------ #
         # 14. Determine forced-progression rewards                           #
@@ -942,8 +1209,13 @@ class TaskipelagoWorld(World):
         forced_prog: set = set()
         for ast in parsed_reward_prereqs:
             forced_prog.update(collect_leaves(ast))
-        for indices in group_to_reward_indices.values():
-            forced_prog.update(indices)
+        referenced_groups: set = set()
+        for ast in parsed_reward_prereqs:
+            referenced_groups.update(_collect_group_names(ast))
+        for gname, indices in group_to_reward_indices.items():
+            # Progressive groups are always forced; other types only when referenced.
+            if group_types.get(gname, "progressive") == "progressive" or gname in referenced_groups:
+                forced_prog.update(indices)
         # Consumable items used in costs must be progression so AP places them accessibly
         for cname, idxs in consumable_groups.items():
             if consumable_demand.get(cname, 0) > 0:
@@ -970,6 +1242,8 @@ class TaskipelagoWorld(World):
 
         self._progressive_groups = raw_prog_groups
         self._progressive_group_colors = progressive_group_colors
+        self._group_types = [group_types.get(g, "progressive") for g in raw_prog_groups]
+        self._group_default_pcts = [group_default_pcts.get(g) for g in raw_prog_groups]
         self._reward_to_group = reward_to_group
         self._group_to_reward_indices = group_to_reward_indices
         self._task_progressive_reqs = task_progressive_reqs
@@ -1021,55 +1295,19 @@ class TaskipelagoWorld(World):
         import worlds as _worlds
 
         task_worlds = list(multiworld.get_game_worlds(cls.game))
-        multi_slot = len(task_worlds) > 1
 
         item_name_to_id: Dict[str, int] = {}
         location_name_to_id: Dict[str, int] = {}
 
-        def _pc(s):
-            try: return max(1, int(s)) if s else 1
-            except ValueError: return 1
-
         for world in task_worlds:
             p = world.player
-            player_name = multiworld.player_name[p]
-            prefix = f"[{player_name}] " if multi_slot else ""
-
-            tasks = [str(t).strip() for t in world.options.tasks.value if str(t).strip()]
-            items_raw_input = [str(r).strip() for r in world.options.items.value]
-
-            # Compute expanded count to size the ID allocation correctly
-            task_count_raw = [str(x).strip() for x in (world.options.task_count.value or [])]
-            item_count_raw = [str(x).strip() for x in (world.options.item_count.value or [])]
-
-            task_counts = [_pc(task_count_raw[i] if i < len(task_count_raw) else "") for i in range(len(tasks))]
-            n_tasks = min(sum(task_counts), MAX_TASKS)
-
-            # Items are an independent editor list from tasks (their own rows/counts),
-            # matching how generate_early expands them.
-            items_raw_editor, _, _, item_counts_editor, _ = build_item_editor_rows(
-                items_raw_input, [], [], item_count_raw
-            )
-            expanded_items = expand_rows(items_raw_editor, item_counts_editor)
-            expanded_items = pad_or_trim_names(expanded_items, n_tasks)
-            expanded_tasks = expand_rows(tasks, task_counts)[:n_tasks]
-
-            for i in range(n_tasks):
-                reward_text = expanded_items[i]
-                task_text = expanded_tasks[i]
-                item_name = (
-                    f"{prefix}Item {i + 1}: {reward_text}"
-                    if reward_text
-                    else f"{prefix}Item {i + 1}"
-                )
-                token_name = f"{prefix}Task {i + 1} Complete"
-                reward_loc_name = f"{prefix}Task {i + 1} (Reward): {task_text}"
-                complete_loc_name = f"{prefix}Task {i + 1} (Complete): {task_text}"
-
-                item_name_to_id[item_name] = BASE_ITEM_ID + (p - 1) * MAX_TASKS + i
-                item_name_to_id[token_name] = BASE_TOKEN_ID + (p - 1) * MAX_TASKS + i
-                location_name_to_id[reward_loc_name] = BASE_REWARD_LOC_ID + (p - 1) * MAX_TASKS + i
-                location_name_to_id[complete_loc_name] = BASE_COMPLETE_LOC_ID + (p - 1) * MAX_TASKS + i
+            # generate_early already built the final (selected, renumbered) names; the
+            # IDs stay index-based: BASE + (player - 1) * MAX_TASKS + index.
+            for i in range(len(world._tasks)):
+                item_name_to_id[world._reward_item_names[i]] = BASE_ITEM_ID + (p - 1) * MAX_TASKS + i
+                item_name_to_id[world._token_item_names[i]] = BASE_TOKEN_ID + (p - 1) * MAX_TASKS + i
+                location_name_to_id[world._reward_location_names[i]] = BASE_REWARD_LOC_ID + (p - 1) * MAX_TASKS + i
+                location_name_to_id[world._complete_location_names[i]] = BASE_COMPLETE_LOC_ID + (p - 1) * MAX_TASKS + i
 
         cls.item_name_to_id = item_name_to_id
         cls.location_name_to_id = location_name_to_id
@@ -1199,6 +1437,8 @@ class TaskipelagoWorld(World):
             "progressive_groups": list(self._progressive_groups),
             "progressive_group_colors": list(self._progressive_group_colors),
             "item_progressive_group": list(self._reward_to_group),
+            "group_types": list(self._group_types),
+            "group_default_pcts": list(self._group_default_pcts),
             "task_progressive_reqs": [
                 [{"group": g, "count": c} for g, c in reqs]
                 for reqs in self._task_progressive_reqs
@@ -1359,6 +1599,71 @@ def _translate_prereq_indices(
         i += 1
 
     return "".join(result)
+
+
+def _resolve_typed_group_refs(
+    node: Node | None,
+    task_idx: int,
+    group_types: Dict[str, str],
+    group_default_pcts: Dict[str, int | None],
+    group_to_reward_indices: Dict[str, List[int]],
+) -> Tuple[Node | None, bool]:
+    """Turn typed group refs into ("group_count", name, C); a zero count becomes an empty
+    AND (always true). Returns (node, changed). Plain progressive refs are left alone."""
+    import math as _math
+    if node is None or isinstance(node, int):
+        return node, False
+    op = node[0]
+    if op in ("and", "or"):
+        kids = [
+            _resolve_typed_group_refs(c, task_idx, group_types, group_default_pcts, group_to_reward_indices)
+            for c in node[1]
+        ]
+        if not any(ch for _, ch in kids):
+            return node, False
+        return (op, [k for k, _ in kids]), True
+    if op not in ("group_ref", "group_count"):
+        return node, False
+    _, gname, val = node
+    gtype = group_types.get(gname, "progressive")
+    dpct = group_default_pcts.get(gname)
+    size = len(group_to_reward_indices.get(gname, []))
+    if gtype == "progressive" and not (op == "group_ref" and val is None and dpct is not None):
+        return node, False
+    if size == 0:
+        raise Exception(
+            f"Taskipelago: task {task_idx + 1} references item group '{gname}' "
+            f"which has no items assigned to it."
+        )
+    if op == "group_count":
+        if val < 1 or val > size:
+            raise Exception(
+                f"Taskipelago: task {task_idx + 1} uses '{gname}*{val}' but group "
+                f"'{gname}' only has {size} item(s)."
+            )
+        return node, False
+    pct = dpct if val is None else val
+    if pct < 0 or pct > 100:
+        raise Exception(
+            f"Taskipelago: task {task_idx + 1} uses '{gname}-{pct}' but the percentage must be 0-100."
+        )
+    count = _math.ceil(size * pct / 100)
+    return (("and", []) if count == 0 else ("group_count", gname, count)), True
+
+
+def _collect_group_names(node: Node | None) -> set:
+    """Group names referenced by resolved group/group_count nodes."""
+    if node is None or isinstance(node, int):
+        return set()
+    op = node[0]
+    if op in ("group", "group_count", "group_ref"):
+        return {node[1]}
+    if op in ("and", "or"):
+        out: set = set()
+        for c in node[1]:
+            out |= _collect_group_names(c)
+        return out
+    return set()
 
 
 def _compute_topo_depths(parsed_prereqs: list, n: int) -> List[int]:

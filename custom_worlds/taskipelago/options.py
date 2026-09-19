@@ -233,6 +233,58 @@ class RegionPrereqs(OptionList):
     default: List[str] = []
 
 
+class RegionRandomPick(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with regions.
+    Empty means the region is not randomized. 'N' keeps N of the region's tasks per seed;
+    'N%' keeps N percent (rounded up, minimum 1). Duplicated tasks (count field) count as
+    separate candidates. Unkept tasks are removed from the seed entirely.
+    Individual tasks inside a randomized region cannot be referenced by task or region
+    prereqs (by index, quoted name, prev, or sequential); refer to the region as a whole.
+    goal_tasks may name individual tasks; one way to satisfy the goal is always kept.
+    Missing or empty entries mean not randomized.
+    """
+    display_name = "Region Random Pick"
+    default: List[str] = []
+
+
+class GroupTypes(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with progressive_groups (item groups). Each entry is one of:
+        "progressive"   -> interchangeable progression counter (default, legacy behavior)
+        "random-choice" -> keep only group_random_pick items per seed; kept items are distinct
+        "aesthetic"     -> color and inventory grouping only; items are distinct
+    Missing or invalid entries are treated as "progressive".
+    """
+    display_name = "Group Types"
+    default: List[str] = []
+
+
+class GroupRandomPick(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with progressive_groups. Only used by random-choice groups.
+    'N' keeps N of the group's items per seed; 'N%' keeps N percent (rounded up, minimum 1).
+    Individual items in a random-choice group cannot be referenced by item prereqs.
+    """
+    display_name = "Group Random Pick"
+    default: List[str] = []
+
+
+class GroupDefaultPcts(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with progressive_groups.
+    Each entry is the percentage (0-100) required when an item prereq references the group
+    by bare name. Blank keeps the legacy progressive behavior (next unused position) for
+    progressive groups and means 100 for random-choice and aesthetic groups.
+    """
+    display_name = "Group Default Percentages"
+    default: List[str] = []
+
+
 class TaskDescriptions(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -398,10 +450,14 @@ class TaskipelagoOptions(PerGameCommonOptions):
     progressive_groups: ProgressiveGroups
     item_progressive_group: ItemProgressiveGroup
     progressive_group_colors: ProgressiveGroupColors
+    group_types: GroupTypes
+    group_random_pick: GroupRandomPick
+    group_default_pcts: GroupDefaultPcts
     regions: Regions
     region_default_pcts: RegionDefaultPcts
     region_colors: RegionColors
     region_prereqs: RegionPrereqs
+    region_random_pick: RegionRandomPick
     task_region: TaskRegion
     bingo_mode: BingoMode
     bingo_dimension_x: BingoDimensionX

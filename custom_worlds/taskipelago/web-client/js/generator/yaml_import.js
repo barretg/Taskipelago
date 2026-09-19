@@ -14,6 +14,7 @@ import {
   REGION_COLOR_PALETTE, REWARD_TYPE_VALUES, limitPlayerName,
   newItem, newTask, newDeathLink, onFillerToggle, onConsumableToggle, setItemProgGroup,
 } from './model.js';
+import { normalizeGroupType } from './randomize_check.js';
 
 export const NO_BLOCK_MESSAGE = "Could not find a 'Taskipelago' section in this YAML.\n"
   + 'Expected either:\n'
@@ -146,6 +147,23 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
   });
   model.regions = regionNames.map(name => ({ name, ...regionInfo.get(name) }));
   model.nextColorIdx = regionNames.length;
+
+  // Randomized regions and item group types (optional parallel lists; absent = defaults).
+  const rawRegionPicks = pyListOr(block, 'region_random_pick');
+  model.regionRandom = {};
+  regionNames.forEach((name, i) => {
+    const pick = i < rawRegionPicks.length ? pyStrip(pyStr(rawRegionPicks[i])) : '';
+    if (pick) model.regionRandom[name] = { on: true, pick };
+  });
+  const rawTypes = pyListOr(block, 'group_types');
+  const rawGroupPicks = pyListOr(block, 'group_random_pick');
+  const rawGroupPcts = pyListOr(block, 'group_default_pcts');
+  model.groupSettings = {};
+  model.progGroups.forEach((g, i) => {
+    const at = list => (i < list.length ? pyStrip(pyStr(list[i])) : '');
+    const s = { type: normalizeGroupType(at(rawTypes)), pick: at(rawGroupPicks), pct: at(rawGroupPcts) };
+    if (s.type !== 'progressive' || s.pick || s.pct) model.groupSettings[g] = s;
+  });
 
   // --------- Tasks ---------
   const tasksRaw = pyListOr(block, 'tasks');

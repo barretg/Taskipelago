@@ -336,6 +336,23 @@ def apply_v11_import(doc, result: dict) -> dict:
         lock = c2_toggle(block.get("death_link_lock_tasks", False))
     m["progGroupColors"] = colors
     m["deathLinkLockTasks"] = lock
+    # Randomized regions and item group types: name-keyed, only non-default entries.
+    region_random, group_settings = {}, {}
+    if result.get("ok"):
+        block = _block(doc)
+        at = lambda key, i: (str(list(block.get(key) or [])[i]).strip()
+                             if i < len(list(block.get(key) or [])) else "")
+        for i, r in enumerate(m["regions"]):
+            if at("region_random_pick", i):
+                region_random[r["name"]] = {"on": True, "pick": at("region_random_pick", i)}
+        for i, g in enumerate(m["progGroups"]):
+            gtype = at("group_types", i).lower()
+            gtype = gtype if gtype in ("progressive", "random-choice", "aesthetic") else "progressive"
+            st = {"type": gtype, "pick": at("group_random_pick", i), "pct": at("group_default_pcts", i)}
+            if gtype != "progressive" or st["pick"] or st["pct"]:
+                group_settings[g] = st
+    m["regionRandom"] = region_random
+    m["groupSettings"] = group_settings
     return result
 
 

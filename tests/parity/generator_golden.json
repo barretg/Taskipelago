@@ -105,7 +105,9 @@
      "progGroupColors": {
       "tickets": "#e05c5c"
      },
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -188,7 +190,9 @@
      ],
      "deathLink": [],
      "progGroupColors": {},
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -276,7 +280,9 @@
       }
      ],
      "progGroupColors": {},
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -368,7 +374,9 @@
       }
      ],
      "progGroupColors": {},
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -451,7 +459,9 @@
      ],
      "deathLink": [],
      "progGroupColors": {},
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -534,7 +544,9 @@
      ],
      "deathLink": [],
      "progGroupColors": {},
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -617,7 +629,9 @@
      ],
      "deathLink": [],
      "progGroupColors": {},
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -704,7 +718,9 @@
      "progGroupColors": {
       "keys": "#e05c5c"
      },
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -813,7 +829,9 @@
      "progGroupColors": {
       "tickets": "#e05c5c"
      },
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -922,7 +940,9 @@
      "progGroupColors": {
       "tickets": "#e05c5c"
      },
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -1031,7 +1051,9 @@
      "progGroupColors": {
       "tickets": "#e05c5c"
      },
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -1140,7 +1162,9 @@
      "progGroupColors": {
       "tickets": "#e05c5c"
      },
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -1257,7 +1281,9 @@
      "progGroupColors": {
       "tickets": "#e05c5c"
      },
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -1358,7 +1384,9 @@
      "progGroupColors": {
       "swords": "#e05c5c"
      },
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": [
      [
@@ -1402,7 +1430,9 @@
      "items": [],
      "deathLink": [],
      "progGroupColors": {},
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": [
      [
@@ -1551,7 +1581,9 @@
       "7": "#e0955c",
       "None": "#e0d45c"
      },
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -1656,7 +1688,9 @@
       "weapons+": "#e0955c",
       "gems": "#e0d45c"
      },
-     "deathLinkLockTasks": true
+     "deathLinkLockTasks": true,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": []
    }
@@ -1814,7 +1848,9 @@
       "y": "#e0d45c",
       "s": "#8de05c"
      },
-     "deathLinkLockTasks": false
+     "deathLinkLockTasks": false,
+     "regionRandom": {},
+     "groupSettings": {}
     },
     "messages": [
      [
@@ -4791,7 +4827,9 @@
     "progGroupColors": {
      "tickets": "#e05c5c"
     },
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -5000,7 +5038,9 @@
     ],
     "deathLink": [],
     "progGroupColors": {},
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -5184,7 +5224,9 @@
      }
     ],
     "progGroupColors": {},
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -5376,7 +5418,9 @@
      }
     ],
     "progGroupColors": {},
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -5561,7 +5605,9 @@
     ],
     "deathLink": [],
     "progGroupColors": {},
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -5740,7 +5786,9 @@
     ],
     "deathLink": [],
     "progGroupColors": {},
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -5921,7 +5969,9 @@
     ],
     "deathLink": [],
     "progGroupColors": {},
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -6106,7 +6156,9 @@
     "progGroupColors": {
      "keys": "#e05c5c"
     },
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -6315,7 +6367,9 @@
     "progGroupColors": {
      "tickets": "#e05c5c"
     },
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -6550,7 +6604,9 @@
     "progGroupColors": {
      "tickets": "#e05c5c"
     },
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -6785,7 +6841,9 @@
     "progGroupColors": {
      "tickets": "#e05c5c"
     },
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -7020,7 +7078,9 @@
     "progGroupColors": {
      "tickets": "#e05c5c"
     },
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -7263,7 +7323,9 @@
     "progGroupColors": {
      "tickets": "#e05c5c"
     },
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -7496,7 +7558,9 @@
     "progGroupColors": {
      "swords": "#e05c5c"
     },
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": null,
@@ -7545,7 +7609,9 @@
     "items": [],
     "deathLink": [],
     "progGroupColors": {},
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": null,
@@ -7694,7 +7760,9 @@
      "7": "#e0955c",
      "None": "#e0d45c"
     },
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": null,
@@ -7796,7 +7864,9 @@
      "weapons+": "#e0955c",
      "gems": "#e0d45c"
     },
-    "deathLinkLockTasks": true
+    "deathLinkLockTasks": true,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {
@@ -8056,7 +8126,9 @@
      "y": "#e0d45c",
      "s": "#8de05c"
     },
-    "deathLinkLockTasks": false
+    "deathLinkLockTasks": false,
+    "regionRandom": {},
+    "groupSettings": {}
    },
    "result": {
     "data": {

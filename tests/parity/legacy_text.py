@@ -54,8 +54,91 @@ NAME_RULE = ("must start with a letter or underscore and must not contain digits
 # Intentional v1.1 text changes applied on top of the legacy text: {key: [(old, new)]}.
 V11_TIP_CHANGES = {
     # F8: unified region / progressive group name rule.
-    "pg_hint": [("may only contain letters, underscores, and hyphens - no digits.", NAME_RULE)],
-    "rg_hint": [("may only contain letters, underscores, and hyphens - no digits.", NAME_RULE)],
+    "pg_hint": [("may only contain letters, underscores, and hyphens - no digits.", NAME_RULE),
+                ("'Prog. Group' column", "'Item Group' column")],
+    "rg_hint": [
+        ("may only contain letters, underscores, and hyphens - no digits.", NAME_RULE),
+        ("A task cannot depend on its own region.\nRegions",
+         "A task cannot depend on its own region in any form.\n\n"
+         "Check Randomize on a region row to keep only N (or N%) of its tasks per seed.\n"
+         "Tasks may only reference a randomized region as a whole, never its individual tasks.\n\n"
+         "Regions"),
+    ],
+    # Randomized regions and item group types.
+    "region_col": [("A task cannot depend on its own region.",
+                    "A task cannot depend on its own region in any form (myregion, myregion-75,\n"
+                    "myregion*5).\n\n"
+                    "Tasks in a randomized region cannot be referenced individually (number,\n"
+                    "quoted name, 'prev' or 'sequential'). Reference the region as a whole.")],
+    "task_prereq": [("A task cannot depend on its own region.\n",
+                     "A task cannot depend on its own region.\n"
+                     "Tasks in a randomized region can only be referenced through the region.\n")],
+    "goal_tasks": [("The 'prev' and 'sequential' keywords",
+                    "Goal Tasks may name tasks in a randomized region. Generation keeps enough of\n"
+                    "them to satisfy at least one way to meet the goal (5 || 8 keeps 5 or 8).\n\n"
+                    "The 'prev' and 'sequential' keywords")],
+    "item_prereq": [
+        ("Progressive group refs:", "Item group refs (progressive groups):"),
+        ("Count mode: multiple tasks can share the same threshold.",
+         "Count mode: multiple tasks can share the same threshold.\n\n"
+         "Random-choice and aesthetic groups:\n"
+         "  mygroup     ->  the group's default % of its items\n"
+         "  mygroup-50  ->  any 50% of the group's items\n"
+         "  mygroup*2   ->  any 2 items from the group\n"
+         "For random-choice groups these count only the kept items, and items inside\n"
+         "the group cannot be referenced individually."),
+    ],
+    "prog_group": [
+        ("Assign this item to a progressive group.", "Assign this item to an item group."),
+        ("Group items are interchangeable", "Progressive group items are interchangeable"),
+        ("Items in a group are always forced to 'progression' classification.",
+         "Items in a progressive group are always forced to 'progression' classification.\n"
+         "Items in random-choice and aesthetic groups are forced to 'progression' only\n"
+         "when an item prereq references them or their group."),
+        ("Groups are defined in the Progressive Groups panel above.",
+         "Groups and their types are defined in the Item Groups panel above."),
+    ],
+    "type": [("Items in a progressive group are always forced to 'progression'.",
+              "Items in a progressive group are always forced to 'progression'.\n"
+              "Items in random-choice and aesthetic groups are forced to 'progression'\n"
+              "only when an item prereq references them or their group.")],
+}
+
+# Tooltips that only exist in v1.1.
+V11_NEW_TIPS = {
+    "rg_random": (
+        "Randomize this region: each seed keeps only some of its tasks.\n\n"
+        "Keep:\n"
+        "  3      ->  keep 3 tasks, chosen at random per seed\n"
+        "  40%    ->  keep 40% of the tasks, rounded up (at least 1)\n\n"
+        "Duplicated tasks (Count > 1) count separately. Keeping every task only warns;\n"
+        "keeping more than the region has is an error.\n\n"
+        "Other tasks may only reference this region as a whole (myregion, myregion-75,\n"
+        "myregion*5), which counts only the kept tasks."
+    ),
+    "group_type": (
+        "How the group behaves:\n\n"
+        "  progressive    ->  items are interchangeable; grp-N is the Nth position,\n"
+        "                     grp*N is any N items (the original behavior)\n"
+        "  random-choice  ->  each seed keeps only Keep items from the group; the rest\n"
+        "                     are removed. Kept items are normal, distinct items\n"
+        "  aesthetic      ->  color and inventory grouping only; items are normal,\n"
+        "                     distinct items\n\n"
+        "For random-choice and aesthetic, grp-N means any N% of the items and grp*N\n"
+        "means any N items."
+    ),
+    "group_pick": (
+        "Random-choice groups only: how many items to keep per seed.\n\n"
+        "  2      ->  keep 2 items, chosen at random\n"
+        "  50%    ->  keep 50% of the items, rounded up (at least 1)\n\n"
+        "Blank keeps every item. Duplicated items (Count > 1) count separately."
+    ),
+    "group_pct": (
+        "Percentage of the group's items required by a bare group reference (mygroup).\n\n"
+        "Blank on a progressive group keeps the original behavior (fills the lowest\n"
+        "unused position). Blank on other types means 100%.\n"
+        "Setting a value on a progressive group makes bare refs use count mode."
+    ),
 }
 
 
@@ -69,7 +152,40 @@ V11_STEP_CHANGES = {
         ("Press Enter or click away to confirm changes.",
          "Press Enter or click away to confirm changes. If other expressions reference the old name,\n"
          "you are asked whether to update them."),
+        ("Regions also appear as Archipelago regions for location hinting.",
+         "A task cannot reference its own region in any form (chores, chores-75 or chores*5).\n\n"
+         "Randomizing a region:\n"
+         "Check Randomize on a region row and enter how many of its tasks to keep:\n"
+         "  3      keep 3 tasks\n"
+         "  40%    keep 40% of the tasks, rounded up (at least 1)\n"
+         "The tasks are chosen when the seed is generated, so every seed can differ. The YAML keeps "
+         "every task. Duplicated tasks (Count > 1) count separately. Keeping every task only warns; "
+         "keeping more tasks than the region has is an error.\n\n"
+         "Regions also appear as Archipelago regions for location hinting."),
     ],
+    # Item group types.
+    "Progressive Groups": [
+        ("Progressive groups link several items together",
+         "Item groups collect related items under one name and color. Each group has a Type: "
+         "progressive, random-choice or aesthetic (see the next steps). Progressive groups link "
+         "several items together"),
+        ("1. In the Progressive Groups panel,", "1. In the Item Groups panel,"),
+        ('the "Prog. Group" dropdown', 'the "Item Group" dropdown'),
+        ("All group items are automatically classified as Progression.",
+         "Progressive group items are automatically classified as Progression."),
+    ],
+    "Item Types": [
+        ("Items in a progressive group and consumable items are automatically forced to "
+         "Progression, regardless of what you set here.",
+         "Items in a progressive group and consumable items are automatically forced to "
+         "Progression, regardless of what you set here. Items in random-choice and aesthetic "
+         "groups are forced to Progression only when an Item Prereq references them or their group."),
+    ],
+}
+
+# Intentional v1.1 tutorial title changes: {legacy title: new title}. Applied after V11_STEP_CHANGES.
+V11_TITLE_CHANGES = {
+    "Progressive Groups": "Item Groups (Progressive, Random-Choice, Aesthetic)",
 }
 
 
@@ -91,6 +207,7 @@ def v11_steps(tree: ast.AST) -> list:
         for old, new in V11_STEP_CHANGES.get(step[0], []):
             assert old in step[1], (step[0], old)
             step[1] = step[1].replace(old, new)
+        step[0] = V11_TITLE_CHANGES.get(step[0], step[0])
     return [[undash(title, title=True), undash(text)] for title, text in steps]
 
 
@@ -100,6 +217,9 @@ def v11_tips(tree: ast.AST) -> dict:
         for old, new in changes:
             assert old in tips[key], (key, old)
             tips[key] = tips[key].replace(old, new)
+    for key, text in V11_NEW_TIPS.items():
+        assert key not in tips, key
+        tips[key] = text
     return {key: undash(text) for key, text in tips.items()}
 
 

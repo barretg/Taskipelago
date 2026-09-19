@@ -58,3 +58,13 @@ The harnesses still run the v1.0.2 code, then apply one named step per feature:
   `death_link_lock_tasks` after `death_link_amnesty` (bingo YAML and `.bingo` settings too).
   `hand_v11_keys.yaml` and the `*_lock_tasks` bingo load docs exercise the new keys.
 - F8 / F4 (`legacy_text.py` `V11_STEP_CHANGES`): the tutorial "Regions" step text.
+- Randomized regions and item group types (`apply_v11_import`): the generator model gains
+  `regionRandom` and `groupSettings` (only non-default entries). Exports add `group_types`,
+  `group_random_pick` and `group_default_pcts` after `item_progressive_group`, and
+  `region_random_pick` after `region_prereqs`, only when a setting is used, so older YAML exports
+  are unchanged.
+- Randomized regions and item group types (`legacy_text.py` `V11_TIP_CHANGES`, `V11_NEW_TIPS`,
+  `V11_STEP_CHANGES`, `V11_TITLE_CHANGES`): the Regions, Item Types and Progressive Groups steps
+  (retitled "Item Groups (Progressive, Random-Choice, Aesthetic)") and the region, group, prereq
+  and type tooltips describe randomization and group types. New tooltips: `rg_random`,
+  `group_type`, `group_pick`, `group_pct`.

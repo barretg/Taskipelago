@@ -9,6 +9,7 @@ import { dumpYaml } from '../shared/yaml11.js';
 import {
   MAX_TASK_DESCRIPTION_LEN, isReservedWord, taskData, itemData,
 } from './model.js';
+import { checkRandomization, groupSetting, regionRandom, usesRandomization } from './randomize_check.js';
 
 /** _resolve_name_refs: "Quoted Name" -> first matching 1-based index. */
 export function resolveNameRefs(text, names) {
@@ -89,6 +90,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   }
 
   const rawItemNames = [];
+  const itemRows = []; // per editor row, for randomization checks
   const rawItemConsumables = [];
   const rawItemCounts = [];
   // itemRowExportIdxs[row] = 1-based indices the editor row occupies in the exported list.
@@ -103,6 +105,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     const it = itemData(row);
     rawItemNames.push(it.name);
     rawItemCounts.push(it.count);
+    itemRows.push({ name: it.name, count: it.count, group: it.progGroup, filler: it.filler || !it.name });
     const isFillerRow = it.filler || !it.name;
     rawItemConsumables.push(isFillerRow ? false : it.consumable);
     const start = items.length + 1;
@@ -162,8 +165,22 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       + reservedGroups.join('\n'));
   }
 
-  const totalTaskSlots = taskCounts.reduce((a, b) => a + b, 0);
-  const totalItemSlots = itemCounts.reduce((a, b) => a + b, 0);
+  let totalTaskSlots = taskCounts.reduce((a, b) => a + b, 0);
+  let totalItemSlots = itemCounts.reduce((a, b) => a + b, 0);
+  const randomized = usesRandomization(model);
+  const regionPrereqs = regionNames.map(n => regionByName.get(n).prereq ?? '');
+  const randomCheck = () => checkRandomization({
+    model, tasks, taskCounts, taskRegions, regionNames, regionPrereqs, itemRows,
+    taskPrereqs: taskPrereqs.map(t => resolveNameRefs(t, tasks)[0]),
+    itemPrereqs: itemPrereqsRaw.map(t => resolveNameRefs(t, rawItemNames)[0]),
+    goal: pyStrip(model.goalTasks),
+  });
+  if (randomized.regions || randomized.groups) {
+    // Balance against the final per-seed counts after random selection.
+    const { finalTasks, finalItems } = randomCheck();
+    totalTaskSlots = finalTasks;
+    totalItemSlots = finalItems;
+  }
   if (totalTaskSlots !== totalItemSlots) {
     const proceed = await confirm('Unbalanced Counts',
       'Warning: Unbalanced item and task slot counts will cause generation failures.\n\n'
@@ -251,6 +268,14 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     return fail('Invalid Expressions',
       'The following expressions could not be parsed and must be fixed before exporting:\n\n' + exprErrors.join('\n'));
   }
+  if (randomized.regions || randomized.groups) {
+    const { errors } = randomCheck();
+    if (errors.length) {
+      return fail('Invalid Randomization',
+        'The following randomized region or item group settings must be fixed before exporting:\n\n'
+        + errors.join('\n'));
+    }
+  }
 
   if (itemRowExportIdxs.some((idxs, i) => idxs.length !== 1 || idxs[0] !== i + 1)) {
     itemPrereqsRaw = itemPrereqsRaw.map(t => remapPrereqIndices(t, itemRowExportIdxs));
@@ -270,11 +295,26 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       progressive_group_colors: model.progGroups.map(g => ( // v1.1 F6
         model.progGroupColors && Object.hasOwn(model.progGroupColors, g) ? model.progGroupColors[g] : '')),
       item_progressive_group: itemProgGroups,
+      // Emitted only when used, so older exports and older apworlds are unaffected.
+      ...(randomized.groups ? {
+        group_types: model.progGroups.map(g => groupSetting(model, g).type),
+        group_random_pick: model.progGroups.map(g => {
+          const s = groupSetting(model, g);
+          return s.type === 'random-choice' ? s.pick : '';
+        }),
+        group_default_pcts: model.progGroups.map(g => groupSetting(model, g).pct),
+      } : {}),
 
       regions: regionNames,
       region_default_pcts: regionNames.map(n => regionByName.get(n).pct ?? 100),
       region_colors: regionNames.map(n => regionByName.get(n).color ?? ''),
-      region_prereqs: regionNames.map(n => regionByName.get(n).prereq ?? ''),
+      region_prereqs: regionPrereqs,
+      ...(randomized.regions ? {
+        region_random_pick: regionNames.map(n => {
+          const rr = regionRandom(model, n);
+          return rr.on ? rr.pick : '';
+        }),
+      } : {}),
       task_region: taskRegions,
       task_priority: taskPriorities.map(p => (p ? 'true' : 'false')),
 

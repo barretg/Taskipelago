@@ -1,4 +1,4 @@
-// Progressive Groups panel (legacy client.py:2210-2235, 2568-2616). v1.1 F4:
+// Item Groups panel (formerly Progressive Groups) (legacy client.py:2210-2235, 2568-2616). v1.1 F4:
 // rows with inline rename (offers to update item-prereq references) and Remove.
 // F6: a color swatch per group.
 import { h } from '../shared/dom.js';
@@ -8,6 +8,40 @@ import { TIPS } from './legacy_text.js';
 import { addProgGroup, checkGroupRename, removeProgGroup, renameProgGroup } from './model.js';
 import { commitNameChange, confirmNameRemoval } from './rename_refs.js';
 import { openColorPicker } from './regions.js';
+import { GROUP_TYPES, groupSetting } from './randomize_check.js';
+
+/** Type dropdown, random-choice pick field and default % field for one group. */
+function settingCells(group, ctx) {
+  const s = groupSetting(ctx.model, group);
+  const update = patch => {
+    ctx.model.groupSettings[group] = { ...groupSetting(ctx.model, group), ...patch };
+    ctx.changed();
+  };
+  const pick = h('input', {
+    type: 'text', value: s.pick, placeholder: 'N or N%', className: 'count-input group-pick', spellcheck: false,
+    disabled: s.type !== 'random-choice', 'aria-label': `Items kept from ${group}`,
+    oninput: e => update({ pick: e.target.value.trim() }),
+  });
+  const pct = h('input', {
+    type: 'text', value: s.pct, className: 'count-input group-pct', spellcheck: false,
+    placeholder: s.type === 'progressive' ? 'auto' : '100', 'aria-label': `Default % for ${group}`,
+    oninput: e => update({ pct: e.target.value.trim() }),
+  });
+  const type = h('select', {
+    className: 'group-type', 'aria-label': `Type of ${group}`,
+    onchange: e => {
+      update({ type: e.target.value });
+      pick.disabled = e.target.value !== 'random-choice';
+      pct.placeholder = e.target.value === 'progressive' ? 'auto' : '100';
+    },
+  }, GROUP_TYPES.map(t => h('option', { value: t }, t)));
+  type.value = s.type;
+  return [
+    h('span', { className: 'hint-with-tip' }, type, tipMarker(TIPS.group_type)),
+    h('span', { className: 'hint-with-tip' }, pick, tipMarker(TIPS.group_pick)),
+    h('span', { className: 'hint-with-tip' }, pct, tipMarker(TIPS.group_pct)),
+  ];
+}
 
 function groupRow(group, ctx) {
   const name = h('input', {
@@ -42,6 +76,7 @@ function groupRow(group, ctx) {
       }),
     }),
     name,
+    ...settingCells(group, ctx),
     h('button', {
       type: 'button', className: 'remove-btn', 'aria-label': `Remove group ${group}`,
       onclick: async () => {
