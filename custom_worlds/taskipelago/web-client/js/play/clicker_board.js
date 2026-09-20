@@ -5,8 +5,8 @@
 // how many activations each task has accrued; it is merged max-wise with data
 // storage so two open clients cannot roll each other back.
 import { ap, state, els } from './state.js';
-import { allChecked, completeTask } from './logic.js';
-import { taskAvailability } from './tasks.js';
+import { allChecked, completeTask, attemptPurchase, attemptMakeChange } from './logic.js';
+import { taskAvailability, formatCostBranches } from './tasks.js';
 import { isDeathLinkLocked } from './deathlink_queue.js';
 import { evalNumExpr, numExprBindings } from '../shared/num_expr.js';
 import {
@@ -473,7 +473,19 @@ function visibleTasks(m) {
     const wouldHide = !a.otherPrereqsOk && state.hideUnreachable && effectiveLock;
     if (wouldHide && !state.showLocked) continue;
     if (a.completed && state.hideCompleted) continue;
-    out.push({ i, locked: !a.unlocked, hiddenName: wouldHide, completed: a.completed, reasons: a.reasons });
+    // A cost-locked task is bought here rather than only in the task list, so
+    // the card carries its price and its buttons.
+    const branches = a.branches || [];
+    out.push({
+      i,
+      locked: !a.unlocked,
+      hiddenName: wouldHide,
+      completed: a.completed,
+      reasons: a.reasons,
+      branches,
+      purchasable: !!a.costOnlyLocked && effectiveLock && branches.length > 0,
+      canMakeChange: branches.length > 1 && (i in state.taskPurchases),
+    });
   }
   return out;
 }
@@ -483,7 +495,7 @@ export function renderClicker() {
   const m = clickerModel();
   const rows = visibleTasks(m);
 
-  const sig = rows.map(r => `${r.i}:${r.locked ? 'L' : ''}${r.completed ? 'C' : ''}${r.hiddenName ? 'H' : ''}`).join(',');
+  const sig = rows.map(r => `${r.i}:${r.locked ? 'L' : ''}${r.completed ? 'C' : ''}${r.hiddenName ? 'H' : ''}${r.purchasable ? '$' : ''}${r.canMakeChange ? 'M' : ''}`).join(',');
   if (sig !== lastSignature) {
     lastSignature = sig;
     buildGrid(rows, m);
@@ -508,6 +520,10 @@ function buildGrid(rows, m) {
         ? `✔ ${i + 1}. ${state.tasks[i]}`
         : `${i + 1}. ${state.tasks[i]}`;
     card.appendChild(name);
+
+    if (row.completed) {
+      if (row.canMakeChange) card.appendChild(cardActions(row));
+    }
 
     if (!row.completed) {
       const barOuter = document.createElement('div');
@@ -543,6 +559,13 @@ function buildGrid(rows, m) {
         why.className = 'clicker-hint';
         why.textContent = `No production while locked. ${row.hiddenName ? '' : row.reasons.join('; ')}`.trim();
         card.appendChild(why);
+        if (row.purchasable && !row.hiddenName) {
+          const price = document.createElement('div');
+          price.className = 'clicker-hint clicker-cost';
+          price.textContent = `Requires purchase: ${formatCostBranches(row.branches)}`;
+          card.appendChild(price);
+        }
+        if (row.purchasable || row.canMakeChange) card.appendChild(cardActions(row));
       } else {
         btn = document.createElement('button');
         btn.className = 'clicker-click-btn';
@@ -556,6 +579,27 @@ function buildGrid(rows, m) {
   }
   els.clickerGrid.innerHTML = '';
   els.clickerGrid.appendChild(frag);
+}
+
+/** Purchase / Make Change buttons for one card. */
+function cardActions(row) {
+  const actions = document.createElement('div');
+  actions.className = 'clicker-actions';
+  if (row.purchasable) {
+    const buy = document.createElement('button');
+    buy.className = 'clicker-buy-btn';
+    buy.textContent = '$$ Purchase $$';
+    buy.onclick = () => attemptPurchase(row.i);
+    actions.appendChild(buy);
+  }
+  if (row.canMakeChange) {
+    const mc = document.createElement('button');
+    mc.className = 'clicker-change-btn';
+    mc.textContent = 'Make Change';
+    mc.onclick = () => attemptMakeChange(row.i);
+    actions.appendChild(mc);
+  }
+  return actions;
 }
 
 function updateGrid(rows, m) {
@@ -582,6 +626,11 @@ function updateGrid(rows, m) {
       n.btn.disabled = dlLocked;
       n.btn.textContent = `Click +${fmt(m.taskClickValue[i])}`;
     }
+  }
+  // Purchase / Make Change buttons live outside `nodes` (a completed card has
+  // no node at all), so gate them here alongside the click buttons.
+  if (els.clickerGrid) {
+    for (const b of els.clickerGrid.querySelectorAll('button')) b.disabled = dlLocked;
   }
 }
 

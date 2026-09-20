@@ -594,6 +594,20 @@ button:disabled {
   font-size: 13px;
 }
 
+/* Purchase / Make Change on a cost-locked card. */
+.clicker-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.clicker-actions button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.clicker-cost { color: var(--accent, #5c8de0); }
+
 /* =============================================================
    Side panel (sub-tabs)
    ============================================================= */
