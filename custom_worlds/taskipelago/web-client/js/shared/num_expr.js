@@ -8,8 +8,8 @@
 // AST (JSON, identical to the Python side):
 //   {num: 1.5}  {const: 'N_TASKS'}  {op: '+', l: node, r: node}
 
-export const NUM_CONSTANTS = ['N_TASKS', 'N_TASKS_UNLOCKED', 'N_TASKS_LOCKED', 'N_TASKS_COMPLETED'];
-export const LIVE_NUM_CONSTANTS = ['N_TASKS_UNLOCKED', 'N_TASKS_LOCKED', 'N_TASKS_COMPLETED'];
+export const NUM_CONSTANTS = ['N_TASKS', 'N_TASKS_UNLOCKED', 'N_TASKS_LOCKED', 'N_TASKS_COMPLETED', 'CPS'];
+export const LIVE_NUM_CONSTANTS = ['N_TASKS_UNLOCKED', 'N_TASKS_LOCKED', 'N_TASKS_COMPLETED', 'CPS'];
 
 const TOKEN_RE = /^(?:(\d+\.\d*|\.\d+|\d+)|([A-Za-z_][A-Za-z0-9_]*)|([-+*/()]))/;
 
@@ -146,13 +146,18 @@ export function foldNumExpr(node, nTasks) {
   return evalNumExpr(node, { N_TASKS: nTasks });
 }
 
-/** Bindings for a live tick. Completed tasks still count as unlocked. */
-export function numExprBindings(nTasks, nUnlocked, nCompleted) {
+/**
+ * Bindings for a live tick. Completed tasks still count as unlocked. CPS is the
+ * click value, which the click channel itself may not reference, so it defaults
+ * to the base value of one click.
+ */
+export function numExprBindings(nTasks, nUnlocked, nCompleted, clickValue = 1) {
   return {
     N_TASKS: nTasks,
     N_TASKS_UNLOCKED: nUnlocked,
     N_TASKS_LOCKED: nTasks - nUnlocked,
     N_TASKS_COMPLETED: nCompleted,
+    CPS: clickValue,
   };
 }
 

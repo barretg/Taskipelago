@@ -30,7 +30,7 @@
 
 * Clicking a task adds its click value; production accrues on its own, including while you are away if offline progress is on. A locked task never accrues anything, from any source, and nothing is banked for it
 
-* Rates, activation counts and multipliers can be plain numbers or small expressions over `N_TASKS`, `N_TASKS_UNLOCKED`, `N_TASKS_LOCKED` and `N_TASKS_COMPLETED`, so a game can scale as it grows
+* Rates, activation counts and multipliers can be plain numbers or small expressions over `N_TASKS`, `N_TASKS_UNLOCKED`, `N_TASKS_LOCKED`, `N_TASKS_COMPLETED` and `CPS` (the current click value), so a game can scale as it grows
 
 * Build one in the YAML Generator tab: tick **Enable clicker mode** and the task, item and region tables grow the clicker columns. `clicker_mode` and `bingo_mode` cannot both be enabled
 

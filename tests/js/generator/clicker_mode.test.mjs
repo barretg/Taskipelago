@@ -154,3 +154,28 @@ test('export rejects a bad activation expression, target or value', async () => 
   r = await build(m);
   assert.match(r.error[1], /Item 'Oven'/);
 });
+
+test('CPS exports in a production value and is refused in a click field', async () => {
+  let m = clickerModel();
+  m.items[0].clickerValue = '0.5 * CPS';
+  let r = await build(m);
+  assert.ok(r.data, JSON.stringify(r.error));
+  assert.equal(r.data.Taskipelago.item_production[0], 'Kitchen-0.5 * CPS');
+  const { model } = roundTrip(r.data);
+  assert.equal(model.items[0].clickerValue, '0.5 * CPS');
+
+  for (const kind of ['click_power', 'click_mult']) {
+    m = clickerModel();
+    m.items[2].clickerKind = kind;
+    m.items[2].clickerValue = '2 * CPS';
+    r = await build(m);
+    assert.match(r.error[1], /'CPS' is the click value and cannot be used in a click field/);
+  }
+
+  // Activations are fixed at generation, so CPS is refused there like the other
+  // live constants.
+  m = clickerModel();
+  m.tasks[0].activations = 'CPS';
+  r = await build(m);
+  assert.match(r.error[1], /changes during play/);
+});

@@ -54,7 +54,13 @@ test('error text matches Python wherever the client also refuses to parse', () =
 
 test('numExprBindings keeps completed tasks inside the unlocked count', () => {
   const b = numExprBindings(10, 6, 4);
-  assert.deepEqual(b, { N_TASKS: 10, N_TASKS_UNLOCKED: 6, N_TASKS_LOCKED: 4, N_TASKS_COMPLETED: 4 });
+  assert.deepEqual(b, { N_TASKS: 10, N_TASKS_UNLOCKED: 6, N_TASKS_LOCKED: 4, N_TASKS_COMPLETED: 4, CPS: 1 });
+});
+
+test('CPS binds to the click value and defaults to one click', () => {
+  assert.equal(numExprBindings(10, 6, 4).CPS, 1);
+  assert.equal(numExprBindings(10, 6, 4, 7.5).CPS, 7.5);
+  assert.equal(evalNumExpr(parseNumExpr('0.25 * CPS'), numExprBindings(10, 0, 0, 8)), 2);
 });
 
 test('a plain number is a valid AST (the folded slot_data form)', () => {

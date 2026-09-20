@@ -8,8 +8,8 @@ import { rowCount } from './model.js';
 
 export const TIPS = {
   activations: 'Activations needed to finish this task. Blank means 1.\n\n'
-    + 'Accepts a number or an expression over N_TASKS. The other task-count constants are live '
-    + 'values, so they are not allowed here: the requirement is fixed when the seed is generated.',
+    + 'Accepts a number or an expression over N_TASKS. The other constants are live values, so '
+    + 'they are not allowed here: the requirement is fixed when the seed is generated.',
   grants: 'What this item does when you receive it.\n\n'
     + 'Production adds activations per second. Click power adds to the value of one click. The two '
     + 'multiplier channels are separate: a production multiplier never touches clicks and a click '
@@ -23,8 +23,10 @@ export const TIPS = {
     + '  3              ->  one task, by 1-based number\n\n'
     + 'Join several with &&. Only Production and Offline multiplier take a target; the other kinds '
     + 'apply to the whole slot.',
-  value: 'A number or an expression over N_TASKS, N_TASKS_UNLOCKED, N_TASKS_LOCKED and '
-    + 'N_TASKS_COMPLETED. The preview shows the value at both ends of the curve.',
+  value: 'A number or an expression over N_TASKS, N_TASKS_UNLOCKED, N_TASKS_LOCKED, '
+    + 'N_TASKS_COMPLETED and CPS (the current click value). CPS cannot be used in a click '
+    + 'field, since that is what defines it. The preview shows the value at both ends of the '
+    + 'curve, with CPS at its base value of 1.',
   distributed: 'Off: the rate applies in full to each eligible task in the region.\n\n'
     + 'On: the rate is split evenly among them, so the region\'s total throughput stays constant '
     + 'and each share rises as siblings complete.',

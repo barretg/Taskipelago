@@ -4,19 +4,22 @@
    "N_TASKS": 10,
    "N_TASKS_UNLOCKED": 0,
    "N_TASKS_LOCKED": 10,
-   "N_TASKS_COMPLETED": 0
+   "N_TASKS_COMPLETED": 0,
+   "CPS": 1
   },
   {
    "N_TASKS": 10,
    "N_TASKS_UNLOCKED": 10,
    "N_TASKS_LOCKED": 0,
-   "N_TASKS_COMPLETED": 10
+   "N_TASKS_COMPLETED": 10,
+   "CPS": 3.5
   },
   {
    "N_TASKS": 7,
    "N_TASKS_UNLOCKED": 3,
    "N_TASKS_LOCKED": 4,
-   "N_TASKS_COMPLETED": 2
+   "N_TASKS_COMPLETED": 2,
+   "CPS": 3.5
   }
  ],
  "cases": [
@@ -701,6 +704,64 @@
    }
   },
   {
+   "text": "CPS",
+   "result": {
+    "ast": {
+     "const": "CPS"
+    },
+    "constants": [
+     "CPS"
+    ],
+    "static": false,
+    "values": [
+     {
+      "v": 1.0,
+      "i": 1
+     },
+     {
+      "v": 3.5,
+      "i": 4
+     },
+     {
+      "v": 3.5,
+      "i": 4
+     }
+    ]
+   }
+  },
+  {
+   "text": "0.25 * CPS",
+   "result": {
+    "ast": {
+     "op": "*",
+     "l": {
+      "num": 0.25
+     },
+     "r": {
+      "const": "CPS"
+     }
+    },
+    "constants": [
+     "CPS"
+    ],
+    "static": false,
+    "values": [
+     {
+      "v": 0.25,
+      "i": 1
+     },
+     {
+      "v": 0.875,
+      "i": 1
+     },
+     {
+      "v": 0.875,
+      "i": 1
+     }
+    ]
+   }
+  },
+  {
    "text": "0.1 * N_TASKS_UNLOCKED",
    "result": {
     "ast": {
@@ -1024,6 +1085,13 @@
    }
   },
   {
+   "text": "CPS",
+   "allow_live": false,
+   "result": {
+    "error": "Taskipelago: 'CPS' changes during play and cannot be used in numeric expression; only N_TASKS is allowed there."
+   }
+  },
+  {
    "text": "",
    "result": {
     "error": "Taskipelago: empty numeric expression."
@@ -1068,13 +1136,13 @@
   {
    "text": "FOO",
    "result": {
-    "error": "Taskipelago: unknown name 'FOO' in numeric expression (valid constants: N_TASKS, N_TASKS_UNLOCKED, N_TASKS_LOCKED, N_TASKS_COMPLETED)."
+    "error": "Taskipelago: unknown name 'FOO' in numeric expression (valid constants: N_TASKS, N_TASKS_UNLOCKED, N_TASKS_LOCKED, N_TASKS_COMPLETED, CPS)."
    }
   },
   {
    "text": "n_tasks",
    "result": {
-    "error": "Taskipelago: unknown name 'n_tasks' in numeric expression (valid constants: N_TASKS, N_TASKS_UNLOCKED, N_TASKS_LOCKED, N_TASKS_COMPLETED)."
+    "error": "Taskipelago: unknown name 'n_tasks' in numeric expression (valid constants: N_TASKS, N_TASKS_UNLOCKED, N_TASKS_LOCKED, N_TASKS_COMPLETED, CPS)."
    }
   },
   {

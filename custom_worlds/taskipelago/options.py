@@ -438,13 +438,16 @@ class Bingoal(Range):
 # lists and forwards them in slot_data, and the client does all the accrual.
 #
 # Numeric fields accept a small arithmetic expression (integers, decimals,
-# + - * /, parentheses) over four constants:
+# + - * /, parentheses) over five constants:
 #     N_TASKS             total tasks in the slot (fixed for the seed)
 #     N_TASKS_UNLOCKED    tasks currently unlocked, including completed ones
 #     N_TASKS_LOCKED      N_TASKS - N_TASKS_UNLOCKED
 #     N_TASKS_COMPLETED   tasks completed so far
-# The last three change during play and are therefore legal only in the clicker
-# fields, never in prereq, goal or cost expressions.
+#     CPS                 the current click value, after click power and the
+#                         click multiplier
+# The last four change during play and are therefore legal only in the clicker
+# fields, never in prereq, goal or cost expressions. CPS is additionally
+# rejected in item_click_power and item_click_mult, which are what define it.
 
 
 class ClickerMode(Toggle):

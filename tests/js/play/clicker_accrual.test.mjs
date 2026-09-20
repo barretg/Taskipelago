@@ -280,3 +280,53 @@ test('the clicker commands say so on a non-clicker slot', async () => {
   await wait(5);
   assert.deepEqual(lines, ['This slot is not in clicker mode.', 'This slot is not in clicker mode.']);
 });
+
+test('the header attributes rates per task, so completing one never moves the base', async () => {
+  await boot({
+    item_production: [
+      [{ kind: 'region', ref: 'Kitchen', rate: 0.2 }],
+      [{ kind: 'region', ref: 'House', rate: 0.5 }],
+      [], [], [],
+    ],
+    item_production_mult: [null, null, 2, null, null],
+  });
+  give('Sponge', 'Oven', 'Foreman');
+  const { els } = await importModule('play/state.js');
+  const header = () => [...els.clickerHeader.children].map(el => el.textContent);
+
+  board.renderClicker();
+  assert.deepEqual(header().slice(0, 2), [
+    '2.8/s total across 4 tasks',
+    'Per task: 1/s on 2 tasks (0.5 base × 2), 0.4/s on 2 tasks (0.2 base × 2)',
+  ]);
+
+  // Completing a task drops it from the total and the count, and leaves every
+  // per-task figure exactly where it was.
+  ap.checkedLocations.add(200);     // Wash complete
+  board.renderClicker();
+  assert.deepEqual(header().slice(0, 2), [
+    '1.8/s total across 3 tasks',
+    'Per task: 1/s on 1 task (0.5 base × 2), 0.4/s on 2 tasks (0.2 base × 2)',
+  ]);
+});
+
+test('CPS binds to the live click value and drives production from it', async () => {
+  await boot({
+    item_production: [[{ kind: 'task', ref: 0, rate: { op: '*', l: { num: 0.5 }, r: { const: 'CPS' } } }], [], [], [], []],
+    item_click_power: [0, 0, 2, 0, 0],
+    item_click_mult: [null, null, null, 3, null],
+  });
+  give('Sponge');
+  // No click items yet: CPS is the base click value of 1.
+  assert.equal(board.clickerModel().rate[0], 0.5);
+
+  give('Foreman');            // +2 click power -> CPS 3
+  assert.equal(board.clickerModel().clickValue, 3);
+  assert.equal(board.clickerModel().rate[0], 1.5);
+
+  give('Glove');              // x3 click multiplier -> CPS 9
+  const m = board.clickerModel();
+  assert.equal(m.clickValue, 9);
+  assert.equal(m.rate[0], 4.5);
+  assert.equal(m.bindings.CPS, 9);
+});

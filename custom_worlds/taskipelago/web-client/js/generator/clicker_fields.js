@@ -7,7 +7,7 @@
 // does not know about: the '<target>-<value>' spec grammar, which is kept in
 // parity with clicker.py, and the numeric-expression preview.
 import { pyGet, pyInt, pyListOr, pyStr, pyStrip } from '../shared/pyish.js';
-import { evalNumExpr, numExprBindings, parseNumExpr } from '../shared/num_expr.js';
+import { evalNumExpr, numExprBindings, numExprConstants, parseNumExpr } from '../shared/num_expr.js';
 import { UPGRADE_KINDS } from './model.js';
 
 export { UPGRADE_KINDS };
@@ -20,6 +20,9 @@ export const KIND_LABELS = {
   click_mult: 'Click multiplier (x)',
   offline_mult: 'Offline multiplier (x)',
 };
+
+/** Kinds whose value may not reference CPS, because CPS is what they define. */
+export const CLICK_KINDS = new Set(['click_power', 'click_mult']);
 
 /** Kinds whose value is aimed at a target; the rest are global to the slot. */
 export const TARGETED_KINDS = new Set(['production', 'offline_mult']);
@@ -153,10 +156,14 @@ export function validateClicker(model, { taskNames, taskActivations, items, item
   for (let i = 0; i < itemSpecs.length; i++) {
     const s = itemSpecs[i];
     if (s.kind === 'none' || !pyStrip(s.value)) continue;
+    let ast;
     try {
-      parseNumExpr(pyStrip(s.value));
+      ast = parseNumExpr(pyStrip(s.value));
     } catch (e) {
       return ['Error', `Item '${items[i]}': ${e.message}`];
+    }
+    if (CLICK_KINDS.has(s.kind) && numExprConstants(ast).has('CPS')) {
+      return ['Error', `Item '${items[i]}': 'CPS' is the click value and cannot be used in a click field.`];
     }
     if (!TARGETED_KINDS.has(s.kind)) continue;
     const why = checkTarget(s.target, taskNames, regionNames);

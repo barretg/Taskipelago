@@ -31,7 +31,7 @@ class NumExprGoldenTest(unittest.TestCase):
         golden = json.loads(num_expr_parity.GOLDEN.read_text(encoding="utf-8"))
         live = [c for c in golden["cases"]
                 if c.get("allow_live") is False and c["text"] != "N_TASKS"]
-        self.assertEqual(len(live), 3)
+        self.assertEqual(len(live), 4)
         for case in live:
             self.assertIn("changes during play", case["result"]["error"])
 

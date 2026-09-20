@@ -429,7 +429,8 @@ class TaskipelagoWorld(World):
             return expand_rows(rows, item_counts_editor)
 
         def _clicker_values(raw: List[str], label: str, *, minimum=None,
-                            positive=False, round_2dp=False, blank) -> List[Any]:
+                            positive=False, round_2dp=False, allow_cps=True,
+                            blank) -> List[Any]:
             rows = []
             for i in range(n_editor_items):
                 text = raw[i] if i < len(raw) else ""
@@ -439,17 +440,19 @@ class TaskipelagoWorld(World):
                 rows.append(parse_value_expr(
                     text, label, f"item {i + 1}", n,
                     minimum=minimum, strictly_positive=positive, round_2dp=round_2dp,
+                    allow_cps=allow_cps,
                 ))
             return expand_rows(rows, item_counts_editor)
 
         clicker_production_full = _clicker_specs(item_production_raw, "item_production", True)
         clicker_offline_mult_full = _clicker_specs(item_offline_mult_raw, "item_offline_mult", True)
         clicker_click_power_full = _clicker_values(
-            item_click_power_raw, "item_click_power", minimum=0.0, blank=0)
+            item_click_power_raw, "item_click_power", minimum=0.0, allow_cps=False, blank=0)
         clicker_production_mult_full = _clicker_values(
             item_production_mult_raw, "item_production_mult", positive=True, round_2dp=True, blank=None)
         clicker_click_mult_full = _clicker_values(
-            item_click_mult_raw, "item_click_mult", positive=True, round_2dp=True, blank=None)
+            item_click_mult_raw, "item_click_mult", positive=True, round_2dp=True,
+            allow_cps=False, blank=None)
 
         # ------------------------------------------------------------------ #
         # 5b. Randomized selection and renumbering                           #

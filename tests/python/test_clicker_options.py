@@ -269,3 +269,22 @@ class SlotDataTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CpsConstantTest(unittest.TestCase):
+    def test_cps_is_allowed_in_production_fields(self):
+        w = world(item_production=["*-0.5 * CPS", "", ""])
+        self.assertEqual(w.fill_slot_data()["item_production"][0][0]["rate"],
+                         {"op": "*", "l": {"num": 0.5}, "r": {"const": "CPS"}})
+
+    def test_cps_is_rejected_in_the_click_fields(self):
+        for key in ("item_click_power", "item_click_mult"):
+            with self.subTest(key=key):
+                with self.assertRaises(Exception) as cm:
+                    world(**{key: ["2 * CPS", "", ""]})
+                self.assertIn("'CPS' is the click value", str(cm.exception))
+
+    def test_cps_is_rejected_where_live_constants_are(self):
+        with self.assertRaises(Exception) as cm:
+            world(task_activations=["CPS", "1", "1"])
+        self.assertIn("changes during play", str(cm.exception))

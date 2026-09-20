@@ -81,9 +81,9 @@ NAME_STAR_RE = _re.compile(r'^(\D+)\*(\d+)$')
 # ---------------------------------------------------------------------------
 
 #: Every constant a numeric expression may reference.
-NUM_CONSTANTS = ("N_TASKS", "N_TASKS_UNLOCKED", "N_TASKS_LOCKED", "N_TASKS_COMPLETED")
+NUM_CONSTANTS = ("N_TASKS", "N_TASKS_UNLOCKED", "N_TASKS_LOCKED", "N_TASKS_COMPLETED", "CPS")
 #: Constants that change during play; only clicker numeric fields may use them.
-LIVE_NUM_CONSTANTS = ("N_TASKS_UNLOCKED", "N_TASKS_LOCKED", "N_TASKS_COMPLETED")
+LIVE_NUM_CONSTANTS = ("N_TASKS_UNLOCKED", "N_TASKS_LOCKED", "N_TASKS_COMPLETED", "CPS")
 
 _NUM_TOKEN_RE = _re.compile(r'\s*(?:(\d+\.\d*|\.\d+|\d+)|([A-Za-z_][A-Za-z0-9_]*)|([-+*/()]))')
 

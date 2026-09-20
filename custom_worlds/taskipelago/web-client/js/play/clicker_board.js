@@ -85,19 +85,6 @@ export function clickerModel({ offline = false, checked = allChecked() } = {}) {
   const bindings = numExprBindings(n, nUnlocked, nCompleted);
   const counts = itemCopyCounts();
 
-  // Global production multiplier: every received copy stacks multiplicatively.
-  let globalMult = 1;
-  const multItems = [];
-  for (let k = 0; k < counts.length; k++) {
-    if (!counts[k]) continue;
-    const raw = state.itemProductionMult[k];
-    if (raw === null || raw === undefined) continue;
-    const m = evalNum(raw, bindings, 1);
-    if (!(m > 0)) continue;
-    globalMult *= Math.pow(m, counts[k]);
-    multItems.push({ name: state.items[k], mult: m, copies: counts[k] });
-  }
-
   // Click value: a channel of its own. The production multiplier never touches
   // it, and the click multiplier never touches production.
   let clickAdd = 0;
@@ -119,6 +106,23 @@ export function clickerModel({ offline = false, checked = allChecked() } = {}) {
     }
   }
   const clickValue = (1 + clickAdd) * clickMult;
+  // CPS is the click value. Binding it here, after the click channel and
+  // before production, is what keeps it from being self-referential: the click
+  // fields that define it are parsed with CPS rejected.
+  bindings.CPS = clickValue;
+
+  // Global production multiplier: every received copy stacks multiplicatively.
+  let globalMult = 1;
+  const multItems = [];
+  for (let k = 0; k < counts.length; k++) {
+    if (!counts[k]) continue;
+    const raw = state.itemProductionMult[k];
+    if (raw === null || raw === undefined) continue;
+    const m = evalNum(raw, bindings, 1);
+    if (!(m > 0)) continue;
+    globalMult *= Math.pow(m, counts[k]);
+    multItems.push({ name: state.items[k], mult: m, copies: counts[k] });
+  }
 
   // Base production, from the per-item target specs.
   const base = new Array(n).fill(0);
@@ -456,12 +460,28 @@ function updateGrid(rows, m) {
 function renderHeader(m) {
   if (!els.clickerHeader) return;
   let total = 0;
-  let totalBase = 0;
-  for (const i of m.eligible) { total += m.rate[i]; totalBase += m.base[i]; }
+  for (const i of m.eligible) total += m.rate[i];
 
   const lines = [];
-  lines.push(`${fmt(total)}/s total (${fmt(totalBase)}/s base × ${fmt(m.globalMult)})`);
-  lines.push(`Click: ${fmt(m.clickValue)} per click (1 + ${fmt(m.clickAdd)} × ${fmt(m.clickMult)})`);
+  // The total is a sum, so never pair it with a 'base' figure: that sum shrinks
+  // as tasks complete and reads as the base rate dropping. Attribute the rates
+  // per task instead, grouped by base, since targeted items give tasks
+  // different rates.
+  const plural = c => `${c} task${c === 1 ? '' : 's'}`;
+  lines.push(`${fmt(total)}/s total across ${plural(m.eligible.length)}`);
+
+  const byBase = new Map();
+  for (const i of m.eligible) {
+    const b = m.base[i];
+    if (b > 0) byBase.set(b, (byBase.get(b) || 0) + 1);
+  }
+  if (byBase.size) {
+    const parts = [...byBase].sort((a, b) => b[0] - a[0]).map(([b, c]) => (m.globalMult === 1
+      ? `${fmt(b)}/s on ${plural(c)}`
+      : `${fmt(b * m.globalMult)}/s on ${plural(c)} (${fmt(b)} base × ${fmt(m.globalMult)})`));
+    lines.push('Per task: ' + parts.join(', '));
+  }
+  lines.push(`Click: ${fmt(m.clickValue)} per click ((1 + ${fmt(m.clickAdd)} click power) × ${fmt(m.clickMult)} click multiplier)`);
   if (state.clickerOffline) {
     const away = Math.max(0, evalNum(state.clickerOfflineRate, m.bindings, 1));
     lines.push(`Offline: ×${fmt(away)}, capped at ${state.clickerOfflineCapHours}h`);

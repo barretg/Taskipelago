@@ -42,6 +42,9 @@ def _bindings(n_tasks: int, unlocked: int, completed: int) -> Dict[str, int]:
         "N_TASKS_UNLOCKED": unlocked,
         "N_TASKS_LOCKED": n_tasks - unlocked,
         "N_TASKS_COMPLETED": completed,
+        # CPS is the live click value, which depends on which click items have
+        # been received. Validation checks the base value of one click.
+        "CPS": 1,
     }
 
 
@@ -61,13 +64,20 @@ def sample_bindings(n_tasks: int) -> List[Dict[str, int]]:
 
 def parse_value_expr(text: str, label: str, loc: str, n_tasks: int, *,
                      minimum: float | None = None, strictly_positive: bool = False,
-                     allow_live: bool = True, round_2dp: bool = False) -> Any:
+                     allow_live: bool = True, allow_cps: bool = True,
+                     round_2dp: bool = False) -> Any:
     """
     Parse one clicker numeric field and check it stays in range over every
     reachable constant binding. Returns a plain number when the expression is
     static (folded at generation) or the AST when it depends on live constants.
     """
     ast = parse_num_expr(text, label, loc, allow_live=allow_live)
+    # CPS is the click value itself, so a click field defined in terms of it
+    # would be self-referential.
+    if not allow_cps and "CPS" in num_expr_constants(ast):
+        raise Exception(
+            f"Taskipelago: 'CPS' is the click value and cannot be used in {label} on {loc}."
+        )
     for binding in sample_bindings(n_tasks):
         value = eval_num_expr(ast, binding, label, loc)
         if strictly_positive and value <= 0:

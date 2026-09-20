@@ -208,7 +208,8 @@ const HANDLERS = {
     for (const i of m.eligible) total += m.rate[i];
     ctx.output(`Production: ${total}/s across ${m.eligible.length} eligible task(s), global multiplier x${m.globalMult}`);
     ctx.output(`Click value: ${m.clickValue}`);
-    ctx.output(`N_TASKS ${m.nTasks}, N_TASKS_UNLOCKED ${m.nUnlocked}, N_TASKS_LOCKED ${m.nLocked}, N_TASKS_COMPLETED ${m.nCompleted}`);
+    ctx.output(`N_TASKS ${m.nTasks}, N_TASKS_UNLOCKED ${m.nUnlocked}, N_TASKS_LOCKED ${m.nLocked}, `
+      + `N_TASKS_COMPLETED ${m.nCompleted}, CPS ${m.clickValue}`);
     ctx.output(state.clickerOffline
       ? `Offline production on, capped at ${state.clickerOfflineCapHours}h`
       : 'Offline production off');
