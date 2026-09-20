@@ -25,10 +25,24 @@ import { openCommunityYamls } from './community.js';
 import { reorderUpdatesRefs, setReorderUpdatesRefs } from './reorder.js';
 import { openFindReplace } from './find_replace.js';
 import { STYLE_SECTION_TIP, renderStyleColors, resetStyleColors } from './style_section.js';
+import { curveFill, offlineExample } from './clicker_fields.js';
+import { TIPS as CLICKER_TIPS } from './clicker_cells.js';
 
 export const DRAFT_KEY = 'taskipelago_draft_generator';
 const SAVE_DELAY_MS = 400;
-const SECTION_DEFAULTS = { regions: false, tasks: true, items: true, deathlink: false, style: false };
+const SECTION_DEFAULTS = {
+  regions: false, tasks: true, items: true, clicker: false, deathlink: false, style: false,
+};
+
+const GLOBAL_SPLIT_TIP = 'Split a rate aimed at * evenly among the eligible tasks, instead of '
+  + 'granting it in full to each of them.';
+
+const CLICKER_TIP = 'Tasclickpelago: each task needs a number of activations instead of one '
+  + 'Complete press. Clicking adds your click value, and items you receive can add activations per '
+  + 'second on their own.\n\n'
+  + 'Turning this on adds the clicker columns to the task and item tables and the Clicker section '
+  + 'below. Everything else on this tab keeps working the same way, and turning it off again '
+  + 'exports a plain Taskipelago YAML.';
 
 const ctx = { model: defaultModel(), changed, root: null, openSection };
 const els = {};
@@ -47,6 +61,7 @@ function changed(parts = {}, { save = true } = {}) {
   if (parts.groups) renderProgGroups(els.groups, ctx);
   if (parts.deathlink) renderDeathLinkTable(els.deathlink, ctx);
   if (parts.style) renderStyleColors(els.style, styleOpts());
+  if (parts.clicker) syncClicker();
   if (parts.goal) els.goalTasks.value = ctx.model.goalTasks;
   updateCounter();
   if (parts.focusLast) {
@@ -76,6 +91,18 @@ function counterCounts(model) {
   );
 }
 
+/** Reflect clicker mode: the section only exists while the mode is on. */
+function syncClicker() {
+  const on = !!ctx.model.clickerMode;
+  els.clickerToggle.checked = on;
+  els.sections.clicker.classList.toggle('hidden', !on);
+  els.distributeGlobal.checked = !!ctx.model.clickerDistributeGlobal;
+  els.offlineEnabled.checked = !!ctx.model.clickerOffline;
+  els.offlineRate.value = ctx.model.clickerOfflineRate;
+  els.offlineCap.value = ctx.model.clickerOfflineCapHours;
+  els.offlineExample.textContent = offlineExample(ctx.model);
+}
+
 /** Show a whole new model (reset, import, draft restore). Callers save when it is a change. */
 function loadModel(model) {
   ctx.model = model;
@@ -90,7 +117,8 @@ function loadModel(model) {
   els.deathLinkEnabled.checked = !!m.deathLinkEnabled;
   els.deathLinkLock.checked = !!m.deathLinkLockTasks;
   els.amnesty.value = m.deathLinkAmnesty;
-  changed({ tasks: true, items: true, regions: true, groups: true, deathlink: true, style: true }, { save: false });
+  changed({ tasks: true, items: true, regions: true, groups: true, deathlink: true, style: true, clicker: true },
+    { save: false });
 }
 
 // ---------------------------------------------------------------------------
@@ -149,6 +177,16 @@ async function exportYaml() {
   const fileName = `${safeFileName(result.data.name)}.yaml`;
   downloadText(fileName, dumpYaml(result.data));
   await alertDialog('info', 'Success', `YAML exported as:\n${fileName}`);
+}
+
+async function runCurveFill() {
+  const result = curveFill(ctx.model.tasks, els.curveFirst.value, els.curveGrowth.value);
+  if (result.error) {
+    await alertDialog('error', ...result.error);
+    return;
+  }
+  ctx.model.tasks = result.tasks;
+  changed({ tasks: true });
 }
 
 async function resetGenerator() {
@@ -224,6 +262,17 @@ function build(root) {
     h('button', { type: 'button', onclick: () => openCommunityYamls(applyDoc) }, 'Community YAMLs'),
     h('button', { type: 'button', onclick: openTutorial }, 'Tutorial'));
 
+  els.clickerToggle = h('input', {
+    type: 'checkbox', id: 'gen-clicker-mode',
+    onchange: e => {
+      ctx.model.clickerMode = e.target.checked;
+      changed({ tasks: true, items: true, regions: true, clicker: true });
+    },
+  });
+  const modeStrip = h('div', { className: 'gen-namebar' },
+    h('label', { className: 'check-label' }, els.clickerToggle,
+      tipHeader('Enable Tasclickpelago', CLICKER_TIP)));
+
   els.regions = h('div', { className: 'region-list' });
   const regions = section('regions', 'Regions', els.regions, buildRegionAddRow(ctx));
 
@@ -273,6 +322,39 @@ function build(root) {
     els.deathlink,
     h('div', { className: 'btn-row' }, h('button', { type: 'button', onclick: () => addDeathLink(ctx) }, 'Add DeathLink Task')));
 
+  els.curveFirst = h('input', { type: 'text', className: 'count-input', value: '10', spellcheck: false });
+  els.curveGrowth = h('input', { type: 'text', className: 'count-input', value: '1.5', spellcheck: false });
+  els.distributeGlobal = h('input', { type: 'checkbox', onchange: setting('clickerDistributeGlobal') });
+  els.offlineEnabled = h('input', {
+    type: 'checkbox',
+    onchange: e => { ctx.model.clickerOffline = e.target.checked; changed({ clicker: true }); },
+  });
+  els.offlineRate = h('input', {
+    type: 'text', className: 'count-input', spellcheck: false,
+    oninput: e => { ctx.model.clickerOfflineRate = e.target.value; changed({ clicker: true }); },
+  });
+  els.offlineCap = h('input', {
+    type: 'number', min: 0, max: 168, className: 'count-input',
+    oninput: e => { ctx.model.clickerOfflineCapHours = e.target.value; changed({ clicker: true }); },
+  });
+  els.offlineExample = h('div', { className: 'muted-text' });
+  const clicker = section('clicker', 'Clicker',
+    h('div', { className: 'gen-settings' },
+      h('label', { className: 'check-label' }, els.distributeGlobal,
+        tipHeader('Distribute global production', GLOBAL_SPLIT_TIP)),
+      h('label', { className: 'inline-label' }, 'First cost:', els.curveFirst),
+      h('label', { className: 'inline-label' }, 'Growth:', els.curveGrowth),
+      h('button', {
+        type: 'button', onclick: runCurveFill,
+        title: 'Fill the Activations column geometrically: first cost, then multiplied by growth each row.',
+      }, 'Curve Fill')),
+    h('div', { className: 'gen-settings' },
+      h('label', { className: 'check-label' }, els.offlineEnabled, 'Offline production'),
+      h('label', { className: 'inline-label' },
+        tipHeader('Away rate:', CLICKER_TIPS.offlineRate), els.offlineRate),
+      h('label', { className: 'inline-label' }, 'Cap (hours):', els.offlineCap)),
+    els.offlineExample);
+
   els.style = h('div', { className: 'style-grid' });
   const style = section('style', 'Style',
     h('div', { className: 'gen-settings' },
@@ -290,7 +372,8 @@ function build(root) {
     h('button', { type: 'button', className: 'primary', onclick: exportYaml }, 'Export YAML'));
 
   root.replaceChildren(
-    h('div', { className: 'gen-scroll' }, nameStrip, regions, tasks, items, deathlink, style), bottom);
+    h('div', { className: 'gen-scroll' }, nameStrip, modeStrip, regions, tasks, items, clicker, deathlink, style),
+    bottom);
 }
 
 export function initGenerator(root = $('generator-root')) {

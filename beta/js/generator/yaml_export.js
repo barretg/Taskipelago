@@ -10,6 +10,7 @@ import { encodeThemeColors } from '../shared/theme.js';
 import {
   MAX_TASK_DESCRIPTION_LEN, isReservedWord, taskData, itemData,
 } from './model.js';
+import { clickerExportKeys, validateClicker } from './clicker_fields.js';
 import { checkRandomization, groupSetting, regionRandom, usesRandomization } from './randomize_check.js';
 
 /** _resolve_name_refs: "Quoted Name" -> first matching 1-based index. */
@@ -70,6 +71,8 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   const taskPriorities = [];
   const taskCounts = [];
   const taskDescriptions = [];
+  const taskActivations = [];
+  const taskManual = [];
   for (const row of model.tasks) {
     const t = taskData(row);
     if (!t.name) continue;
@@ -81,6 +84,8 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     taskPriorities.push(t.priority);
     taskCounts.push(t.count);
     taskDescriptions.push(pySlice(t.desc, MAX_TASK_DESCRIPTION_LEN));
+    taskActivations.push(t.activations);
+    taskManual.push(t.manual);
   }
   if (!tasks.length) return fail('Error', 'No tasks defined.');
 
@@ -102,6 +107,10 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   const itemProgGroups = [];
   const itemConsumables = [];
   const itemCounts = [];
+  // Parallel to `items`, so an expanded filler row repeats its (empty) spec.
+  const itemSpecs = [];
+  const specOf = it => ({ kind: it.clickerKind, target: it.clickerTarget, value: it.clickerValue });
+  const noSpec = { kind: 'none', target: '*', value: '' };
   for (const row of model.items) {
     const it = itemData(row);
     rawItemNames.push(it.name);
@@ -118,6 +127,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
         itemProgGroups.push('');
         itemConsumables.push(false);
         itemCounts.push(1);
+        itemSpecs.push(noSpec);
       }
     } else {
       items.push(isFillerRow ? randomFiller() : it.name);
@@ -126,6 +136,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       itemProgGroups.push(isFillerRow ? '' : it.progGroup);
       itemConsumables.push(isFillerRow ? false : it.consumable);
       itemCounts.push(it.count);
+      itemSpecs.push(isFillerRow ? noSpec : specOf(it));
     }
     const idxs = [];
     for (let k = start; k <= items.length; k++) idxs.push(k);
@@ -283,6 +294,12 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     taskCosts = taskCosts.map(t => remapCostIndices(t, itemRowExportIdxs));
   }
 
+  const clickerError = validateClicker(model, {
+    taskNames: tasks, taskActivations, items, itemSpecs, regionNames,
+    taskManual, taskRegions,
+  });
+  if (clickerError) return { error: clickerError };
+
   const styleColors = encodeThemeColors(model.styleColors);
 
   const data = {
@@ -346,6 +363,10 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       death_link_amnesty: pyInt(model.deathLinkAmnesty),
       death_link_lock_tasks: !!model.deathLinkLockTasks, // v1.1 F3
       // v1.1 F7: only non-default colors, so an all-default Style section adds nothing.
+      ...clickerExportKeys(model, {
+        taskActivations, taskManual, itemSpecs, taskNames: tasks,
+        regionRows: regionNames.map(n => regionByName.get(n)),
+      }),
       ...(styleColors.length ? { style_colors: styleColors } : {}),
     },
   };

@@ -6,6 +6,7 @@ import {
   completeTask, attemptPurchase, attemptMakeChange,
 } from './logic.js';
 import { renderBingo } from './bingo_board.js';
+import { isManualTask, renderClicker } from './clicker_board.js';
 import { ap } from './state.js';
 import { getUiPref, setUiPref } from '../shared/ui_prefs.js';
 import { h } from '../shared/dom.js';
@@ -103,11 +104,98 @@ export function renderDeathLinkCards() {
 // =============================================================
 // Rendering: tasks
 // =============================================================
+/**
+ * Whether task `i` is completed and whether anything still locks it, with the
+ * human-readable reasons. Shared by the task list and the clicker board so both
+ * agree on exactly one notion of "unlocked".
+ *
+ * `effectiveLock` defaults to the YAML setting plus the local override, which
+ * is what the task list uses; cost only locks a task when it is on.
+ */
+export function taskAvailability(i, checked = allChecked(), effectiveLock = state.lockPrereqs || state.localEnforce) {
+  const completed = state.baseCompleteId !== null && checked.has(state.baseCompleteId + i);
+
+  // Task prereqs
+  let taskPrereqOk = true;
+  let taskPrereqText = '';
+  if (i < state.taskPrereqs.length && state.taskPrereqs[i]) {
+    taskPrereqText = String(state.taskPrereqs[i]).trim();
+    if (taskPrereqText) taskPrereqOk = prereqsSatisfied(taskPrereqText, checked);
+  }
+
+  // Progressive group requirements
+  const progReqs = (Array.isArray(state.taskProgressiveReqs[i]) ? state.taskProgressiveReqs[i] : []);
+
+  // Item prereqs
+  let itemPrereqOk = true;
+  let itemPrereqText = '';
+  if (i < state.itemPrereqs.length && state.itemPrereqs[i]) {
+    itemPrereqText = String(state.itemPrereqs[i]).trim();
+    if (itemPrereqText) itemPrereqOk = itemPrereqsSatisfied(itemPrereqText, progReqs);
+  }
+
+  const progHints = [];
+  for (const req of progReqs) {
+    const g = req.group ?? req[0];
+    const c = req.count ?? req[1] ?? 1;
+    if (!progressiveReqSatisfied(g, c)) progHints.push(`group '${g}' (need ${c})`);
+  }
+
+  // Region requirements
+  const regionReqs = (Array.isArray(state.taskRegionReqs[i]) ? state.taskRegionReqs[i] : []);
+  let regionOk = true;
+  const regionHints = [];
+  for (const req of regionReqs) {
+    const r   = req.region ?? req[0];
+    const abs = req.abs_count ?? null;
+    const pct = req.pct ?? req[1] ?? 100;
+    if (abs !== null) {
+      if (!regionReqSatisfiedAbs(r, abs, checked)) {
+        regionOk = false;
+        regionHints.push(`region '${r}' (need ${abs} tasks)`);
+      }
+    } else {
+      if (!regionReqSatisfied(r, pct, checked)) {
+        regionOk = false;
+        regionHints.push(`region '${r}' (${pct}% completed)`);
+      }
+    }
+  }
+
+  // Cost
+  const branches = state.taskCostAmounts[i] || [];
+  const hasCost  = branches.length > 0;
+  const costPaid = !hasCost || !effectiveLock || taskCostIsPaid(i);
+
+  const otherPrereqsOk = taskPrereqOk && itemPrereqOk && regionOk;
+  const costOnlyLocked = otherPrereqsOk && !costPaid;
+
+  const reasons = [];
+  if (taskPrereqText && !taskPrereqOk) reasons.push(`Locked behind task(s): ${taskPrereqText}`);
+  if ((itemPrereqText || progHints.length) && !itemPrereqOk) {
+    const parts = [];
+    if (itemPrereqText) parts.push(itemPrereqText);
+    parts.push(...progHints);
+    reasons.push(`Locked behind item(s): ${parts.join(', ')}`);
+  }
+  if (regionHints.length && !regionOk) reasons.push(`Locked behind region(s): ${regionHints.join(', ')}`);
+  if (costOnlyLocked && effectiveLock) reasons.push('Requires purchase');
+
+  return {
+    completed,
+    unlocked: otherPrereqsOk && costPaid,
+    reasons,
+    taskPrereqOk, taskPrereqText, itemPrereqOk, itemPrereqText, progHints,
+    regionOk, regionHints, branches, hasCost, costPaid, otherPrereqsOk, costOnlyLocked,
+  };
+}
+
 export function renderTasks() {
   renderDeathLinkCards();
   const dlLocked = isDeathLinkLocked();
   els.tasksList.classList.toggle('locked-dl', dlLocked);
   els.bingoSection.classList.toggle('locked-dl', dlLocked);
+  if (els.clickerSection) els.clickerSection.classList.toggle('locked-dl', dlLocked);
   const connected = !!(
     state.tasks.length &&
     state.baseRewardId !== null &&
@@ -148,81 +236,58 @@ export function renderTasks() {
     els.tasksList.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">Connect to a server to see tasks.</div>';
     els.tasksList.classList.remove('hidden');
     els.bingoSection.classList.add('hidden');
+    if (els.clickerSection) els.clickerSection.classList.add('hidden');
     return;
   }
 
   if (state.bingoMode) {
     els.tasksList.classList.add('hidden');
     els.bingoSection.classList.remove('hidden');
+    if (els.clickerSection) els.clickerSection.classList.add('hidden');
     renderBingo();
     return;
   }
 
-  els.bingoSection.classList.add('hidden');
-  els.tasksList.classList.remove('hidden');
+  if (state.clickerMode) {
+    els.tasksList.classList.add('hidden');
+    els.bingoSection.classList.add('hidden');
+    els.clickerSection.classList.remove('hidden');
+    renderClicker();
+    // Manual tasks opt out of clicking, so they keep the ordinary task row,
+    // Complete button and all, in their own section under the cards.
+    if (els.clickerManualList) {
+      renderTaskCards(els.clickerManualList, effectiveLock, dlLocked, isManualTask);
+      if (els.clickerManual) {
+        els.clickerManual.classList.toggle('hidden', !els.clickerManualList.children.length);
+      }
+    }
+    return;
+  }
 
+  els.bingoSection.classList.add('hidden');
+  if (els.clickerSection) els.clickerSection.classList.add('hidden');
+  els.tasksList.classList.remove('hidden');
+  if (els.clickerManual) els.clickerManual.classList.add('hidden');
+
+  renderTaskCards(els.tasksList, effectiveLock, dlLocked);
+}
+
+/**
+ * The ordinary task cards, into `container`. `include` filters which task
+ * indices are drawn, which is how clicker mode puts its manual tasks in a
+ * section of their own; everything else renders the full list.
+ */
+function renderTaskCards(container, effectiveLock, dlLocked, include = null) {
   const checked = allChecked();
   const frag = document.createDocumentFragment();
 
   for (let i = 0; i < state.tasks.length; i++) {
+    if (include && !include(i)) continue;
     const taskName = state.tasks[i];
-    const completeId = state.baseCompleteId + i;
-    const completed  = checked.has(completeId);
-
-    // Task prereqs
-    let taskPrereqOk = true;
-    let taskPrereqText = '';
-    if (i < state.taskPrereqs.length && state.taskPrereqs[i]) {
-      taskPrereqText = String(state.taskPrereqs[i]).trim();
-      if (taskPrereqText) taskPrereqOk = prereqsSatisfied(taskPrereqText, checked);
-    }
-
-    // Progressive group requirements
-    const progReqs = (Array.isArray(state.taskProgressiveReqs[i]) ? state.taskProgressiveReqs[i] : []);
-
-    // Item prereqs
-    let itemPrereqOk = true;
-    let itemPrereqText = '';
-    if (i < state.itemPrereqs.length && state.itemPrereqs[i]) {
-      itemPrereqText = String(state.itemPrereqs[i]).trim();
-      if (itemPrereqText) itemPrereqOk = itemPrereqsSatisfied(itemPrereqText, progReqs);
-    }
-
-    const progHints = [];
-    for (const req of progReqs) {
-      const g = req.group ?? req[0];
-      const c = req.count ?? req[1] ?? 1;
-      if (!progressiveReqSatisfied(g, c)) progHints.push(`group '${g}' (need ${c})`);
-    }
-
-    // Region requirements
-    const regionReqs = (Array.isArray(state.taskRegionReqs[i]) ? state.taskRegionReqs[i] : []);
-    let regionOk = true;
-    const regionHints = [];
-    for (const req of regionReqs) {
-      const r   = req.region ?? req[0];
-      const abs = req.abs_count ?? null;
-      const pct = req.pct ?? req[1] ?? 100;
-      if (abs !== null) {
-        if (!regionReqSatisfiedAbs(r, abs, checked)) {
-          regionOk = false;
-          regionHints.push(`region '${r}' (need ${abs} tasks)`);
-        }
-      } else {
-        if (!regionReqSatisfied(r, pct, checked)) {
-          regionOk = false;
-          regionHints.push(`region '${r}' (${pct}% completed)`);
-        }
-      }
-    }
-
-    // Cost
-    const branches = state.taskCostAmounts[i] || [];
-    const hasCost  = branches.length > 0;
-    const costPaid = !hasCost || !effectiveLock || taskCostIsPaid(i);
-
-    const otherPrereqsOk = taskPrereqOk && itemPrereqOk && regionOk;
-    const costOnlyLocked = otherPrereqsOk && !costPaid;
+    const { completed,
+      taskPrereqOk, taskPrereqText, itemPrereqOk, itemPrereqText, progHints,
+      regionOk, regionHints, branches, costPaid, otherPrereqsOk, costOnlyLocked,
+    } = taskAvailability(i, checked, effectiveLock);
 
     const wouldHide = !otherPrereqsOk && state.hideUnreachable && effectiveLock;
     const showAsLocked = wouldHide && state.showLocked;
@@ -344,8 +409,8 @@ export function renderTasks() {
     frag.appendChild(card);
   }
 
-  els.tasksList.innerHTML = '';
-  els.tasksList.appendChild(frag);
+  container.innerHTML = '';
+  container.appendChild(frag);
 }
 
 function makeHint(text) {

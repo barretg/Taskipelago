@@ -8,6 +8,7 @@ import { TIPS } from './legacy_text.js';
 import {
   REGION_COLOR_PALETTE, addRegion, checkRegionRename, commitRegionPct, removeRegion, renameRegion,
 } from './model.js';
+import { regionCells } from './clicker_cells.js';
 import { commitNameChange, confirmNameRemoval } from './rename_refs.js';
 import { regionRandom } from './randomize_check.js';
 
@@ -139,6 +140,7 @@ function regionRow(region, i, ctx) {
       oninput: e => { region.prereq = e.target.value.trim(); ctx.changed(); },
     }),
     ...randomizeCells(region, ctx),
+    ...(ctx.model.clickerMode ? regionCells(region, ctx) : []),
     h('button', {
       type: 'button', className: 'remove-btn',
       onclick: async () => {

@@ -10,6 +10,7 @@ import { remapCostIndices, remapPrereqIndices, renameNameRefs } from '../shared/
 import { isFillerExact, randomFiller as defaultRandomFiller } from '../shared/filler.js';
 import { pyInt, pyStrip } from '../shared/pyish.js';
 import { defaultThemeColors, normalizeStyleColors } from '../shared/theme.js';
+import { groupSetting } from './randomize_check.js';
 
 export const MAX_TASK_DESCRIPTION_LEN = 100;
 export const MAX_PLAYER_NAME_LEN = 16;
@@ -25,6 +26,12 @@ export const REWARD_TYPE_VALUES = ['junk', 'useful', 'progression', 'trap'];
 export const DEFAULT_REWARD_TYPE = 'useful';
 export const TASK_REWARD_PREVIEW_LABELS = ['No Previews', 'Scout Previews', 'Hint Previews'];
 
+// Clicker mode (Tasclickpelago). These fields ride along on the normal model and
+// are only exported when model.clickerMode is on, so a slot stays a plain
+// Taskipelago YAML until the author turns clicker mode on.
+// 'none' is an item that grants nothing and exists purely as an AP unlock.
+export const UPGRADE_KINDS = ['none', 'production', 'click_power', 'production_mult', 'click_mult', 'offline_mult'];
+
 export const isReservedWord = name => RESERVED_WORDS.has(name.toLowerCase());
 
 /** Code-point truncation, as _limit_var_length does on every write. */
@@ -34,12 +41,17 @@ export function limitPlayerName(name) {
 }
 
 export function newTask() {
-  return { name: '', prereq: '', itemPrereq: '', cost: '', region: '', priority: false, count: 1, desc: '' };
+  return {
+    name: '', prereq: '', itemPrereq: '', cost: '', region: '', priority: false, count: 1, desc: '',
+    activations: '',   // clicker mode
+    manual: false,     // clicker mode: a normal task row, never clickable
+  };
 }
 
 export function newItem() {
   return {
     name: '', filler: false, type: DEFAULT_REWARD_TYPE, progGroup: '', consumable: false, count: 1,
+    clickerKind: 'none', clickerTarget: '*', clickerValue: '',   // clicker mode
     ui: {
       savedType: DEFAULT_REWARD_TYPE, savedItem: '', savedGroup: '',
       nameDisabled: false, typeDisabled: false, fillerDisabled: false,
@@ -74,6 +86,12 @@ export function defaultModel() {
     regionRandom: {},  // region name -> { on, pick, order } ('N' or 'N%'; order shuffles kept tasks)
     groupSettings: {}, // group name -> { type, pick, pct } (see randomize_check.js)
     styleColors: defaultThemeColors(), // F7: theme key -> hex, applied while connected
+    // Clicker mode, appended so older drafts keep their key order
+    clickerMode: false,
+    clickerDistributeGlobal: false,
+    clickerOffline: true,
+    clickerOfflineRate: '1',
+    clickerOfflineCapHours: 8,
   };
 }
 
@@ -102,7 +120,7 @@ export function normalizeModel(raw) {
   });
   model.deathLink = (Array.isArray(model.deathLink) ? model.deathLink : []).map(d => ({ ...newDeathLink(), ...d }));
   model.regions = (Array.isArray(model.regions) ? model.regions : [])
-    .map(r => ({ name: '', pct: 100, color: '', prereq: '', ...r }));
+    .map(r => ({ name: '', pct: 100, color: '', prereq: '', distributed: false, offlineRate: '', manual: false, ...r }));
   model.progGroups = Array.isArray(model.progGroups) ? model.progGroups : [];
   const colors = model.progGroupColors;
   model.progGroupColors = colors && typeof colors === 'object' && !Array.isArray(colors) ? colors : {};
@@ -110,7 +128,10 @@ export function normalizeModel(raw) {
   const plainObj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
   model.regionRandom = plainObj(model.regionRandom);
   model.groupSettings = plainObj(model.groupSettings);
+  model.clickerMode = !!model.clickerMode;
   model.styleColors = normalizeStyleColors(model.styleColors);
+  // Drafts saved before non-progressive groups existed may hold stale locks.
+  refreshItemGroupLocks(model, { restoreType: false });
   return model;
 }
 
@@ -129,6 +150,7 @@ export function taskData(t) {
     name: pyStrip(t.name), prereq: pyStrip(t.prereq), itemPrereq: pyStrip(t.itemPrereq),
     cost: pyStrip(t.cost), region: pyStrip(t.region), priority: !!t.priority,
     count: rowCount(t.count), desc: pyStrip(t.desc),
+    activations: pyStrip(t.activations), manual: !!t.manual,
   };
 }
 
@@ -138,6 +160,8 @@ export function itemData(it) {
     name: pyStrip(it.name), filler: !!it.filler,
     type: pyStrip(it.type).toLowerCase() || 'useful',
     progGroup: pyStrip(it.progGroup), consumable: !!it.consumable, count: rowCount(it.count),
+    clickerKind: UPGRADE_KINDS.includes(it.clickerKind) ? it.clickerKind : 'none',
+    clickerTarget: pyStrip(it.clickerTarget) || '*', clickerValue: pyStrip(it.clickerValue),
   };
 }
 
@@ -158,9 +182,20 @@ export function slotCounts(model) {
 // of the same name, in the same statement order (traces fire mid-function).
 // ---------------------------------------------------------------------------
 
-function onProgGroupChange(it) {
+/**
+ * Only progressive groups force their items to Progression. random-choice and
+ * aesthetic items are normal items, so they keep the type and filler controls.
+ * A missing model (legacy callers) is treated as progressive, as before.
+ */
+function isProgressiveGroup(model, group) {
+  if (!group) return false;
+  if (!model) return true;
+  return groupSetting(model, group).type === 'progressive';
+}
+
+function onProgGroupChange(it, model = null) {
   const u = it.ui;
-  if (it.progGroup) {
+  if (isProgressiveGroup(model, it.progGroup)) {
     if (!it.filler) {
       const current = pyStrip(it.type).toLowerCase();
       if (current !== 'progression') u.savedType = current;
@@ -178,13 +213,27 @@ function onProgGroupChange(it) {
 }
 
 /** prog_group_var.set(group), firing its trace. */
-export function setItemProgGroup(it, group) {
+export function setItemProgGroup(it, group, model = null) {
   it.progGroup = group;
-  onProgGroupChange(it);
+  onProgGroupChange(it, model);
+}
+
+/**
+ * Re-apply the group locks after a group's type changed. With restoreType
+ * false the stored type is left alone and only the disabled flags move, so
+ * loading an older draft cannot silently change what it exports.
+ */
+export function refreshItemGroupLocks(model, { restoreType = true } = {}) {
+  for (const it of model.items) {
+    if (it.filler || it.consumable || !it.progGroup) continue;
+    const saved = it.type;
+    onProgGroupChange(it, model);
+    if (!restoreType) it.type = saved;
+  }
 }
 
 /** Checkbox command after filler_var changed to it.filler. */
-export function onFillerToggle(it, randomFiller = defaultRandomFiller) {
+export function onFillerToggle(it, randomFiller = defaultRandomFiller, model = null) {
   const u = it.ui;
   if (it.filler) {
     const current = pyStrip(it.name);
@@ -192,7 +241,7 @@ export function onFillerToggle(it, randomFiller = defaultRandomFiller) {
     const currentType = pyStrip(it.type).toLowerCase();
     if (currentType) u.savedType = currentType;
     u.savedGroup = it.progGroup;
-    setItemProgGroup(it, '');
+    setItemProgGroup(it, '', model);
     u.groupDisabled = true;
     it.consumable = false;
     u.consumableDisabled = true;
@@ -205,16 +254,16 @@ export function onFillerToggle(it, randomFiller = defaultRandomFiller) {
     it.name = u.savedItem;
     u.consumableDisabled = false;
     if (it.consumable) {
-      onConsumableToggle(it);
+      onConsumableToggle(it, model);
     } else {
       u.groupDisabled = false;
-      setItemProgGroup(it, u.savedGroup);
+      setItemProgGroup(it, u.savedGroup, model);
     }
   }
 }
 
 /** Checkbox command after consumable_var changed to it.consumable. */
-export function onConsumableToggle(it) {
+export function onConsumableToggle(it, model = null) {
   const u = it.ui;
   if (it.consumable) {
     const currentType = pyStrip(it.type).toLowerCase();
@@ -222,13 +271,13 @@ export function onConsumableToggle(it) {
     it.type = 'progression';
     u.typeDisabled = true;
     if (!u.savedGroup) u.savedGroup = it.progGroup;
-    setItemProgGroup(it, '');
+    setItemProgGroup(it, '', model);
     u.groupDisabled = true;
   } else if (!it.filler) {
     u.typeDisabled = false;
     it.type = u.savedType || DEFAULT_REWARD_TYPE;
     u.groupDisabled = false;
-    setItemProgGroup(it, u.savedGroup);
+    setItemProgGroup(it, u.savedGroup, model);
   }
 }
 
@@ -253,14 +302,14 @@ export function removeProgGroup(model, name) {
   if (idx >= 0) model.progGroups.splice(idx, 1);
   if (model.progGroupColors) delete model.progGroupColors[name];
   if (model.groupSettings) delete model.groupSettings[name];
-  for (const it of model.items) if (it.progGroup === name) setItemProgGroup(it, '');
+  for (const it of model.items) if (it.progGroup === name) setItemProgGroup(it, '', model);
   syncItemGroups(model);
 }
 
 /** ItemRow.update_groups on every row. */
 export function syncItemGroups(model) {
   for (const it of model.items) {
-    if (it.progGroup !== '' && !model.progGroups.includes(it.progGroup)) setItemProgGroup(it, '');
+    if (it.progGroup !== '' && !model.progGroups.includes(it.progGroup)) setItemProgGroup(it, '', model);
   }
 }
 
@@ -272,7 +321,7 @@ export function addRegion(model, rawName, pct) {
   if (model.regions.some(r => r.name === name)) return ['Error', `Region '${name}' already exists.`];
   const color = REGION_COLOR_PALETTE[model.nextColorIdx % REGION_COLOR_PALETTE.length];
   model.nextColorIdx += 1;
-  model.regions.push({ name, pct: pyInt(pct), color, prereq: '' });
+  model.regions.push({ name, pct: pyInt(pct), color, prereq: '', distributed: false, offlineRate: '' });
   return null;
 }
 

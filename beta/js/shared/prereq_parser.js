@@ -19,7 +19,16 @@
 // ("list index out of range") when an expression ends where ')' is expected.
 // Digits are ASCII only (Python also accepts other Unicode digits there).
 
+import {
+  LIVE_NUM_CONSTANTS, NumExprError, evalNumExprStrict, numExprConstants, numExprToInt, parseNumExpr,
+} from './num_expr.js';
+
 export const RESERVED_WORDS = new Set(['prev', 'sequential']);
+
+/** Names the numeric-expression grammar reserves; unusable as region/group/item names. */
+export const RESERVED_NAMES = new Set([
+  ...RESERVED_WORDS, 'n_tasks', 'n_tasks_unlocked', 'n_tasks_locked', 'n_tasks_completed',
+]);
 
 const INDEX_ERROR = 'list index out of range';
 
@@ -38,12 +47,54 @@ const isAlpha = c => /^\p{L}$/u.test(c);
 const NAME_DASH_RE = /^(\P{Nd}+)-(\d+)$/u;
 const NAME_STAR_RE = /^(\P{Nd}+)\*(\d+)$/u;
 
-/** Returns [base, n, mode]; mode is 'dash', 'star' or 'none'. */
-export function splitNameSuffix(tok) {
-  let m = NAME_DASH_RE.exec(tok);
-  if (m) return [m[1], Number(m[2]), 'dash'];
-  m = NAME_STAR_RE.exec(tok);
-  if (m) return [m[1], Number(m[2]), 'star'];
+/**
+ * Returns [base, n, mode]; mode is 'dash', 'star' or 'none'.
+ * A suffix that mentions N_TASKS ("chores-N_TASKS") is folded with `nTasks`;
+ * every suffix that parsed before still takes the plain-integer path.
+ * knownNames, when given, restricts which prefixes may be split off, which
+ * disambiguates names that themselves contain '-'.
+ */
+export function splitNameSuffix(tok, knownNames = null, nTasks = 0, errCtx = null) {
+  const dash = NAME_DASH_RE.exec(tok);
+  if (dash && (!knownNames || knownNames.has(dash[1]))) return [dash[1], Number(dash[2]), 'dash'];
+  const star = NAME_STAR_RE.exec(tok);
+  if (star && (!knownNames || knownNames.has(star[1]))) return [star[1], Number(star[2]), 'star'];
+  if (tok.includes('N')) {
+    for (let i = 1; i < tok.length; i++) {
+      const ch = tok[i];
+      if (ch !== '-' && ch !== '*') continue;
+      const base = tok.slice(0, i);
+      const rest = tok.slice(i + 1);
+      if (!rest) continue;
+      if (knownNames && !knownNames.has(base)) continue;
+      let ast;
+      try {
+        ast = parseNumExpr(rest, { allowLive: true });
+      } catch (_) {
+        continue;
+      }
+      const consts = numExprConstants(ast);
+      if (!consts.size) continue;
+      for (const live of LIVE_NUM_CONSTANTS) {
+        if (consts.has(live)) {
+          fail(`Taskipelago: '${live}' changes during play and cannot be used in '${tok}'; `
+            + 'only N_TASKS is allowed in a prereq, goal or cost suffix.');
+        }
+      }
+      let value;
+      try {
+        value = evalNumExprStrict(
+          ast, { N_TASKS: nTasks },
+          errCtx ? errCtx.label : 'numeric expression', errCtx ? errCtx.loc : null);
+      } catch (e) {
+        if (!(e instanceof NumExprError)) throw e;
+        fail(e.message);
+      }
+      return [base, numExprToInt(value), ch === '-' ? 'dash' : 'star'];
+    }
+  }
+  if (dash) return [dash[1], Number(dash[2]), 'dash'];
+  if (star) return [star[1], Number(star[2]), 'star'];
   return [tok, null, 'none'];
 }
 
@@ -171,7 +222,8 @@ function tokenize(chars, taskIndex, label, locationLabel) {
  * with the Python message otherwise. Integer leaves are 0-based.
  */
 export function parsePrereq(text, nTasks, taskIndex, label,
-                            knownGroups = null, knownRegions = null, locationLabel = null) {
+                            knownGroups = null, knownRegions = null, locationLabel = null,
+                            nTasksConst = null) {
   const chars = pyStrip(text);
   if (!chars.length) return null;
 
@@ -258,7 +310,10 @@ export function parsePrereq(text, nTasks, taskIndex, label,
         }
         return ['seq_flag'];
       }
-      const [base, suffix, mode] = splitNameSuffix(tok);
+      const known = new Set([...(groups || []), ...(regions || [])]);
+      const [base, suffix, mode] = splitNameSuffix(
+        tok, known.size ? known : null, nTasksConst === null ? nTasks : nTasksConst,
+        { label, loc });
       if (groups !== null && groups.has(base)) {
         return mode === 'star' ? ['group_count', base, suffix] : ['group_ref', base, suffix];
       }
@@ -281,17 +336,45 @@ export function parsePrereq(text, nTasks, taskIndex, label,
 // Cost expressions
 // ---------------------------------------------------------------------------
 
-function readCount(chars, j) {
-  // "*N" after a name or index; returns [count, nextIndex]
-  if (j < chars.length && chars[j] === '*') {
-    let k = j + 1;
-    while (k < chars.length && isDigit(chars[k])) k++;
-    if (k > j + 1) return [Number(chars.slice(j + 1, k).join('')), k];
+const COST_SUFFIX_CHARS = new Set('0123456789._+-*/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz');
+
+function readCount(chars, j, nTasks = 0) {
+  // "*N" after a name or index, where N is an integer or an N_TASKS expression;
+  // returns [count, nextIndex]
+  if (j >= chars.length || chars[j] !== '*') return [1, j];
+  let digitsEnd = j + 1;
+  while (digitsEnd < chars.length && isDigit(chars[digitsEnd])) digitsEnd++;
+  let k = j + 1;
+  while (k < chars.length && COST_SUFFIX_CHARS.has(chars[k])) k++;
+  const rest = chars.slice(j + 1, k).join('');
+  if (k > digitsEnd && rest.includes('N')) {
+    let ast = null;
+    try {
+      ast = parseNumExpr(rest, { label: 'cost count', allowLive: true });
+    } catch (_) { /* fall through to the digits-only reading */ }
+    const consts = ast ? numExprConstants(ast) : new Set();
+    if (consts.size) {
+      for (const live of LIVE_NUM_CONSTANTS) {
+        if (consts.has(live)) {
+          fail(`Taskipelago: '${live}' changes during play and cannot be used in a cost `
+            + 'expression; only N_TASKS is allowed there.');
+        }
+      }
+      let value;
+      try {
+        value = evalNumExprStrict(ast, { N_TASKS: nTasks }, 'cost count');
+      } catch (e) {
+        if (!(e instanceof NumExprError)) throw e;
+        fail(e.message);
+      }
+      return [numExprToInt(value), k];
+    }
   }
+  if (digitsEnd > j + 1) return [Number(chars.slice(j + 1, digitsEnd).join('')), digitsEnd];
   return [1, j];
 }
 
-function tokenizeCost(chars, itemNamesOrdered) {
+function tokenizeCost(chars, itemNamesOrdered, nTasks = 0) {
   const tokens = [];
   let i = 0;
   while (i < chars.length) {
@@ -309,7 +392,7 @@ function tokenizeCost(chars, itemNamesOrdered) {
       while (j < chars.length && chars[j] !== '"') j++;
       if (j >= chars.length) fail('Taskipelago: unclosed quote in cost expression.');
       const name = chars.slice(i + 1, j).join('');
-      const [count, next] = readCount(chars, j + 1);
+      const [count, next] = readCount(chars, j + 1, nTasks);
       tokens.push(['cost_item', name, count]);
       i = next;
       continue;
@@ -319,7 +402,7 @@ function tokenizeCost(chars, itemNamesOrdered) {
       let j = i;
       while (j < chars.length && isDigit(chars[j])) j++;
       const idx = BigInt(chars.slice(i, j).join(''));
-      const [count, next] = readCount(chars, j);
+      const [count, next] = readCount(chars, j, nTasks);
       const name = itemNamesOrdered && itemNamesOrdered.length && idx >= 1n && idx <= BigInt(itemNamesOrdered.length)
         ? itemNamesOrdered[Number(idx) - 1]
         : String(idx); // left as the index; the name check reports it
@@ -337,12 +420,12 @@ function tokenizeCost(chars, itemNamesOrdered) {
  * Parse a task cost expression. consumableNames: valid consumable names.
  * itemNamesOrdered: all item names (index 0 = item 1) for numeric references.
  */
-export function parseCostExpr(text, consumableNames, itemNamesOrdered = null) {
+export function parseCostExpr(text, consumableNames, itemNamesOrdered = null, nTasks = 0) {
   const chars = pyStrip(text);
   if (!chars.length) return null;
 
   const consumables = toSet(consumableNames) || new Set();
-  const tokens = tokenizeCost(chars, itemNamesOrdered);
+  const tokens = tokenizeCost(chars, itemNamesOrdered, nTasks);
   if (!tokens.length) return null;
 
   let pos = 0;

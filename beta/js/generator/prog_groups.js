@@ -5,7 +5,9 @@ import { h } from '../shared/dom.js';
 import { alertDialog } from '../shared/dialog.js';
 import { tipMarker } from '../shared/tooltip.js';
 import { TIPS } from './legacy_text.js';
-import { addProgGroup, checkGroupRename, removeProgGroup, renameProgGroup } from './model.js';
+import {
+  addProgGroup, checkGroupRename, refreshItemGroupLocks, removeProgGroup, renameProgGroup,
+} from './model.js';
 import { commitNameChange, confirmNameRemoval } from './rename_refs.js';
 import { openColorPicker } from './regions.js';
 import { GROUP_TYPES, groupSetting } from './randomize_check.js';
@@ -30,9 +32,12 @@ function settingCells(group, ctx) {
   const type = h('select', {
     className: 'group-type', 'aria-label': `Type of ${group}`,
     onchange: e => {
-      update({ type: e.target.value });
+      ctx.model.groupSettings[group] = { ...groupSetting(ctx.model, group), type: e.target.value };
+      // Only progressive groups force their items to Progression.
+      refreshItemGroupLocks(ctx.model);
       pick.disabled = e.target.value !== 'random-choice';
       pct.placeholder = e.target.value === 'progressive' ? 'auto' : '100';
+      ctx.changed({ items: true });
     },
   }, GROUP_TYPES.map(t => h('option', { value: t }, t)));
   type.value = s.type;

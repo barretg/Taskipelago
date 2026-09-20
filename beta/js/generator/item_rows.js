@@ -4,6 +4,7 @@ import { h } from '../shared/dom.js';
 import { tipHeader } from '../shared/tooltip.js';
 import { TIPS } from './legacy_text.js';
 import { rowNumberCell } from './reorder.js';
+import { itemCells, itemHeadCells } from './clicker_cells.js';
 import {
   REWARD_TYPE_VALUES, newItem, onConsumableToggle, onFillerToggle, setItemProgGroup,
 } from './model.js';
@@ -39,18 +40,18 @@ function itemRow(it, i, ctx, container) {
 
   filler.addEventListener('change', () => {
     it.filler = filler.checked;
-    onFillerToggle(it);
+    onFillerToggle(it, undefined, model);
     sync();
     ctx.changed();
   });
   consumable.addEventListener('change', () => {
     it.consumable = consumable.checked;
-    onConsumableToggle(it);
+    onConsumableToggle(it, model);
     sync();
     ctx.changed();
   });
   group.addEventListener('change', () => {
-    setItemProgGroup(it, group.value);
+    setItemProgGroup(it, group.value, model);
     sync();
     ctx.changed();
   });
@@ -66,6 +67,7 @@ function itemRow(it, i, ctx, container) {
       type: 'number', min: 1, max: 999, step: 1, value: it.count, className: 'count-input',
       oninput: e => { it.count = e.target.value; ctx.changed({ counter: true }); },
     })),
+    ...(model.clickerMode ? itemCells(it, i, ctx).map(c => cell(c)) : []),
     cell(h('button', {
       type: 'button', className: 'remove-btn',
       onclick: () => { model.items.splice(i, 1); ctx.changed({ items: true, counter: true }); },
@@ -73,6 +75,10 @@ function itemRow(it, i, ctx, container) {
 }
 
 export function renderItemTable(container, ctx) {
+  const clicker = !!ctx.model.clickerMode;
+  container.classList.toggle('clicker', clicker);
+  const extraHead = clicker ? itemHeadCells().map(c => cell(c)) : [];
+  const extraHint = clicker ? [cell(''), cell(''), cell('')] : [];
   container.replaceChildren(
     h('div', { className: 'gt-row gt-head' },
       cell('#'), cell('Item'),
@@ -81,9 +87,11 @@ export function renderItemTable(container, ctx) {
       cell(tipHeader('Consumable', TIPS.consumable)),
       cell(tipHeader('Item Group', TIPS.prog_group)),
       cell(tipHeader('Count', TIPS.count_item)),
+      ...extraHead,
       cell('')),
     h('div', { className: 'gt-row gt-hint muted-text' },
-      cell(''), cell('Multiworld item name (blank = filler)'), cell(''), cell(''), cell(''), cell(''), cell(''), cell('')),
+      cell(''), cell('Multiworld item name (blank = filler)'), cell(''), cell(''), cell(''), cell(''), cell(''),
+      ...extraHint, cell('')),
     ...ctx.model.items.map((it, i) => itemRow(it, i, ctx, container)),
   );
 }

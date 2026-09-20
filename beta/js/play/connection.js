@@ -15,7 +15,11 @@ import { cfg } from '../shared/config.js';
 import {
   serverKeys, subscribeServerState, sanitizePurchases, isOwnWrite,
   writeNotifyCursor, flushNotifyCursor, resetNotifyCursor,
+  sanitizeClickerProgress, mergeClickerProgress, flushClickerProgress,
 } from '../shared/server_state.js';
+import {
+  startClickerLoop, stopClickerLoop, applyServerClickerProgress,
+} from './clicker_board.js';
 import { applyTheme, clearTheme, decodeThemeColors } from '../shared/theme.js';
 
 // How long ReceivedItems notifications wait for the server notify cursor.
@@ -116,6 +120,20 @@ function loadLastConnection() {
 // =============================================================
 // Slot data application
 // =============================================================
+/**
+ * Normalize a per-item clicker grant list to spec lists. A pre-targeting seed
+ * sends a bare number (or null/0 for "nothing") per item; that is the same as a
+ * spec aimed at '*', so the board only ever sees one shape.
+ */
+function toSpecLists(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(entry => {
+    if (Array.isArray(entry)) return entry;
+    if (entry === null || entry === undefined || entry === 0) return [];
+    return [{ kind: 'all', ref: null, rate: entry }];
+  });
+}
+
 function applySlotData(sd) {
   state.tasks               = sd.tasks || [];
   state.items               = sd.items || sd.rewards || [];
@@ -155,6 +173,26 @@ function applySlotData(sd) {
   state.bingoDimX           = parseInt(sd.bingo_dimension_x || 5);
   state.bingoDimY           = parseInt(sd.bingo_dimension_y || 5);
   state.bingoal             = parseInt(sd.bingoal || 3);
+  // Tasclickpelago. Absent keys (an older seed) leave the mode off.
+  state.clickerMode         = !!sd.clicker_mode;
+  state.taskActivations     = Array.isArray(sd.task_activations) ? sd.task_activations : [];
+  state.taskManual          = Array.isArray(sd.task_manual) ? sd.task_manual : [];
+  state.itemProduction      = Array.isArray(sd.item_production) ? sd.item_production : [];
+  // Click power and the two multipliers are targeted lists like the rest, but a
+  // seed generated before targeting sends one slot-wide value per item, so each
+  // entry is normalized to a spec list aimed at '*'.
+  state.itemClickPower      = toSpecLists(sd.item_click_power);
+  state.itemProductionMult  = toSpecLists(sd.item_production_mult);
+  state.itemClickMult       = toSpecLists(sd.item_click_mult);
+  state.itemOfflineMult     = Array.isArray(sd.item_offline_mult) ? sd.item_offline_mult : [];
+  state.regionDistributed   = (sd.region_distributed_production && typeof sd.region_distributed_production === 'object')
+    ? sd.region_distributed_production : {};
+  state.clickerDistributeGlobal = !!sd.clicker_distribute_global;
+  state.clickerOffline      = sd.clicker_offline_progress !== false;
+  state.clickerOfflineRate  = sd.clicker_offline_rate ?? 1;
+  state.regionOfflineRate   = (sd.region_offline_rate && typeof sd.region_offline_rate === 'object')
+    ? sd.region_offline_rate : {};
+  state.clickerOfflineCapHours = parseInt(sd.clicker_offline_cap_hours ?? 8);
   state.deathLinkAmnestyLeft = state.deathLinkAmnesty;
   // v1.1 F7: the slot's Style colors, for as long as the connection lasts.
   applyTheme(decodeThemeColors(sd.style_colors));
@@ -190,6 +228,7 @@ export function startConnect() {
 
 export function startDisconnect() {
   flushNotifyCursor();
+  flushClickerProgress();
   state.connState = 'disconnected';
   setStatus('Disconnected.');
   els.connectBtn.textContent = 'Connect';
@@ -261,6 +300,23 @@ function clearPlayState() {
   state.bingoDimX = 5;
   state.bingoDimY = 5;
   state.bingoal = 3;
+  stopClickerLoop();
+  state.clickerMode = false;
+  state.taskActivations = [];
+  state.taskManual = [];
+  state.itemProduction = [];
+  state.itemClickPower = [];
+  state.itemProductionMult = [];
+  state.itemClickMult = [];
+  state.itemOfflineMult = [];
+  state.regionDistributed = {};
+  state.clickerDistributeGlobal = false;
+  state.clickerOffline = true;
+  state.clickerOfflineRate = 1;
+  state.regionOfflineRate = {};
+  state.clickerOfflineCapHours = 8;
+  state.clickerProgress = {};
+  state.clickerLastTick = 0;
   // Runtime
   state.checkedLocations = new Set();
   state.pendingLocations = new Set();
@@ -340,6 +396,7 @@ export function initConnection() {
     }
 
     updateConsoleConnected(true);
+    if (state.clickerMode) startClickerLoop();
     renderAll();
   };
 
@@ -384,6 +441,7 @@ export function initConnection() {
       applyServerDeathLinkQueue(keys[k.deathlink], true);
       renderAll();
     }
+    if (k.clicker in keys) applyServerClickerProgress(keys[k.clicker], true);
     if (k.notify in keys) {
       const v = keys[k.notify];
       state.serverNotifyIndex = Number.isInteger(v) && v >= 0 ? v : null;
@@ -404,7 +462,8 @@ export function initConnection() {
       return;
     }
     if (isOwnWrite(msg)) return;
-    if (key === k.manual) applyServerManualConsumptions(value, false);
+    if (key === k.clicker) applyServerClickerProgress(value, false);
+    else if (key === k.manual) applyServerManualConsumptions(value, false);
     else if (key === k.purchases) applyServerPurchases(value);
     else if (key === k.deathlink) {
       applyServerDeathLinkQueue(value, false);

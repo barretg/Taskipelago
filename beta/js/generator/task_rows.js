@@ -6,6 +6,7 @@ import { tipHeader } from '../shared/tooltip.js';
 import { MAX_TASK_DESCRIPTION_LEN, newTask } from './model.js';
 import { TIPS } from './legacy_text.js';
 import { rowNumberCell } from './reorder.js';
+import { taskCells, taskHeadCells } from './clicker_cells.js';
 
 /** Code-point length and truncation for the description editor. */
 const cpLen = s => Array.from(s).length;
@@ -58,6 +59,10 @@ function countInput(obj, ctx, max = 999) {
 
 export function renderTaskTable(container, ctx) {
   const { model } = ctx;
+  const clicker = !!model.clickerMode;
+  container.classList.toggle('clicker', clicker);
+  const extraHead = clicker ? taskHeadCells().map(c => cell(c)) : [];
+  const extraHint = clicker ? [cell(''), cell('')] : [];
   container.replaceChildren(
     h('div', { className: 'gt-row gt-head' },
       cell('#'), cell('Task'),
@@ -67,10 +72,12 @@ export function renderTaskTable(container, ctx) {
       cell(tipHeader('Region', TIPS.region_col)),
       cell(tipHeader('Prio', TIPS.priority_col)),
       cell(tipHeader('Count', TIPS.count_task)),
+      ...extraHead,
       cell('')),
     h('div', { className: 'gt-row gt-hint muted-text' },
       cell(''), cell('Location'), cell('1  or  "Task Name"  or  region'),
-      cell('1  or  "Item Name"'), cell('"ItemName"*N'), cell(''), cell(''), cell(''), cell('')),
+      cell('1  or  "Item Name"'), cell('"ItemName"*N'), cell(''), cell(''), cell(''),
+      ...extraHint, cell('')),
   );
 
   model.tasks.forEach((task, i) => {
@@ -96,6 +103,7 @@ export function renderTaskTable(container, ctx) {
         onchange: e => { task.priority = e.target.checked; ctx.changed(); },
       })),
       cell(countInput(task, ctx)),
+      ...(clicker ? taskCells(task, i, ctx).map(c => cell(c)) : []),
       cell(h('button', {
         type: 'button', className: 'remove-btn',
         onclick: () => { model.tasks.splice(i, 1); ctx.changed({ tasks: true, counter: true }); },
