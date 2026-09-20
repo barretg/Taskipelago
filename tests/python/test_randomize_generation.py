@@ -55,9 +55,20 @@ class RegionSelectionTest(unittest.TestCase):
         self.assertEqual(len(_region_world("40%")._tasks), 2 + 3)  # ceil(6 * 0.4) = 3
         self.assertEqual(len(_region_world("1%")._tasks), 2 + 1)
 
-    def test_selection_varies_by_seed_and_order_is_shuffled(self):
+    def test_selection_varies_by_seed(self):
         picks = {tuple(_region_world("3", seed=s)._tasks[1:4]) for s in range(30)}
         self.assertGreater(len(picks), 5)
+
+    def test_order_is_kept_by_default(self):
+        for seed in range(20):
+            kept = _region_world("3", seed=seed)._tasks[1:4]
+            self.assertEqual(kept, sorted(kept))
+
+    def test_random_order_shuffles_kept_tasks(self):
+        picks = {
+            tuple(_region_world("3", seed=s, region_random_order=["true"])._tasks[1:4])
+            for s in range(30)
+        }
         self.assertTrue(any(list(p) != sorted(p) for p in picks))
 
     def test_equal_count_warns_and_keeps_all(self):

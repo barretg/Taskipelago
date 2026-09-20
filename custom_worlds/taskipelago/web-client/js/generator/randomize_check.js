@@ -15,10 +15,10 @@ export function groupSetting(model, name) {
   return { type: normalizeGroupType(s.type), pick: String(s.pick ?? '').trim(), pct: String(s.pct ?? '').trim() };
 }
 
-/** Randomize state for a region: { on, pick }. */
+/** Randomize state for a region: { on, pick, order }. */
 export function regionRandom(model, name) {
   const s = (model.regionRandom && model.regionRandom[name]) || {};
-  return { on: !!s.on, pick: String(s.pick ?? '').trim() };
+  return { on: !!s.on, pick: String(s.pick ?? '').trim(), order: !!s.order };
 }
 
 /** True when any region or group setting differs from the defaults (new YAML keys needed). */

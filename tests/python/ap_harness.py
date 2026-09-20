@@ -93,7 +93,7 @@ _DEFAULTS = {
     "death_link_lock_tasks": False, "progressive_groups": [], "item_progressive_group": [],
     "progressive_group_colors": [], "group_types": [], "group_random_pick": [],
     "group_default_pcts": [], "regions": [], "region_default_pcts": [], "region_colors": [],
-    "region_prereqs": [], "region_random_pick": [], "task_region": [], "bingo_mode": False,
+    "region_prereqs": [], "region_random_pick": [], "region_random_order": [], "task_region": [], "bingo_mode": False,
     "bingo_dimension_x": 5, "bingo_dimension_y": 5, "bingoal": 1, "task_reward_previews": 0,
 }
 

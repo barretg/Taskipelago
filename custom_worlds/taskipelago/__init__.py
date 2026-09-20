@@ -126,6 +126,11 @@ class TaskipelagoWorld(World):
             _pk = parse_pick(_rrp[_ri] if _ri < len(_rrp) else "", f"region '{_rname}'")
             if _pk is not None:
                 region_picks[_rname] = _pk
+        _rro = [str(x).strip() for x in (self.options.region_random_order.value or [])]
+        region_random_order: Dict[str, bool] = {
+            _rname: (_rro[_ri].lower() == "true" if _ri < len(_rro) else False)
+            for _ri, _rname in enumerate(_opt_regions)
+        }
         _gt_raw = [str(x).strip() for x in (self.options.group_types.value or [])]
         group_types: Dict[str, str] = {
             g: normalize_group_type(_gt_raw[gi] if gi < len(_gt_raw) else "")
@@ -468,9 +473,10 @@ class TaskipelagoWorld(World):
                 _rest = [t for t in _members if t not in pinned]
                 _kept = _pins + self.random.sample(_rest, region_keep_n[_rname] - len(_pins))
                 _kept.sort()
-                _shuffled = list(_kept)
-                self.random.shuffle(_shuffled)
-                region_kept_order[_rname] = _shuffled
+                _order = list(_kept)
+                if region_random_order.get(_rname):
+                    self.random.shuffle(_order)
+                region_kept_order[_rname] = _order
             _kept_sets = {r: set(v) for r, v in region_kept_order.items()}
             _region_iters = {r: iter(v) for r, v in region_kept_order.items()}
 

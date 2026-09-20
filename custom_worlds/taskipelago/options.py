@@ -249,6 +249,17 @@ class RegionRandomPick(OptionList):
     default: List[str] = []
 
 
+class RegionRandomOrder(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with regions. "true" shuffles the order of the tasks kept from
+    that randomized region; anything else (including missing or empty entries) keeps them
+    in their original YAML order. Only used by regions that have a region_random_pick.
+    """
+    display_name = "Region Random Order"
+    default: List[str] = []
+
+
 class GroupTypes(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -458,6 +469,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     region_colors: RegionColors
     region_prereqs: RegionPrereqs
     region_random_pick: RegionRandomPick
+    region_random_order: RegionRandomOrder
     task_region: TaskRegion
     bingo_mode: BingoMode
     bingo_dimension_x: BingoDimensionX

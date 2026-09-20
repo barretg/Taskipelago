@@ -958,6 +958,8 @@ button.primary { border-color: var(--accent); }
 .region-prereq { width: 200px; }
 .region-head .col-prereq { width: 200px; }
 .region-head .col-random { width: 110px; }
+.region-head .col-pick { width: 64px; }
+.region-head .col-order { width: 130px; }
 .region-random { gap: 4px; }
 .region-pick, .group-pick, .group-pct { width: 64px; }
 .empty-note { font-size: 13px; }

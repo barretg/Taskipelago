@@ -70,7 +70,7 @@ export function defaultModel() {
     // v1.1 (appended so older drafts and parity shapes keep their key order)
     progGroupColors: {}, // F6: group name -> hex color ('' = no color)
     deathLinkLockTasks: false, // F3
-    regionRandom: {},  // region name -> { on, pick } ('N' or 'N%')
+    regionRandom: {},  // region name -> { on, pick, order } ('N' or 'N%'; order shuffles kept tasks)
     groupSettings: {}, // group name -> { type, pick, pct } (see randomize_check.js)
   };
 }

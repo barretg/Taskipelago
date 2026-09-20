@@ -52,9 +52,13 @@ test('export emits region_random_pick only when used and balances final counts',
   const r = await run(base());
   assert.equal(r.error, undefined);
   assert.deepEqual(r.data.Taskipelago.region_random_pick, ['2']);
+  assert.deepEqual(r.data.Taskipelago.region_random_order, ['false']);
+  const shuffled = await run(base({ regionRandom: { pool: { on: true, pick: '2', order: true } } }));
+  assert.deepEqual(shuffled.data.Taskipelago.region_random_order, ['true']);
   assert.equal(r.confirms.length, 0); // 1 + 2 kept tasks == 3 items
   const plain = await run(base({ regionRandom: {} }));
   assert.equal('region_random_pick' in plain.data.Taskipelago, false);
+  assert.equal('region_random_order' in plain.data.Taskipelago, false);
   assert.match(plain.confirms[0], /Task slots: 5 {2}\| {2}Item slots: 3/);
 });
 
@@ -137,7 +141,7 @@ test('YAML round trip keeps the settings', async () => {
   m.items[0].progGroup = 'gem';
   const { data } = await run(m);
   const back = importDoc(defaultModel(), loadYaml(dumpYaml(data)), { randomFiller }).model;
-  assert.deepEqual(back.regionRandom, { pool: { on: true, pick: '2' } });
+  assert.deepEqual(back.regionRandom, { pool: { on: true, pick: '2', order: false } });
   assert.deepEqual(back.groupSettings, { gem: { type: 'aesthetic', pick: '', pct: '75' } });
 });
 

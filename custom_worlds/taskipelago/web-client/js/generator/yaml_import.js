@@ -150,10 +150,13 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
 
   // Randomized regions and item group types (optional parallel lists; absent = defaults).
   const rawRegionPicks = pyListOr(block, 'region_random_pick');
+  const rawRegionOrders = pyListOr(block, 'region_random_order');
   model.regionRandom = {};
   regionNames.forEach((name, i) => {
     const pick = i < rawRegionPicks.length ? pyStrip(pyStr(rawRegionPicks[i])) : '';
-    if (pick) model.regionRandom[name] = { on: true, pick };
+    const order = i < rawRegionOrders.length
+      && pyStrip(pyStr(rawRegionOrders[i])).toLowerCase() === 'true';
+    if (pick) model.regionRandom[name] = { on: true, pick, order };
   });
   const rawTypes = pyListOr(block, 'group_types');
   const rawGroupPicks = pyListOr(block, 'group_random_pick');

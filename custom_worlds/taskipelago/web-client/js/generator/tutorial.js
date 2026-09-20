@@ -36,8 +36,11 @@ const V11_STEPS = [
     + 'Goal Tasks may name individual tasks in a randomized region. Generation guarantees at least '
     + 'one way to meet the goal: with 4 || 10, at least one of tasks 4 and 10 is kept. Export '
     + 'fails if no way to meet the goal fits within the Keep values.\n\n'
-    + 'Task numbers are renumbered in the final seed and the kept tasks of a randomized region '
-    + 'are shuffled, so the numbers seen while playing differ from the generator.',
+    + 'Task numbers are renumbered in the final seed, so the numbers seen while playing differ '
+    + 'from the generator.\n\n'
+    + 'Shuffle order (per region, off by default): with it off, the kept tasks stay in the order '
+    + 'they have in the task list. Check it to shuffle the order of that region\'s kept tasks in '
+    + 'each seed. It only applies to regions with Randomize checked.',
   ]],
   [GROUPS_TITLE, [
     'Group Types, Keep and Default %',

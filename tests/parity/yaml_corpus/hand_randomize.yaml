@@ -20,6 +20,7 @@ Taskipelago:
   region_colors: ['#e05c5c', '#5cb85c', '#8e7cc3']
   region_prereqs: ['', '', 'fitness*1']
   region_random_pick: ['3', '50%', '']
+  region_random_order: ['true', 'false', '']
   tasks:
   - Morning coffee
   - Dishes

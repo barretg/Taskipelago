@@ -344,7 +344,10 @@ def apply_v11_import(doc, result: dict) -> dict:
                              if i < len(list(block.get(key) or [])) else "")
         for i, r in enumerate(m["regions"]):
             if at("region_random_pick", i):
-                region_random[r["name"]] = {"on": True, "pick": at("region_random_pick", i)}
+                region_random[r["name"]] = {
+                    "on": True, "pick": at("region_random_pick", i),
+                    "order": at("region_random_order", i).lower() == "true",
+                }
         for i, g in enumerate(m["progGroups"]):
             gtype = at("group_types", i).lower()
             gtype = gtype if gtype in ("progressive", "random-choice", "aesthetic") else "progressive"
@@ -418,6 +421,9 @@ def _apply_randomize_keys(m: dict, block: dict, result: dict) -> dict:
     if use_regions:
         block = _insert_after(block, "region_prereqs", "region_random_pick",
                               [rr[n]["pick"] if rr.get(n, {}).get("on") else "" for n in block["regions"]])
+        block = _insert_after(block, "region_random_pick", "region_random_order",
+                              ["true" if rr.get(n, {}).get("on") and rr[n].get("order") else "false"
+                               for n in block["regions"]])
     task_counts = [int(c) for c in block["task_count"]]
     tasks = sum(task_counts)
     for n in block["regions"]:

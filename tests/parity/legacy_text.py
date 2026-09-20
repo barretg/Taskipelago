@@ -116,6 +116,12 @@ V11_NEW_TIPS = {
         "Other tasks may only reference this region as a whole (myregion, myregion-75,\n"
         "myregion*5), which counts only the kept tasks."
     ),
+    "rg_order": (
+        "Shuffle the order of the tasks kept from this randomized region.\n\n"
+        "Off (default): the kept tasks stay in their original list order.\n"
+        "On: their order is shuffled per seed.\n\n"
+        "Only applies when Randomize is checked for this region."
+    ),
     "group_type": (
         "How the group behaves:\n\n"
         "  progressive    ->  items are interchangeable; grp-N is the Nth position,\n"
