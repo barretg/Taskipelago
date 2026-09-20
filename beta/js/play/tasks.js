@@ -16,6 +16,7 @@ import { completeDeathLinkEntry, isDeathLinkLocked, pendingDeathLinks } from './
 // Region helpers
 // =============================================================
 let regionProgressExpanded = true;
+let subregionsExpanded = null;  // Set of expanded parent region names (lazy, from UI prefs)
 
 function buildRegionColorMap() {
   const m = {};
@@ -24,6 +25,93 @@ function buildRegionColorMap() {
     if (c) m[state.regions[i]] = c;
   }
   return m;
+}
+
+/**
+ * Subregions: state.regionParent maps a region to the region it is displayed
+ * under. Nesting is one level, so a parent that itself names a parent is
+ * ignored and its children are shown at the top level.
+ */
+function regionParentOf(rname) {
+  const p = state.regionParent ? state.regionParent[rname] : '';
+  if (!p || p === rname || !state.regions.includes(p)) return '';
+  const gp = state.regionParent ? state.regionParent[p] : '';
+  return gp && gp !== p && state.regions.includes(gp) ? '' : p;
+}
+
+/** Parent region name -> its subregion names, in region order. */
+function buildSubregionMap() {
+  const kids = new Map();
+  for (const rname of state.regions) {
+    const p = regionParentOf(rname);
+    if (!p) continue;
+    if (!kids.has(p)) kids.set(p, []);
+    kids.get(p).push(rname);
+  }
+  return kids;
+}
+
+function expandedSubregions() {
+  if (!subregionsExpanded) {
+    const saved = getUiPref('expandedSubregions', []);
+    subregionsExpanded = new Set(Array.isArray(saved) ? saved : []);
+  }
+  return subregionsExpanded;
+}
+
+/** Completed / total task slots directly assigned to one region. */
+function regionCounts(rname, checked) {
+  const indices = state.taskRegion.map((r, i) => (r === rname ? i : -1)).filter(i => i >= 0);
+  const done = state.baseCompleteId !== null
+    ? indices.filter(i => checked.has(state.baseCompleteId + i)).length
+    : 0;
+  return { done, total: indices.length };
+}
+
+function regionProgressRow(rname, { color, done, total, sub, kids, onToggle, expanded }) {
+  const pct = total > 0 ? done / total : 0;
+  const row = document.createElement('div');
+  row.className = 'region-progress-row' + (sub ? ' region-progress-sub' : '')
+    + (kids ? ' has-subregions' : '');
+
+  const caret = document.createElement('span');
+  caret.className = 'region-progress-caret';
+  caret.textContent = kids ? (expanded ? '\u25bc' : '\u25b6') : '';
+  row.appendChild(caret);
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'region-progress-name';
+  nameEl.textContent = rname;
+  row.appendChild(nameEl);
+
+  const barOuter = document.createElement('div');
+  barOuter.className = 'region-progress-bar-outer';
+  const barInner = document.createElement('div');
+  barInner.className = 'region-progress-bar-inner';
+  barInner.style.width = `${Math.round(pct * 100)}%`;
+  barInner.style.backgroundColor = color;
+  barOuter.appendChild(barInner);
+  row.appendChild(barOuter);
+
+  const countEl = document.createElement('span');
+  countEl.className = 'region-progress-count';
+  countEl.textContent = `${done}/${total}`;
+  row.appendChild(countEl);
+
+  if (kids) {
+    row.setAttribute('role', 'button');
+    row.tabIndex = 0;
+    row.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    row.title = `${kids} subregion${kids === 1 ? '' : 's'} - click to ${expanded ? 'collapse' : 'expand'}`;
+    row.addEventListener('click', onToggle);
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onToggle();
+      }
+    });
+  }
+  return row;
 }
 
 export function renderRegionProgress() {
@@ -41,40 +129,40 @@ export function renderRegionProgress() {
 
   const checked = allChecked();
   const rColors = buildRegionColorMap();
+  const kidsOf = buildSubregionMap();
+  const open = expandedSubregions();
   const frag = document.createDocumentFragment();
 
+  const toggleParent = rname => {
+    if (open.has(rname)) open.delete(rname);
+    else open.add(rname);
+    setUiPref('expandedSubregions', [...open]);
+    renderRegionProgress();
+  };
+
   for (const rname of state.regions) {
-    const color = rColors[rname] || '#808080';
-    const indices = state.taskRegion.map((r, i) => r === rname ? i : -1).filter(i => i >= 0);
-    const total = indices.length;
-    const done = state.baseCompleteId !== null
-      ? indices.filter(i => checked.has(state.baseCompleteId + i)).length
-      : 0;
-    const pct = total > 0 ? done / total : 0;
+    if (regionParentOf(rname)) continue;  // shown under its parent instead
+    const kids = kidsOf.get(rname) || [];
+    const expanded = open.has(rname);
+    // A parent's bar rolls up its own tasks and every task in its subregions.
+    const own = regionCounts(rname, checked);
+    const totals = kids.reduce((acc, k) => {
+      const c = regionCounts(k, checked);
+      return { done: acc.done + c.done, total: acc.total + c.total };
+    }, own);
 
-    const row = document.createElement('div');
-    row.className = 'region-progress-row';
-
-    const nameEl = document.createElement('span');
-    nameEl.className = 'region-progress-name';
-    nameEl.textContent = rname;
-    row.appendChild(nameEl);
-
-    const barOuter = document.createElement('div');
-    barOuter.className = 'region-progress-bar-outer';
-    const barInner = document.createElement('div');
-    barInner.className = 'region-progress-bar-inner';
-    barInner.style.width = `${Math.round(pct * 100)}%`;
-    barInner.style.backgroundColor = color;
-    barOuter.appendChild(barInner);
-    row.appendChild(barOuter);
-
-    const countEl = document.createElement('span');
-    countEl.className = 'region-progress-count';
-    countEl.textContent = `${done}/${total}`;
-    row.appendChild(countEl);
-
-    frag.appendChild(row);
+    frag.appendChild(regionProgressRow(rname, {
+      color: rColors[rname] || '#808080',
+      done: totals.done, total: totals.total, sub: false,
+      kids: kids.length, expanded, onToggle: () => toggleParent(rname),
+    }));
+    if (!kids.length || !expanded) continue;
+    for (const kid of kids) {
+      const c = regionCounts(kid, checked);
+      frag.appendChild(regionProgressRow(kid, {
+        color: rColors[kid] || '#808080', done: c.done, total: c.total, sub: true, kids: 0,
+      }));
+    }
   }
 
   list.innerHTML = '';

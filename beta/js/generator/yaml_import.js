@@ -13,7 +13,8 @@ import {
 import { decodeThemeColors, normalizeStyleColors } from '../shared/theme.js';
 import {
   REGION_COLOR_PALETTE, REWARD_TYPE_VALUES, limitPlayerName,
-  newItem, newTask, newDeathLink, onFillerToggle, onConsumableToggle, setItemProgGroup,
+  newItem, newTask, newDeathLink, normalizeRegionParents, onFillerToggle, onConsumableToggle,
+  setItemProgGroup,
 } from './model.js';
 import { clickerImportSettings, clickerItemFields, clickerTaskFields } from './clicker_fields.js';
 import { finalCounts, normalizeGroupType } from './randomize_check.js';
@@ -139,6 +140,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
   const rawPcts = pyListOr(block, 'region_default_pcts');
   const rawColors = pyListOr(block, 'region_colors');
   const rawRegionPrereqs = pyListOr(block, 'region_prereqs');
+  const rawRegionParents = pyListOr(block, 'region_parent');
   const regionNames = rawRegions.map(r => pyStrip(pyStr(r))).filter(Boolean);
   const regionInfo = new Map();
   regionNames.forEach((name, i) => {
@@ -148,6 +150,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
       pct,
       color: color || REGION_COLOR_PALETTE[i % REGION_COLOR_PALETTE.length],
       prereq: i < rawRegionPrereqs.length ? pyStrip(pyStr(rawRegionPrereqs[i])) : '',
+      parent: i < rawRegionParents.length ? pyStrip(pyStr(rawRegionParents[i])) : '',
     });
   });
   model.regions = regionNames.map(name => ({ name, ...regionInfo.get(name) }));
@@ -163,6 +166,8 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
       && pyStrip(pyStr(rawRegionOrders[i])).toLowerCase() === 'true';
     if (pick) model.regionRandom[name] = { on: true, pick, order };
   });
+  // Drops parent links a hand-written YAML got wrong (missing, nested or randomized).
+  normalizeRegionParents(model);
   const rawTypes = pyListOr(block, 'group_types');
   const rawGroupPicks = pyListOr(block, 'group_random_pick');
   const rawGroupPcts = pyListOr(block, 'group_default_pcts');

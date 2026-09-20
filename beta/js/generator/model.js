@@ -120,7 +120,11 @@ export function normalizeModel(raw) {
   });
   model.deathLink = (Array.isArray(model.deathLink) ? model.deathLink : []).map(d => ({ ...newDeathLink(), ...d }));
   model.regions = (Array.isArray(model.regions) ? model.regions : [])
-    .map(r => ({ name: '', pct: 100, color: '', prereq: '', distributed: false, offlineRate: '', manual: false, ...r }));
+    .map(r => ({
+      name: '', pct: 100, color: '', prereq: '', parent: '',
+      distributed: false, offlineRate: '', manual: false, ...r,
+    }));
+  normalizeRegionParents(model);
   model.progGroups = Array.isArray(model.progGroups) ? model.progGroups : [];
   const colors = model.progGroupColors;
   model.progGroupColors = colors && typeof colors === 'object' && !Array.isArray(colors) ? colors : {};
@@ -321,12 +325,64 @@ export function addRegion(model, rawName, pct) {
   if (model.regions.some(r => r.name === name)) return ['Error', `Region '${name}' already exists.`];
   const color = REGION_COLOR_PALETTE[model.nextColorIdx % REGION_COLOR_PALETTE.length];
   model.nextColorIdx += 1;
-  model.regions.push({ name, pct: pyInt(pct), color, prereq: '', distributed: false, offlineRate: '' });
+  model.regions.push({
+    name, pct: pyInt(pct), color, prereq: '', parent: '', distributed: false, offlineRate: '',
+  });
   return null;
+}
+
+/**
+ * Subregions: a region may name another region as its Parent. A subregion
+ * behaves exactly like a region everywhere (tasks, prereqs, randomization, colors);
+ * only the play client's region progress list groups it under its parent.
+ * Nesting is one level deep and randomized regions may not be parents.
+ */
+
+/** True when this region is randomized (parents may not be). */
+export function isRegionRandomized(model, name) {
+  const s = model.regionRandom && model.regionRandom[name];
+  return !!(s && s.on);
+}
+
+/** Names of the regions whose parent is `name`. */
+export function regionChildren(model, name) {
+  if (!name) return [];
+  return (model.regions || []).filter(r => r.parent === name).map(r => r.name);
+}
+
+/** Region names that may be picked as the parent of `region` (excludes blank). */
+export function regionParentOptions(model, region) {
+  return (model.regions || [])
+    .filter(r => r.name !== region.name && !r.parent && !isRegionRandomized(model, r.name))
+    .map(r => r.name);
+}
+
+/** True when `region` may be given a parent at all (a region with children may not). */
+export function regionCanHaveParent(model, region) {
+  return regionChildren(model, region.name).length === 0;
+}
+
+/** Drop parent links that no longer point at a legal parent (missing, self, nested, randomized). */
+export function normalizeRegionParents(model) {
+  const byName = new Map((model.regions || []).map(r => [r.name, r]));
+  for (const r of model.regions || []) {
+    if (!r.parent) {
+      r.parent = '';
+      continue;
+    }
+    const p = byName.get(r.parent);
+    if (!p || p === r || isRegionRandomized(model, p.name)) r.parent = '';
+  }
+  // One level only: a region that is itself a child cannot be a parent.
+  for (const r of model.regions || []) {
+    const p = byName.get(r.parent);
+    if (p && p.parent) r.parent = '';
+  }
 }
 
 export function removeRegion(model, name) {
   model.regions = model.regions.filter(r => r.name !== name);
+  for (const r of model.regions) if (r.parent === name) r.parent = '';
   if (model.regionRandom) delete model.regionRandom[name];
   for (const t of model.tasks) if (t.region === name) t.region = '';
   syncTaskRegions(model);
@@ -365,6 +421,7 @@ export function renameRegion(model, oldName, rawNew) {
   if (!region) return null;
   region.name = newName;
   moveKey(model.regionRandom, oldName, newName);
+  for (const r of model.regions) if (r.parent === oldName) r.parent = newName;
   for (const t of model.tasks) if (t.region === oldName) t.region = newName;
   syncTaskRegions(model);
   return null;

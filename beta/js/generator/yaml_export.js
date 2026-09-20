@@ -177,6 +177,25 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       + reservedGroups.join('\n'));
   }
 
+  // Subregions: parents must exist, nesting is one level, randomized regions are never parents.
+  const parentErrors = [];
+  const usesParents = model.regions.some(r => r.parent);
+  for (const r of model.regions) {
+    if (!r.parent) continue;
+    const p = regionByName.get(r.parent);
+    if (!p) parentErrors.push(`${r.name}: parent region '${r.parent}' does not exist.`);
+    else if (p.name === r.name) parentErrors.push(`${r.name}: a region cannot be its own parent.`);
+    else if (p.parent) {
+      parentErrors.push(`${r.name}: parent '${p.name}' is itself a subregion; nesting is one level deep.`);
+    } else if (regionRandom(model, p.name).on) {
+      parentErrors.push(`${r.name}: parent '${p.name}' is randomized; randomized regions cannot be parents.`);
+    }
+  }
+  if (parentErrors.length) {
+    return fail('Invalid Subregions',
+      'The following region parent settings must be fixed before exporting:\n\n' + parentErrors.join('\n'));
+  }
+
   let totalTaskSlots = taskCounts.reduce((a, b) => a + b, 0);
   let totalItemSlots = itemCounts.reduce((a, b) => a + b, 0);
   const randomized = usesRandomization(model);
@@ -329,6 +348,8 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       region_default_pcts: regionNames.map(n => regionByName.get(n).pct ?? 100),
       region_colors: regionNames.map(n => regionByName.get(n).color ?? ''),
       region_prereqs: regionPrereqs,
+      // Emitted only when subregions are used, so older apworlds are unaffected.
+      ...(usesParents ? { region_parent: regionNames.map(n => regionByName.get(n).parent ?? '') } : {}),
       ...(randomized.regions ? {
         region_random_pick: regionNames.map(n => {
           const rr = regionRandom(model, n);
