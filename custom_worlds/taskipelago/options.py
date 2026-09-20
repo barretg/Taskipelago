@@ -253,7 +253,8 @@ class RegionPrereqs(OptionList):
     'sequential'; inside item( ... ) any item prereq expression is valid except item
     copy counts. task( ... ) may not reference a task in the region it gates, may not
     reference a task in a randomized region, and item( ... ) may not name an
-    individual item inside a random-choice progressive group.
+    individual item inside a random-choice progressive group or a consumable
+    currency item (a currency is spent on task costs, so it cannot gate a region).
     A region cannot depend on itself, and dependency cycles between regions are not
     allowed. Missing or empty entries mean the region has no additional requirement
     of its own.
@@ -424,11 +425,12 @@ class TaskCost(OptionList):
     Parallel list aligned with tasks.
     Each entry is a cost expression. The player must spend the specified consumable items
     (from item_consumable) before being allowed to complete this task.
-    Format: '"ItemName"-N' requires spending N of the consumable item named ItemName.
+    Format: '"ItemName"*N' requires spending N of the consumable item named ItemName.
+    A bare '"ItemName"' with no suffix costs 1.
     Use && for AND (all costs required), || for OR (player picks one branch), () for grouping.
-    Item indices (1-based) may also be used in place of quoted names.
-    Example: '"Gold"-3 && "Silver"-2'  costs 3 Gold and 2 Silver.
-    Example: '"Gold"-5 || "Silver"-10'  player chooses which currency to spend.
+    Item indices (1-based) may also be used in place of quoted names ('4*3').
+    Example: '"Gold"*3 && "Silver"*2'  costs 3 Gold and 2 Silver.
+    Example: '"Gold"*5 || "Silver"*10'  player chooses which currency to spend.
     Leave empty for no cost.
     An error is raised at generation time if total consumable supply is insufficient to
     cover all task costs.

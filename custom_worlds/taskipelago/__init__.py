@@ -1243,6 +1243,15 @@ class TaskipelagoWorld(World):
                         f"Taskipelago: region '{rname}' depends on item {leaf + 1} inside "
                         f"random-choice group '{g}'. Reference the group instead."
                     )
+                # Consumables are spent on task costs, so "received" is not a stable
+                # gate: the region would lock itself again on the next purchase.
+                if leaf < len(item_consumable) and item_consumable[leaf]:
+                    _cname = rewards[leaf] if leaf < len(rewards) else f"item {leaf + 1}"
+                    raise Exception(
+                        f"Taskipelago: region '{rname}' depends on item {leaf + 1} "
+                        f"('{_cname}'), which is a consumable currency. A region cannot "
+                        f"depend on a currency item."
+                    )
             for gname, _pos in collect_group_refs(ast_r):
                 raise Exception(
                     f"Taskipelago: region '{rname}' uses progressive group '{gname}' in ordering "
