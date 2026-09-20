@@ -258,3 +258,27 @@ class ItemGroupTypesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GoalRowCountTest(unittest.TestCase):
+    """goal_tasks numbers editor rows, so Count > 1 shifts the flat indices after it."""
+
+    def _world(self, goal, **extra):
+        return _quiet(tasks=["A", "B 2", "C"], items=[f"I{i}" for i in range(5)],
+                      task_count=["3", "1", "1"], goal_tasks=goal, **extra)[0]
+
+    def test_row_number_after_a_counted_row(self):
+        w = self._world(["3"])
+        self.assertEqual([w._tasks[i] for i in w._goal_indices], ["C"])
+
+    def test_counted_row_means_every_copy(self):
+        self.assertEqual(self._world(["1"])._goal_indices, [0, 1, 2])
+
+    def test_names_resolve_by_row_and_keep_their_digits(self):
+        w = self._world(['"B 2" && "C"'])
+        self.assertEqual([w._tasks[i] for i in w._goal_indices], ["B 2", "C"])
+        self.assertEqual(self._world(['"A"*2'])._goal_indices, [0, 1])
+
+    def test_unknown_name_errors(self):
+        with self.assertRaises(Exception):
+            self._world(['"Nope"'])

@@ -278,6 +278,23 @@ class TaskipelagoWorld(World):
         n_yaml_tasks = sum(task_counts_editor)
         n_yaml_items = sum(item_counts_editor)
 
+        # goal_tasks numbers editor rows, like task_prereqs (the generator
+        # validates and renumbers it that way), so it is translated to YAML
+        # indices here: a row with Count > 1 means every copy. Names resolve
+        # against the editor rows first so digits inside them are not touched.
+        raw_goal_yaml = ", ".join(
+            str(x).strip() for x in list(self.options.goal_tasks.value or []) if str(x).strip()
+        )
+        if raw_goal_yaml:
+            raw_goal_yaml, _goal_name_errs = _resolve_quoted_names(
+                _resolve_quoted_copy_names(raw_goal_yaml, tasks_raw), tasks_raw
+            )
+            if _goal_name_errs:
+                raise Exception(
+                    "Taskipelago: goal_tasks references unknown task name(s): " + "; ".join(_goal_name_errs)
+                )
+            raw_goal_yaml = _translate_prereq_indices(raw_goal_yaml, editor_to_yaml_task, and_multi=True)
+
         if n_yaml_tasks > MAX_TASKS:
             raise Exception(
                 f"Taskipelago: expanded task count ({n_yaml_tasks}) exceeds maximum ({MAX_TASKS}). "
@@ -604,8 +621,7 @@ class TaskipelagoWorld(World):
                         file=_sys.stderr,
                     )
 
-            _raw_goal_parts = [str(x).strip() for x in list(self.options.goal_tasks.value or []) if str(x).strip()]
-            _raw_goal = ", ".join(_raw_goal_parts)
+            _raw_goal = raw_goal_yaml
             _goal_ast0 = None
             if _raw_goal:
                 _goal_res, _goal_errs = _resolve_quoted_names(_raw_goal, tasks)
@@ -1581,8 +1597,7 @@ class TaskipelagoWorld(World):
         # ------------------------------------------------------------------ #
         # 13. Parse goal tasks                                                #
         # ------------------------------------------------------------------ #
-        raw_goal_parts = [str(x).strip() for x in list(self.options.goal_tasks.value or []) if str(x).strip()]
-        raw_goal = ", ".join(raw_goal_parts)
+        raw_goal = raw_goal_yaml
         if goal_text_override is not None:
             raw_goal = goal_text_override
 
