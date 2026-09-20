@@ -25,6 +25,12 @@ export const REWARD_TYPE_VALUES = ['junk', 'useful', 'progression', 'trap'];
 export const DEFAULT_REWARD_TYPE = 'useful';
 export const TASK_REWARD_PREVIEW_LABELS = ['No Previews', 'Scout Previews', 'Hint Previews'];
 
+// Clicker mode (Tasclickpelago). These fields ride along on the normal model and
+// are only exported when model.clickerMode is on, so a slot stays a plain
+// Taskipelago YAML until the author turns clicker mode on.
+// 'none' is an item that grants nothing and exists purely as an AP unlock.
+export const UPGRADE_KINDS = ['none', 'production', 'click_power', 'production_mult', 'click_mult', 'offline_mult'];
+
 export const isReservedWord = name => RESERVED_WORDS.has(name.toLowerCase());
 
 /** Code-point truncation, as _limit_var_length does on every write. */
@@ -34,12 +40,16 @@ export function limitPlayerName(name) {
 }
 
 export function newTask() {
-  return { name: '', prereq: '', itemPrereq: '', cost: '', region: '', priority: false, count: 1, desc: '' };
+  return {
+    name: '', prereq: '', itemPrereq: '', cost: '', region: '', priority: false, count: 1, desc: '',
+    activations: '',   // clicker mode
+  };
 }
 
 export function newItem() {
   return {
     name: '', filler: false, type: DEFAULT_REWARD_TYPE, progGroup: '', consumable: false, count: 1,
+    clickerKind: 'none', clickerTarget: '*', clickerValue: '',   // clicker mode
     ui: {
       savedType: DEFAULT_REWARD_TYPE, savedItem: '', savedGroup: '',
       nameDisabled: false, typeDisabled: false, fillerDisabled: false,
@@ -74,6 +84,12 @@ export function defaultModel() {
     regionRandom: {},  // region name -> { on, pick, order } ('N' or 'N%'; order shuffles kept tasks)
     groupSettings: {}, // group name -> { type, pick, pct } (see randomize_check.js)
     styleColors: defaultThemeColors(), // F7: theme key -> hex, applied while connected
+    // Clicker mode, appended so older drafts keep their key order
+    clickerMode: false,
+    clickerDistributeGlobal: false,
+    clickerOffline: true,
+    clickerOfflineRate: '1',
+    clickerOfflineCapHours: 8,
   };
 }
 
@@ -102,7 +118,7 @@ export function normalizeModel(raw) {
   });
   model.deathLink = (Array.isArray(model.deathLink) ? model.deathLink : []).map(d => ({ ...newDeathLink(), ...d }));
   model.regions = (Array.isArray(model.regions) ? model.regions : [])
-    .map(r => ({ name: '', pct: 100, color: '', prereq: '', ...r }));
+    .map(r => ({ name: '', pct: 100, color: '', prereq: '', distributed: false, offlineRate: '', ...r }));
   model.progGroups = Array.isArray(model.progGroups) ? model.progGroups : [];
   const colors = model.progGroupColors;
   model.progGroupColors = colors && typeof colors === 'object' && !Array.isArray(colors) ? colors : {};
@@ -110,6 +126,7 @@ export function normalizeModel(raw) {
   const plainObj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
   model.regionRandom = plainObj(model.regionRandom);
   model.groupSettings = plainObj(model.groupSettings);
+  model.clickerMode = !!model.clickerMode;
   model.styleColors = normalizeStyleColors(model.styleColors);
   return model;
 }
@@ -129,6 +146,7 @@ export function taskData(t) {
     name: pyStrip(t.name), prereq: pyStrip(t.prereq), itemPrereq: pyStrip(t.itemPrereq),
     cost: pyStrip(t.cost), region: pyStrip(t.region), priority: !!t.priority,
     count: rowCount(t.count), desc: pyStrip(t.desc),
+    activations: pyStrip(t.activations),
   };
 }
 
@@ -138,6 +156,8 @@ export function itemData(it) {
     name: pyStrip(it.name), filler: !!it.filler,
     type: pyStrip(it.type).toLowerCase() || 'useful',
     progGroup: pyStrip(it.progGroup), consumable: !!it.consumable, count: rowCount(it.count),
+    clickerKind: UPGRADE_KINDS.includes(it.clickerKind) ? it.clickerKind : 'none',
+    clickerTarget: pyStrip(it.clickerTarget) || '*', clickerValue: pyStrip(it.clickerValue),
   };
 }
 
@@ -272,7 +292,7 @@ export function addRegion(model, rawName, pct) {
   if (model.regions.some(r => r.name === name)) return ['Error', `Region '${name}' already exists.`];
   const color = REGION_COLOR_PALETTE[model.nextColorIdx % REGION_COLOR_PALETTE.length];
   model.nextColorIdx += 1;
-  model.regions.push({ name, pct: pyInt(pct), color, prereq: '' });
+  model.regions.push({ name, pct: pyInt(pct), color, prereq: '', distributed: false, offlineRate: '' });
   return null;
 }
 

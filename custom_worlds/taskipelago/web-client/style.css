@@ -982,6 +982,17 @@ button.primary { border-color: var(--accent); }
   grid-template-columns: 70px minmax(220px, 3fr) 120px 76px 112px minmax(120px, 1fr) 64px 76px;
 }
 
+/* Clicker mode grows both tables by its own columns. */
+.gen-task-table.clicker .gt-row {
+  grid-template-columns: 70px minmax(200px, 3fr) minmax(140px, 2fr) minmax(120px, 2fr) minmax(110px, 2fr) minmax(100px, 1.4fr) 40px 64px minmax(150px, 1.6fr) 76px;
+}
+
+.gen-item-table.clicker .gt-row {
+  grid-template-columns: 70px minmax(180px, 2.4fr) 110px 76px 112px minmax(110px, 1fr) 64px minmax(170px, 1.4fr) minmax(90px, 1fr) minmax(150px, 1.6fr) 76px;
+}
+
+.region-row .region-offline { width: 72px; }
+
 .gt-cell { min-width: 0; font-size: 13px; }
 .gt-cell > input[type="text"], .gt-cell > select { width: 100%; }
 .gt-head { font-size: 12px; color: var(--fg); }

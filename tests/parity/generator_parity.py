@@ -32,13 +32,14 @@ F = lg.FILLER_PLACEHOLDER
 
 def task(name, **kw):
     t = {"name": name, "prereq": "", "itemPrereq": "", "cost": "", "region": "",
-         "priority": False, "count": 1, "desc": ""}
+         "priority": False, "count": 1, "desc": "", "activations": ""}
     t.update(kw)
     return t
 
 
 def item(name, **kw):
-    it = {"name": name, "filler": False, "type": "useful", "progGroup": "", "consumable": False, "count": 1}
+    it = {"name": name, "filler": False, "type": "useful", "progGroup": "", "consumable": False,
+          "count": 1, "clickerKind": "none", "clickerTarget": "*", "clickerValue": ""}
     it.update(kw)
     return it
 
@@ -48,7 +49,8 @@ def filler(count=1):
 
 
 def region(name, pct=100, color="", prereq=""):
-    return {"name": name, "pct": pct, "color": color, "prereq": prereq}
+    return {"name": name, "pct": pct, "color": color, "prereq": prereq,
+            "distributed": False, "offlineRate": ""}
 
 
 def model(**kw):
@@ -402,6 +404,22 @@ def apply_v11_import(doc, result: dict) -> dict:
     m["groupSettings"] = group_settings
     # C2 (F7): style colors, defaults filled in for every key the YAML omits.
     m["styleColors"] = style_colors_from(_block(doc) if result.get("ok") else {}, GENERAL_STYLE_COLORS)
+    # Clicker mode is a post-legacy extension: the legacy corpus has none, so
+    # every case carries the defaults.
+    for t in m["tasks"]:
+        t["activations"] = ""
+    for it in m["items"]:
+        it["clickerKind"] = "none"
+        it["clickerTarget"] = "*"
+        it["clickerValue"] = ""
+    for r in m["regions"]:
+        r["distributed"] = False
+        r["offlineRate"] = ""
+    m["clickerMode"] = False
+    m["clickerDistributeGlobal"] = False
+    m["clickerOffline"] = True
+    m["clickerOfflineRate"] = "1"
+    m["clickerOfflineCapHours"] = 8
     # The import balance warning uses the final per-seed counts when randomized.
     if region_random or any(s["type"] == "random-choice" and s["pick"] for s in group_settings.values()):
         def keep(text, count):

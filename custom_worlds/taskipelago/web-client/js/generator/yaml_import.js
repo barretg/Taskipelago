@@ -15,6 +15,7 @@ import {
   REGION_COLOR_PALETTE, REWARD_TYPE_VALUES, limitPlayerName,
   newItem, newTask, newDeathLink, onFillerToggle, onConsumableToggle, setItemProgGroup,
 } from './model.js';
+import { clickerImportSettings, clickerItemFields, clickerTaskFields } from './clicker_fields.js';
 import { finalCounts, normalizeGroupType } from './randomize_check.js';
 
 export const NO_BLOCK_MESSAGE = "Could not find a 'Taskipelago' section in this YAML.\n"
@@ -184,6 +185,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
   const taskCountRaw = pyGet(block, 'task_count', null);
 
   const tasks = [];
+  const clickerTaskAt = clickerTaskFields(block);
   const taskFields = i => ({
     prereq: at(prereqsRaw, i, str),
     region: at(taskRegionsRaw, i, str),
@@ -191,6 +193,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     cost: at(taskCostsRaw, i, str),
     desc: at(taskDescRaw, i, str),
     itemPrereq: at(itemPrereqsRaw, i, str),
+    ...clickerTaskAt(i),
   });
   if (taskCountRaw !== null) {
     const counts = Array.isArray(taskCountRaw) ? taskCountRaw : [taskCountRaw];
@@ -219,6 +222,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
   const itemCountRaw = pyGet(block, 'item_count', null);
 
   const items = [];
+  const clickerItemAt = clickerItemFields(block);
   let flatToRow;
   const typeAt = i => at(typesRaw, i, v => str(v, 'useful'), 'useful');
   const fillerAt = i => (i < fillersRaw.length ? fillersRaw[i] : null);
@@ -239,13 +243,16 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
         let total = flatCounts[i];
         let j = i + 1;
         while (j < names.length && isFlatFiller(j)) total += flatCounts[j++];
-        items.push({ name: names[i], type: typeAt(i), filler: true, group: '', consumable: false, count: total });
+        items.push({
+          name: names[i], type: typeAt(i), filler: true, group: '', consumable: false, count: total,
+          ...clickerItemAt(i),
+        });
         for (let k = i; k < j; k++) flatToRow[k] = [items.length];
         i = j;
       } else {
         items.push({
           name: names[i], type: typeAt(i), filler: fillerAt(i), group: groupAt(i),
-          consumable: consumableAt(i), count: flatCounts[i],
+          consumable: consumableAt(i), count: flatCounts[i], ...clickerItemAt(i),
         });
         flatToRow[i] = [items.length];
         i++;
@@ -262,7 +269,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
       for (let k = i; k < j; k++) flatToRow[k] = [items.length + 1];
       items.push({
         name, type: typeAt(i), filler: fillerAt(i), group: groupAt(i),
-        consumable: consumableAt(i), count: j - i,
+        consumable: consumableAt(i), count: j - i, ...clickerItemAt(i),
       });
       i = j;
     }
@@ -291,6 +298,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     name: t.name, prereq: t.prereq, itemPrereq: t.itemPrereq, cost: t.cost,
     priority: !!t.priority, count: t.count, desc: t.desc,
     region: regionSet.has(t.region) ? t.region : '',
+    activations: t.activations,
   }));
 
   model.items = items.map(src => {
@@ -299,6 +307,9 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     it.type = type;
     it.ui.savedType = type;
     it.count = src.count;
+    it.clickerKind = src.clickerKind;
+    it.clickerTarget = src.clickerTarget;
+    it.clickerValue = src.clickerValue;
     const isFiller = typeof src.filler === 'boolean' ? src.filler : isFillerExact(src.name);
     if (isFiller) {
       it.filler = true;
@@ -327,6 +338,9 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     const w = weights[i];
     model.deathLink.push({ ...newDeathLink(), text, weight: str(w, '1') || '1' });
   });
+
+  // --------- Clicker mode (no-op for a plain Taskipelago YAML) ---------
+  clickerImportSettings(model, block);
 
   return { ok: true, model, messages };
 }

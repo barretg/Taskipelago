@@ -68,9 +68,9 @@ async function answer(label) {
   await wait(5);
 }
 
-test('generator, bingo and clicker tabs are in the tab bar', () => {
+test('generator and bingo tabs are in the tab bar', () => {
   const tabs = [...doc.querySelectorAll('#main-tabs .tab-btn')].map(b => b.textContent);
-  assert.deepEqual(tabs, ['Connect and Play', 'Text Console', 'Hints', 'YAML Generator', 'Taskipelabingo', 'Tasclickpelago']);
+  assert.deepEqual(tabs, ['Connect and Play', 'Text Console', 'Hints', 'YAML Generator', 'Taskipelabingo']);
   button(doc.getElementById('main-tabs'), 'YAML Generator').click();
   assert.ok($('tab-generator').classList.contains('active'));
   assert.equal(doc.title, 'Taskipelago');
@@ -141,7 +141,8 @@ test('regions: add, invalid name error, rename updates task rows, remove', async
   input(addRow.querySelector('input[type="text"]'), 'chores');
   button(addRow, 'Add Region').click();
   await wait(5);
-  assert.deepEqual(generatorModel().regions, [{ name: 'chores', pct: 100, color: '#e05c5c', prereq: '' }]);
+  assert.deepEqual(generatorModel().regions,
+    [{ name: 'chores', pct: 100, color: '#e05c5c', prereq: '', distributed: false, offlineRate: '' }]);
 
   const taskRegion = root().querySelector('.gt-task select');
   change(taskRegion, { value: 'chores' });
@@ -502,6 +503,31 @@ test('bingo tab counts, validates and exports', async () => {
 
   await wait(450);
   assert.equal(JSON.parse(localStorage.getItem('taskipelago_draft_bingo')).x, '3');
+});
+
+test('the clicker toggle grows the shared tables and reveals the clicker section', () => {
+  button(doc.getElementById('main-tabs'), 'YAML Generator').click();
+  const toggle = [...root().querySelectorAll('input[type=checkbox]')]
+    .find(c => c.parentElement.textContent.includes('Enable clicker mode'));
+  assert.ok(toggle, 'the mode strip has an Enable clicker mode toggle');
+  assert.equal(toggle.checked, false);
+
+  // tipHeader appends a ' ?' marker, so match on the label prefix.
+  const labels = sel => [...root().querySelectorAll(`${sel} .gt-head .gt-cell`)].map(c => c.textContent.replace(/ \?$/, ''));
+  const heads = () => labels('.gen-task-table');
+  const itemHeads = () => labels('.gen-item-table');
+  assert.ok(!heads().includes('Activations'));
+
+  change(toggle, { checked: true });
+  assert.equal(generatorModel().clickerMode, true);
+  assert.ok(heads().includes('Activations'));
+  for (const h of ['Grants', 'Target', 'Value']) assert.ok(itemHeads().includes(h), `item head ${h}`);
+  assert.ok(root().querySelector('.gen-task-table').classList.contains('clicker'));
+
+  change(toggle, { checked: false });
+  assert.equal(generatorModel().clickerMode, false);
+  assert.ok(!heads().includes('Activations'));
+  assert.ok(!itemHeads().includes('Grants'));
 });
 
 test('no runtime errors', () => {

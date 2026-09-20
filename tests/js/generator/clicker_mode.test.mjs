@@ -1,0 +1,156 @@
+// Clicker mode as an overlay on the normal generator: the extra columns export
+// and import losslessly, and a plain Taskipelago YAML is untouched by them.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { importModule } from '../helpers/env.mjs';
+
+const { loadYaml, dumpYaml } = await importModule('shared/yaml11.js');
+const { defaultModel, normalizeModel } = await importModule('generator/model.js');
+const { importDoc } = await importModule('generator/yaml_import.js');
+const { buildExport } = await importModule('generator/yaml_export.js');
+const { splitSpec, targetToken, checkTarget, previewValue } = await importModule('generator/clicker_fields.js');
+
+const randomFiller = () => 'RANDOM FILLER';
+const confirm = async () => true;
+
+function clickerModel(over = {}) {
+  return normalizeModel({
+    playerName: 'P',
+    clickerMode: true,
+    regions: [
+      { name: 'Kitchen', pct: 100, color: '#111111', distributed: true, offlineRate: '0.5' },
+      { name: 'Garage', pct: 100, color: '#222222' },
+    ],
+    tasks: [
+      { name: 'Bake Bread', region: 'Kitchen', activations: '10' },
+      { name: 'Fix Car', region: 'Garage', activations: '2 * N_TASKS', prereq: '"Bake Bread"' },
+    ],
+    items: [
+      { name: 'Oven', clickerKind: 'production', clickerTarget: 'Kitchen', clickerValue: '0.5' },
+      { name: 'Wrench', clickerKind: 'production', clickerTarget: 'Fix Car', clickerValue: '1' },
+      { name: 'Gloves', clickerKind: 'click_power', clickerValue: '2' },
+      { name: 'Manual', clickerKind: 'none' },
+      { name: '', filler: true, count: 2 },
+    ],
+    ...over,
+  });
+}
+
+const build = m => buildExport(m, { confirm, randomFiller });
+const roundTrip = data => importDoc(defaultModel(), loadYaml(dumpYaml(data)), { randomFiller });
+
+test('splitSpec and targetToken round-trip each reference form', () => {
+  assert.deepEqual(splitSpec('"Bake Bread"-0.5'), { target: 'Bake Bread', value: '0.5' });
+  assert.deepEqual(splitSpec('Kitchen-0.25'), { target: 'Kitchen', value: '0.25' });
+  assert.deepEqual(splitSpec('3-1'), { target: '3', value: '1' });
+  assert.deepEqual(splitSpec('*-2'), { target: '*', value: '2' });
+  assert.deepEqual(splitSpec(''), { target: '*', value: '' });
+
+  const names = ['Bake Bread'];
+  assert.equal(targetToken('Bake Bread', names), '"Bake Bread"');
+  assert.equal(targetToken('Kitchen', names), 'Kitchen');
+  assert.equal(targetToken('3', names), '3');
+  assert.equal(targetToken('', names), '*');
+});
+
+test('checkTarget accepts tasks, regions, indices and *', () => {
+  const tasks = ['Bake Bread'];
+  const regions = ['Kitchen'];
+  assert.equal(checkTarget('*', tasks, regions), null);
+  assert.equal(checkTarget('Kitchen', tasks, regions), null);
+  assert.equal(checkTarget('"Bake Bread"', tasks, regions), null);
+  assert.equal(checkTarget('2', tasks, regions), null);
+  assert.equal(checkTarget('Kitchen && "Bake Bread"', tasks, regions), null);
+  assert.match(checkTarget('Basement', tasks, regions), /not a task or a region/);
+});
+
+test('previewValue shows both ends of a live curve', () => {
+  assert.deepEqual(previewValue('', 4), { ok: true, blank: true });
+  assert.deepEqual(previewValue('2', 4), { ok: true, low: 2, high: 2 });
+  assert.deepEqual(previewValue('N_TASKS_COMPLETED', 4), { ok: true, low: 0, high: 4 });
+  assert.equal(previewValue('2 +', 4).ok, false);
+});
+
+test('export writes the clicker lists parallel to the exported rows', async () => {
+  const r = await build(clickerModel());
+  assert.ok(r.data, JSON.stringify(r.error));
+  const b = r.data.Taskipelago;
+  assert.equal(b.clicker_mode, true);
+  assert.deepEqual(b.task_activations, ['10', '2 * N_TASKS']);
+  // Two filler copies expand, so the spec lists stay parallel to `items`.
+  assert.equal(b.items.length, 6);
+  assert.deepEqual(b.item_production, ['Kitchen-0.5', '"Fix Car"-1', '', '', '', '']);
+  assert.deepEqual(b.item_click_power, ['', '', '2', '', '', '']);
+  assert.ok(!('item_click_mult' in b), 'unused kinds are left out');
+  assert.deepEqual(b.region_distributed_production, ['true', 'false']);
+  assert.deepEqual(b.region_offline_rate, ['0.5', '']);
+  assert.equal(b.clicker_offline_progress, true);
+  assert.deepEqual(b.clicker_offline_rate, ['1']);
+  assert.equal(b.clicker_offline_cap_hours, 8);
+});
+
+test('a clicker slot round-trips back into the same rows', async () => {
+  const r = await build(clickerModel());
+  const { ok, model } = roundTrip(r.data);
+  assert.ok(ok);
+  assert.equal(model.clickerMode, true);
+  assert.deepEqual(model.tasks.map(t => t.activations), ['10', '2 * N_TASKS']);
+  assert.deepEqual(model.items.map(it => [it.clickerKind, it.clickerTarget, it.clickerValue]), [
+    ['production', 'Kitchen', '0.5'],
+    ['production', 'Fix Car', '1'],
+    ['click_power', '*', '2'],
+    ['none', '*', ''],
+    ['none', '*', ''],
+  ]);
+  assert.deepEqual(model.regions.map(g => [g.distributed, g.offlineRate]),
+    [[true, '0.5'], [false, '']]);
+  // A second pass is byte-identical, so nothing drifts on repeated editing.
+  const again = await build(model);
+  assert.deepEqual(again.data, r.data);
+});
+
+test('a plain Taskipelago YAML gains no clicker keys and imports with the defaults', async () => {
+  const plain = normalizeModel({
+    playerName: 'P',
+    regions: [{ name: 'Kitchen', pct: 100, color: '#111111' }],
+    tasks: [{ name: 'Bake Bread', region: 'Kitchen' }],
+    items: [{ name: 'Oven' }],
+  });
+  const r = await build(plain);
+  assert.ok(r.data, JSON.stringify(r.error));
+  const keys = Object.keys(r.data.Taskipelago);
+  assert.deepEqual(keys.filter(k => k.startsWith('clicker_') || k.startsWith('item_prod')
+    || k === 'task_activations' || k.startsWith('region_offline')), []);
+
+  const { model } = roundTrip(r.data);
+  assert.equal(model.clickerMode, false);
+  assert.deepEqual(model.tasks.map(t => t.activations), ['']);
+  assert.deepEqual(model.items.map(it => it.clickerKind), ['none']);
+  assert.deepEqual(model.regions.map(g => [g.distributed, g.offlineRate]), [[false, '']]);
+
+  // Turning clicker mode on for that same slot keeps every normal setting.
+  model.clickerMode = true;
+  const on = await build(model);
+  assert.ok(on.data, JSON.stringify(on.error));
+  for (const [k, v] of Object.entries(r.data.Taskipelago)) {
+    assert.deepEqual(on.data.Taskipelago[k], v, `key ${k} changed`);
+  }
+  assert.equal(on.data.Taskipelago.clicker_mode, true);
+});
+
+test('export rejects a bad activation expression, target or value', async () => {
+  let m = clickerModel();
+  m.tasks[0].activations = 'N_TASKS_COMPLETED';
+  let r = await build(m);
+  assert.match(r.error[1], /Task 'Bake Bread' activations/);
+
+  m = clickerModel();
+  m.items[0].clickerTarget = 'Basement';
+  r = await build(m);
+  assert.match(r.error[1], /Item 'Oven' targets 'Basement'/);
+
+  m = clickerModel();
+  m.items[0].clickerValue = '0.5 *';
+  r = await build(m);
+  assert.match(r.error[1], /Item 'Oven'/);
+});
