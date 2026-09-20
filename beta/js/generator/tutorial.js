@@ -48,7 +48,9 @@ const V11_STEPS = [
     + 'Inside item( ... ) you may use item numbers, quoted item names and group counts '
     + '(keys*3). A progressive group must use count mode here, never ordering mode '
     + '(keys or keys-2), because an ordering position belongs to a single task. '
-    + "'prev' and 'sequential' are never allowed in a region dependency.\n\n"
+    + "'prev' and 'sequential' are never allowed in a region dependency. "
+    + 'A consumable currency item cannot be named at all, since it is spent on task '
+    + 'costs and so cannot stably gate a region.\n\n'
     + 'A region cannot depend on itself or on a task inside itself, the region it names must '
     + 'have at least one task assigned, and cycles between regions (a depends on b, b depends '
     + 'on a) are an error. Leave the field blank for a region with no gate.\n\n'

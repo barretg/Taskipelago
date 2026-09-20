@@ -11,7 +11,7 @@ import {
   MAX_TASK_DESCRIPTION_LEN, isReservedWord, taskData, itemData,
 } from './model.js';
 import { clickerExportKeys, validateClicker } from './clicker_fields.js';
-import { checkRandomization, groupSetting, regionRandom, usesRandomization } from './randomize_check.js';
+import { checkRandomization, groupSetting, regionRandom, scopedLeaves, usesRandomization } from './randomize_check.js';
 
 /** _resolve_name_refs: "Quoted Name" -> first matching 1-based index. */
 export function resolveNameRefs(text, names) {
@@ -308,8 +308,19 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     if (!rpr) continue;
     const resolved = mapScopedText(rpr,
       t => resolveNameRefs(t, tasks)[0], t => resolveNameRefs(t, rawItemNames)[0]);
-    attempt(() => parsePrereq(
-      resolved, 0, 0, 'region prereq', null, regionSet, `region '${name}'`, nTasks, regionScopes));
+    attempt(() => {
+      const ast = parsePrereq(
+        resolved, 0, 0, 'region prereq', null, regionSet, `region '${name}'`, nTasks, regionScopes);
+      // Consumables are spent on task costs, so "received" is not a stable gate:
+      // the region would lock itself again on the next purchase.
+      for (const leaf of scopedLeaves(ast, 'item')) {
+        if (rawItemConsumables[leaf]) {
+          throw new Error(`Taskipelago: region '${name}' depends on item ${leaf + 1} `
+            + `('${rawItemNames[leaf]}'), which is a consumable currency. A region cannot `
+            + 'depend on a currency item.');
+        }
+      }
+    });
   }
   if (exprErrors.length) {
     return fail('Invalid Expressions',

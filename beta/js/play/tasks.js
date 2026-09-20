@@ -492,13 +492,7 @@ function renderTaskCards(container, effectiveLock, dlLocked, include = null) {
       card.appendChild(makeHint(`Locked behind region(s): ${regionHints.join(', ')}`));
     }
     if (!completed && costOnlyLocked && effectiveLock && branches.length) {
-      const costParts = branches.map(branch =>
-        branch.map(([name, amt]) => `${amt} ${name}`).join(' && ')
-      );
-      const costText = costParts.length > 1
-        ? costParts.map(p => `(${p})`).join(' || ')
-        : costParts[0];
-      card.appendChild(makeHint(`Requires purchase: ${costText}`));
+      card.appendChild(makeHint(`Requires purchase: ${formatCostBranches(branches)}`));
     }
 
     frag.appendChild(card);
@@ -506,6 +500,15 @@ function renderTaskCards(container, effectiveLock, dlLocked, include = null) {
 
   container.innerHTML = '';
   container.appendChild(frag);
+}
+
+/** A task's cost branches as one line: '2 Coin && 1 Gem' or '(2 Coin) || (1 Gem)'. */
+export function formatCostBranches(branches) {
+  const parts = (branches || []).map(branch =>
+    branch.map(([name, amt]) => `${amt} ${name}`).join(' && ')
+  );
+  if (!parts.length) return '';
+  return parts.length > 1 ? parts.map(p => `(${p})`).join(' || ') : parts[0];
 }
 
 function makeHint(text) {
