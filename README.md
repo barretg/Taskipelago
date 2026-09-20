@@ -32,7 +32,7 @@
 
 * Rates, activation counts and multipliers can be plain numbers or small expressions over `N_TASKS`, `N_TASKS_UNLOCKED`, `N_TASKS_LOCKED`, `N_TASKS_COMPLETED` and `CPS` (the current click value), so a game can scale as it grows
 
-* Build one in the YAML Generator tab: tick **Enable clicker mode** and the task, item and region tables grow the clicker columns. `clicker_mode` and `bingo_mode` cannot both be enabled
+* Build one in the YAML Generator tab: tick **Enable Tasclickpelago** and the task, item and region tables grow the clicker columns. `clicker_mode` and `bingo_mode` cannot both be enabled
 
 ## Setup:
 

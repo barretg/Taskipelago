@@ -510,8 +510,8 @@ test('bingo tab counts, validates and exports', async () => {
 test('the clicker toggle grows the shared tables and reveals the clicker section', () => {
   button(doc.getElementById('main-tabs'), 'YAML Generator').click();
   const toggle = [...root().querySelectorAll('input[type=checkbox]')]
-    .find(c => c.parentElement.textContent.includes('Enable clicker mode'));
-  assert.ok(toggle, 'the mode strip has an Enable clicker mode toggle');
+    .find(c => c.parentElement.textContent.includes('Enable Tasclickpelago'));
+  assert.ok(toggle, 'the mode strip has an Enable Tasclickpelago toggle');
   assert.equal(toggle.checked, false);
 
   // tipHeader appends a ' ?' marker, so match on the label prefix.

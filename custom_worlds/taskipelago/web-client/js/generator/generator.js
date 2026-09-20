@@ -271,7 +271,7 @@ function build(root) {
   });
   const modeStrip = h('div', { className: 'gen-namebar' },
     h('label', { className: 'check-label' }, els.clickerToggle,
-      tipHeader('Enable clicker mode (Tasclickpelago)', CLICKER_TIP)));
+      tipHeader('Enable Tasclickpelago', CLICKER_TIP)));
 
   els.regions = h('div', { className: 'region-list' });
   const regions = section('regions', 'Regions', els.regions, buildRegionAddRow(ctx));

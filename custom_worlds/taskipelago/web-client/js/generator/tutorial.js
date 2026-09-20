@@ -123,7 +123,7 @@ const V11_STEPS = [
   ]],
   ['DeathLink (Optional Challenge)', [
     'Clicker Mode (Tasclickpelago)',
-    'Tick "Enable clicker mode" in the bar at the top of the generator to turn this slot into an '
+    'Tick "Enable Tasclickpelago" in the bar at the top of the generator to turn this slot into an '
     + 'idle/clicker game. Nothing else changes: the same regions, item groups, prereqs, DeathLink '
     + 'and Style panels all still apply, and a slot stays a normal Taskipelago YAML until the '
     + 'toggle is on.\n\n'
