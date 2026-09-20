@@ -56,7 +56,7 @@ export function openColorPicker(title, currentColor, onPick) {
   });
 }
 
-/** Randomize checkbox and pick field (N or N%) for one region. */
+/** Randomize checkbox, pick field (N or N%), and shuffle-order checkbox for one region. */
 function randomizeCells(region, ctx) {
   const rr = regionRandom(ctx.model, region.name);
   const pick = h('input', {
@@ -68,17 +68,27 @@ function randomizeCells(region, ctx) {
       ctx.changed();
     },
   });
+  const orderBox = h('input', {
+    type: 'checkbox', checked: rr.order, disabled: !rr.on,
+    'aria-label': `Shuffle task order in ${region.name}`,
+    onchange: e => {
+      ctx.model.regionRandom[region.name] = { ...regionRandom(ctx.model, region.name), order: e.target.checked };
+      ctx.changed();
+    },
+  });
   const box = h('input', {
     type: 'checkbox', checked: rr.on, 'aria-label': `Randomize ${region.name}`,
     onchange: e => {
       ctx.model.regionRandom[region.name] = { ...regionRandom(ctx.model, region.name), on: e.target.checked };
       pick.disabled = !e.target.checked;
+      orderBox.disabled = !e.target.checked;
       ctx.changed();
     },
   });
   return [
     h('label', { className: 'check-label region-random' }, box, 'Randomize', tipMarker(TIPS.rg_random)),
     pick,
+    h('label', { className: 'check-label region-random' }, orderBox, 'Shuffle order', tipMarker(TIPS.rg_order)),
   ];
 }
 
@@ -149,7 +159,8 @@ export function renderRegions(container, ctx) {
     h('div', { className: 'region-row region-head muted-text' },
       h('span', { className: 'col-color' }, 'Color'), h('span', { className: 'col-name' }, 'Name'),
       h('span', { className: 'col-pct' }, 'Default %'), h('span', { className: 'col-prereq' }, 'Depends on'),
-      h('span', { className: 'col-random' }, 'Randomize'), h('span', { className: 'col-pick' }, 'Keep')),
+      h('span', { className: 'col-random' }, 'Randomize'), h('span', { className: 'col-pick' }, 'Keep'),
+      h('span', { className: 'col-order' }, 'Shuffle order')),
     ...model.regions.map((r, i) => regionRow(r, i, ctx)),
   );
 }

@@ -9,6 +9,7 @@ import { RESERVED_WORDS, validateRefName } from '../shared/prereq_parser.js';
 import { remapCostIndices, remapPrereqIndices, renameNameRefs } from '../shared/expr_rewrite.js';
 import { isFillerExact, randomFiller as defaultRandomFiller } from '../shared/filler.js';
 import { pyInt, pyStrip } from '../shared/pyish.js';
+import { defaultThemeColors, normalizeStyleColors } from '../shared/theme.js';
 
 export const MAX_TASK_DESCRIPTION_LEN = 100;
 export const MAX_PLAYER_NAME_LEN = 16;
@@ -70,8 +71,9 @@ export function defaultModel() {
     // v1.1 (appended so older drafts and parity shapes keep their key order)
     progGroupColors: {}, // F6: group name -> hex color ('' = no color)
     deathLinkLockTasks: false, // F3
-    regionRandom: {},  // region name -> { on, pick } ('N' or 'N%')
+    regionRandom: {},  // region name -> { on, pick, order } ('N' or 'N%'; order shuffles kept tasks)
     groupSettings: {}, // group name -> { type, pick, pct } (see randomize_check.js)
+    styleColors: defaultThemeColors(), // F7: theme key -> hex, applied while connected
   };
 }
 
@@ -108,6 +110,7 @@ export function normalizeModel(raw) {
   const plainObj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
   model.regionRandom = plainObj(model.regionRandom);
   model.groupSettings = plainObj(model.groupSettings);
+  model.styleColors = normalizeStyleColors(model.styleColors);
   return model;
 }
 

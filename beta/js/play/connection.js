@@ -16,6 +16,7 @@ import {
   serverKeys, subscribeServerState, sanitizePurchases, isOwnWrite,
   writeNotifyCursor, flushNotifyCursor, resetNotifyCursor,
 } from '../shared/server_state.js';
+import { applyTheme, clearTheme, decodeThemeColors } from '../shared/theme.js';
 
 // How long ReceivedItems notifications wait for the server notify cursor.
 const NOTIFY_FALLBACK_MS = 3000;
@@ -155,6 +156,8 @@ function applySlotData(sd) {
   state.bingoDimY           = parseInt(sd.bingo_dimension_y || 5);
   state.bingoal             = parseInt(sd.bingoal || 3);
   state.deathLinkAmnestyLeft = state.deathLinkAmnesty;
+  // v1.1 F7: the slot's Style colors, for as long as the connection lasts.
+  applyTheme(decodeThemeColors(sd.style_colors));
 }
 
 // =============================================================
@@ -222,6 +225,7 @@ export function getConnectStatus() {
 function clearPlayState() {
   clearTimeout(notifyFallbackTimer);
   notifyFallbackTimer = null;
+  clearTheme(); // F7: back to the stylesheet's default color scheme
   // Slot data
   state.tasks = [];
   state.items = [];

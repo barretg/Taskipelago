@@ -6,6 +6,7 @@ import { randomFiller as defaultRandomFiller } from '../shared/filler.js';
 import { remapPrereqIndices, remapCostIndices } from '../shared/expr_rewrite.js';
 import { pyInt, pySlice, pyStrip } from '../shared/pyish.js';
 import { dumpYaml } from '../shared/yaml11.js';
+import { encodeThemeColors } from '../shared/theme.js';
 import {
   MAX_TASK_DESCRIPTION_LEN, isReservedWord, taskData, itemData,
 } from './model.js';
@@ -282,6 +283,8 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     taskCosts = taskCosts.map(t => remapCostIndices(t, itemRowExportIdxs));
   }
 
+  const styleColors = encodeThemeColors(model.styleColors);
+
   const data = {
     name: playerName,
     game: 'Taskipelago',
@@ -314,6 +317,10 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
           const rr = regionRandom(model, n);
           return rr.on ? rr.pick : '';
         }),
+        region_random_order: regionNames.map(n => {
+          const rr = regionRandom(model, n);
+          return rr.on && rr.order ? 'true' : 'false';
+        }),
       } : {}),
       task_region: taskRegions,
       task_priority: taskPriorities.map(p => (p ? 'true' : 'false')),
@@ -338,6 +345,8 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       death_link_weights: deathLinkWeights,
       death_link_amnesty: pyInt(model.deathLinkAmnesty),
       death_link_lock_tasks: !!model.deathLinkLockTasks, // v1.1 F3
+      // v1.1 F7: only non-default colors, so an all-default Style section adds nothing.
+      ...(styleColors.length ? { style_colors: styleColors } : {}),
     },
   };
   return { data };

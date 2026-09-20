@@ -10,6 +10,7 @@ import { collapseCopyGroups, remapPrereqIndices, remapCostIndices } from '../sha
 import {
   PyError, isDict, pyGet, pyInt, pyList, pyListOr, pyStr, pyStrip, pyTruthy,
 } from '../shared/pyish.js';
+import { decodeThemeColors, normalizeStyleColors } from '../shared/theme.js';
 import {
   REGION_COLOR_PALETTE, REWARD_TYPE_VALUES, limitPlayerName,
   newItem, newTask, newDeathLink, onFillerToggle, onConsumableToggle, setItemProgGroup,
@@ -108,6 +109,9 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     model.deathLinkAmnesty = pyInt(pyTruthy(v) ? v : 0);
   });
 
+  // v1.1 F7: style colors; keys the export omitted fall back to their defaults.
+  model.styleColors = normalizeStyleColors(decodeThemeColors(pyListOr(block, 'style_colors').map(pyStr)));
+
   model.lockPrereqs = pyTruthy(pyGet(block, 'lock_prereqs', !!model.lockPrereqs));
   model.hideUnreachable = pyTruthy(pyGet(block, 'hide_unreachable_tasks', !!model.hideUnreachable));
 
@@ -150,10 +154,13 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
 
   // Randomized regions and item group types (optional parallel lists; absent = defaults).
   const rawRegionPicks = pyListOr(block, 'region_random_pick');
+  const rawRegionOrders = pyListOr(block, 'region_random_order');
   model.regionRandom = {};
   regionNames.forEach((name, i) => {
     const pick = i < rawRegionPicks.length ? pyStrip(pyStr(rawRegionPicks[i])) : '';
-    if (pick) model.regionRandom[name] = { on: true, pick };
+    const order = i < rawRegionOrders.length
+      && pyStrip(pyStr(rawRegionOrders[i])).toLowerCase() === 'true';
+    if (pick) model.regionRandom[name] = { on: true, pick, order };
   });
   const rawTypes = pyListOr(block, 'group_types');
   const rawGroupPicks = pyListOr(block, 'group_random_pick');

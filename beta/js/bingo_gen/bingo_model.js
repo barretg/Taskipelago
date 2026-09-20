@@ -10,18 +10,24 @@ import {
 } from '../shared/pyish.js';
 import { extractTaskipelagoBlock, toggleOption } from '../generator/yaml_import.js';
 import { limitPlayerName } from '../generator/model.js';
+import {
+  THEME_COLORS, decodeThemeColors, defaultThemeColors, encodeThemeColors, normalizeStyleColors,
+} from '../shared/theme.js';
 
 export function defaultBingoModel() {
   return {
     playerName: '', x: 5, y: 5, bingoal: 3, progressionBalancing: 50, accessibility: 'full',
     deathLinkEnabled: false, deathLinkAmnesty: 0, spaces: '', rewards: '', deathLinkPool: '',
     deathLinkLockTasks: false, // v1.1 F3
+    // v1.1 F7: theme key -> hex. A bingo slot themes the board colors too.
+    styleColors: defaultThemeColors(THEME_COLORS),
   };
 }
 
 export function normalizeBingoModel(raw) {
   const model = defaultBingoModel();
   if (raw && typeof raw === 'object') for (const k of Object.keys(model)) if (raw[k] !== undefined) model[k] = raw[k];
+  model.styleColors = normalizeStyleColors(model.styleColors, THEME_COLORS);
   return model;
 }
 
@@ -279,6 +285,8 @@ export function buildBingoExport(model, rng = defaultRng) {
   console.assert(rewards.slice(0, nSpaces).every((rw, i) => i === middle || collapsed.names[i] === rw),
     'bingo export: board unlock item rows shifted after collapse');
 
+  const styleColors = encodeThemeColors(model.styleColors, THEME_COLORS);
+
   const data = {
     name: playerName,
     game: 'Taskipelago',
@@ -307,6 +315,8 @@ export function buildBingoExport(model, rng = defaultRng) {
       bingo_dimension_x: X,
       bingo_dimension_y: Y,
       bingoal,
+      // v1.1 F7: only non-default colors, so an untouched Style panel adds nothing.
+      ...(styleColors.length ? { style_colors: styleColors } : {}),
     },
   };
   return { data, unusedRewards: rewardPool.length - next };
@@ -327,6 +337,7 @@ export function bingoSettingsDoc(model) {
     death_link_amnesty: safeInt(model.deathLinkAmnesty, 0),
     death_link_lock_tasks: !!model.deathLinkLockTasks,
     death_link_pool: nonEmptyLines(model.deathLinkPool),
+    style_colors: encodeThemeColors(model.styleColors, THEME_COLORS), // v1.1 F7
   };
 }
 
@@ -356,6 +367,8 @@ function loadSettingsDoc(model, doc) {
   model.deathLinkPool = linesOf(pyListOr(doc, 'death_link_pool'));
   model.spaces = linesOf(pyListOr(doc, 'spaces'));
   model.rewards = linesOf(pyListOr(doc, 'rewards'));
+  model.styleColors = normalizeStyleColors(
+    decodeThemeColors(pyListOr(doc, 'style_colors').map(pyStr)), THEME_COLORS);
 }
 
 function loadYamlDoc(model, doc) {
@@ -398,6 +411,8 @@ function loadYamlDoc(model, doc) {
   }
   model.deathLinkLockTasks = toggleOption(pyGet(block, 'death_link_lock_tasks', false));
   model.deathLinkPool = linesOf(pyListOr(block, 'death_link_pool'));
+  model.styleColors = normalizeStyleColors(
+    decodeThemeColors(pyListOr(block, 'style_colors').map(pyStr)), THEME_COLORS);
 
   const tasks = pyListOr(block, 'tasks');
   model.spaces = linesOf(tasks.slice(0, X * Y));
