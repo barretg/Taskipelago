@@ -121,6 +121,51 @@ const V11_STEPS = [
     + 'slots exported without color changes leave it alone. The Taskipelabingo tab has its own '
     + 'Style panel, including the two bingo board colors.',
   ]],
+  ['DeathLink (Optional Challenge)', [
+    'Clicker Mode (Tasclickpelago)',
+    'Tick "Enable clicker mode" in the bar at the top of the generator to turn this slot into an '
+    + 'idle/clicker game. Nothing else changes: the same regions, item groups, prereqs, DeathLink '
+    + 'and Style panels all still apply, and a slot stays a normal Taskipelago YAML until the '
+    + 'toggle is on.\n\n'
+    + 'The toggle adds columns to the tables you already have:\n'
+    + '  Tasks   Activations - how many activations finish the task (blank means 1)\n'
+    + '  Items   Grants, Target and Value - what an item does when you receive it\n'
+    + '  Regions Distributed and Offline rate\n\n'
+    + 'Activations come from clicking and from production granted by items. Grants can be:\n'
+    + '  Production (/s)              activations per second\n'
+    + '  Click power (+)              added to the value of one click\n'
+    + '  Production multiplier (x)    scales production only\n'
+    + '  Click multiplier (x)         scales clicks only\n'
+    + '  Offline multiplier (x)       scales what accrues while you are away\n'
+    + '  Unlock only (no effect)      grants nothing; use it as an Item Prereq\n'
+    + 'The two multiplier channels never touch each other, and copies of a multiplier stack '
+    + 'multiplicatively.\n\n'
+    + 'Target applies to Production and Offline multiplier only, in the usual reference syntax: '
+    + '* for every task, a bare region name, a quoted "Task Name" or a task number, joined with &&. '
+    + 'The other kinds apply to the whole slot.\n\n'
+    + 'Distributed (per region) splits that region\'s rate evenly among its eligible tasks instead '
+    + 'of giving each one the full rate, so the region\'s throughput stays constant as tasks '
+    + 'complete. The Clicker section has the same switch for the whole slot, plus offline '
+    + 'production: the away rate, the cap in hours and a worked example.',
+  ]],
+  ['DeathLink (Optional Challenge)', [
+    'Clicker Values and Constants',
+    'Every clicker number can be an expression instead of a plain number: integers, decimals, '
+    + '+ - * / and parentheses over five constants:\n'
+    + '  N_TASKS             total tasks in the slot (fixed when the seed is made)\n'
+    + '  N_TASKS_UNLOCKED    tasks unlocked so far, including completed ones\n'
+    + '  N_TASKS_LOCKED      N_TASKS - N_TASKS_UNLOCKED\n'
+    + '  N_TASKS_COMPLETED   tasks completed so far\n'
+    + '  CPS                 the current click value, after click power and the click multiplier\n\n'
+    + 'The preview beside each cell shows the value at both ends of the curve, with CPS at its base '
+    + 'value of 1. Examples: 0.1 * N_TASKS_UNLOCKED, 1 + 0.02 * N_TASKS, 0.25 * CPS.\n\n'
+    + 'Two rules follow from when each value is decided. Activations are fixed when the seed is '
+    + 'generated, so only N_TASKS is allowed there. CPS is the click value itself, so it cannot be '
+    + 'used in Click power or Click multiplier, which are what define it; use it to price '
+    + 'production in clicks instead.\n\n'
+    + 'Curve Fill in the Clicker section writes the whole Activations column from a first cost and '
+    + 'a growth factor, the usual idle-game pacing. The values stay editable afterwards.',
+  ]],
   [null, [
     'While Playing: Hints and Item Filters',
     'The Hints tab lists every hint for your slot, like the Archipelago text client: who receives '
