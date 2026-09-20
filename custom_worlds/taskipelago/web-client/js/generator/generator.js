@@ -24,10 +24,11 @@ import { openTutorial } from './tutorial.js';
 import { openCommunityYamls } from './community.js';
 import { reorderUpdatesRefs, setReorderUpdatesRefs } from './reorder.js';
 import { openFindReplace } from './find_replace.js';
+import { STYLE_SECTION_TIP, renderStyleColors, resetStyleColors } from './style_section.js';
 
 export const DRAFT_KEY = 'taskipelago_draft_generator';
 const SAVE_DELAY_MS = 400;
-const SECTION_DEFAULTS = { regions: false, tasks: true, items: true, deathlink: false };
+const SECTION_DEFAULTS = { regions: false, tasks: true, items: true, deathlink: false, style: false };
 
 const ctx = { model: defaultModel(), changed, root: null, openSection };
 const els = {};
@@ -45,6 +46,7 @@ function changed(parts = {}, { save = true } = {}) {
   if (parts.regions) renderRegions(els.regions, ctx);
   if (parts.groups) renderProgGroups(els.groups, ctx);
   if (parts.deathlink) renderDeathLinkTable(els.deathlink, ctx);
+  if (parts.style) renderStyleColors(els.style, styleOpts());
   if (parts.goal) els.goalTasks.value = ctx.model.goalTasks;
   updateCounter();
   if (parts.focusLast) {
@@ -88,7 +90,7 @@ function loadModel(model) {
   els.deathLinkEnabled.checked = !!m.deathLinkEnabled;
   els.deathLinkLock.checked = !!m.deathLinkLockTasks;
   els.amnesty.value = m.deathLinkAmnesty;
-  changed({ tasks: true, items: true, regions: true, groups: true, deathlink: true }, { save: false });
+  changed({ tasks: true, items: true, regions: true, groups: true, deathlink: true, style: true }, { save: false });
 }
 
 // ---------------------------------------------------------------------------
@@ -184,6 +186,13 @@ function section(key, title, ...body) {
   return details;
 }
 
+/** Style section wiring: the pickers read and write ctx.model.styleColors. */
+const styleOpts = () => ({
+  get: () => ctx.model.styleColors,
+  set: colors => { ctx.model.styleColors = colors; },
+  onChange: () => changed(),
+});
+
 const setting = (key, parse = v => v) => e => {
   ctx.model[key] = parse(e.target.type === 'checkbox' ? e.target.checked : e.target.value);
   changed();
@@ -264,13 +273,24 @@ function build(root) {
     els.deathlink,
     h('div', { className: 'btn-row' }, h('button', { type: 'button', onclick: () => addDeathLink(ctx) }, 'Add DeathLink Task')));
 
+  els.style = h('div', { className: 'style-grid' });
+  const style = section('style', 'Style',
+    h('div', { className: 'gen-settings' },
+      tipHeader('Colors applied while connected to this slot', STYLE_SECTION_TIP)),
+    els.style,
+    h('div', { className: 'btn-row' },
+      h('button', {
+        type: 'button', onclick: () => resetStyleColors(els.style, styleOpts()),
+      }, 'Reset Colors')));
+
   const bottom = h('div', { className: 'gen-bottom' },
     h('button', { type: 'button', onclick: resetGenerator }, 'Reset'),
     h('span', { className: 'spacer' }),
     h('button', { type: 'button', onclick: importYaml }, 'Import YAML'),
     h('button', { type: 'button', className: 'primary', onclick: exportYaml }, 'Export YAML'));
 
-  root.replaceChildren(h('div', { className: 'gen-scroll' }, nameStrip, regions, tasks, items, deathlink), bottom);
+  root.replaceChildren(
+    h('div', { className: 'gen-scroll' }, nameStrip, regions, tasks, items, deathlink, style), bottom);
 }
 
 export function initGenerator(root = $('generator-root')) {

@@ -215,6 +215,20 @@ class ProgressiveGroupColors(OptionList):
     default: List[str] = []
 
 
+class StyleColors(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Client color scheme for this slot. Each entry is "key:#rrggbb", for example
+    'bg:#1e1e1e'. The client applies these colors while it is connected to this
+    slot and returns to its default color scheme on disconnect.
+    Recognized keys: bg, panel, field, fg, muted, desc, border, tab-bg,
+    tab-active, btn-bg, btn-hover, warning, bingo-line, bingo-done.
+    Unknown keys and malformed entries are ignored.
+    """
+    display_name = "Style Colors"
+    default: List[str] = []
+
+
 class RegionPrereqs(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -476,3 +490,4 @@ class TaskipelagoOptions(PerGameCommonOptions):
     bingo_dimension_y: BingoDimensionY
     bingoal: Bingoal
     task_reward_previews: TaskRewardPreviews
+    style_colors: StyleColors

@@ -400,7 +400,7 @@ test('tutorial shows the legacy steps plus the hosted/launcher and v1.1 steps', 
   button(root(), 'Tutorial').click();
   const panel = doc.querySelector('.tutorial-panel');
   assert.ok(panel);
-  assert.equal(STEPS.length, 26);
+  assert.equal(STEPS.length, 27);
   const titles = STEPS.map(s => s[0]);
   const after = (a, b) => assert.equal(titles.indexOf(b), titles.indexOf(a) + 1, `${b} follows ${a}`);
   after('Regions', 'Randomized Regions and Dependencies');
@@ -411,8 +411,9 @@ test('tutorial shows the legacy steps plus the hosted/launcher and v1.1 steps', 
   after('DeathLink (Optional Challenge)', 'DeathLink Task Cards and Lock');
   after('While Playing: Hints and Item Filters', 'Hosted Page and Launcher Client');
   assert.match(panel.textContent, /Welcome to the YAML Generator/);
-  assert.match(panel.textContent, /Step 1 of 26/);
-  for (let i = 0; i < 24; i++) button(panel, 'Next >').click();
+  assert.match(panel.textContent, /Step 1 of 27/);
+  after('DeathLink Task Cards and Lock', 'Slot Colors');
+  for (let i = 0; i < 25; i++) button(panel, 'Next >').click();
   assert.match(panel.textContent, /Hosted Page and Launcher Client/);
   button(panel, 'Next >').click();
   assert.match(panel.textContent, /Export, Import, and Reset/);

@@ -315,6 +315,50 @@ def _insert_after(d: dict, after: str, key: str, value) -> dict:
     return out
 
 
+# C2 (F7): style colors. Mirrors web-client/js/shared/theme.js.
+GENERAL_STYLE_COLORS = [
+    ("bg", "#1e1e1e"), ("panel", "#252526"), ("field", "#2d2d30"), ("fg", "#e6e6e6"),
+    ("muted", "#bdbdbd"), ("desc", "#d4d4d4"), ("border", "#3a3a3a"), ("tab-bg", "#3a3a3a"),
+    ("tab-active", "#4a4a4a"), ("btn-bg", "#3a3a3a"), ("btn-hover", "#484848"), ("warning", "#e07070"),
+]
+BINGO_STYLE_COLORS = [("bingo-line", "#1a4a1a"), ("bingo-done", "#4a3a00")]
+ALL_STYLE_COLORS = GENERAL_STYLE_COLORS + BINGO_STYLE_COLORS
+
+
+def _norm_hex(value) -> str:
+    import re
+    text = str(value if value is not None else "").strip()
+    m = re.fullmatch(r"#?([0-9a-fA-F]{3})", text)
+    if m:
+        return ("#" + "".join(c * 2 for c in m.group(1))).lower()
+    m = re.fullmatch(r"#?([0-9a-fA-F]{6})", text)
+    return ("#" + m.group(1).lower()) if m else ""
+
+
+def style_colors_from(block, specs) -> dict:
+    known = {k for k, _ in ALL_STYLE_COLORS}
+    decoded = {}
+    for entry in list(block.get("style_colors") or []):
+        text = str(entry)
+        if ":" not in text:
+            continue
+        key, _, rest = text.partition(":")
+        key, hexval = key.strip(), _norm_hex(rest)
+        if hexval and key in known:
+            decoded[key] = hexval
+    return {k: decoded.get(k, d) for k, d in specs}
+
+
+def style_colors_export(model: dict, specs) -> list:
+    colors = model.get("styleColors") or {}
+    out = []
+    for key, default in specs:
+        hexval = _norm_hex(colors.get(key))
+        if hexval and hexval != default:
+            out.append(f"{key}:{hexval}")
+    return out
+
+
 def _block(doc):
     return lg.new_app()._extract_taskipelago_block(doc)[1]
 
@@ -356,6 +400,8 @@ def apply_v11_import(doc, result: dict) -> dict:
                 group_settings[g] = st
     m["regionRandom"] = region_random
     m["groupSettings"] = group_settings
+    # C2 (F7): style colors, defaults filled in for every key the YAML omits.
+    m["styleColors"] = style_colors_from(_block(doc) if result.get("ok") else {}, GENERAL_STYLE_COLORS)
     # The import balance warning uses the final per-seed counts when randomized.
     if region_random or any(s["type"] == "random-choice" and s["pick"] for s in group_settings.values()):
         def keep(text, count):
@@ -390,6 +436,9 @@ def apply_v11_export_keys(m: dict, result: dict) -> dict:
     block = _insert_after(block, "progressive_groups", "progressive_group_colors",
                           [colors.get(g, "") for g in m["progGroups"]])
     block = _insert_after(block, "death_link_amnesty", "death_link_lock_tasks", bool(m.get("deathLinkLockTasks")))
+    style = style_colors_export(m, GENERAL_STYLE_COLORS)
+    if style:
+        block = _insert_after(block, "death_link_lock_tasks", "style_colors", style)
     block = _apply_randomize_keys(m, block, result)
     result["data"]["Taskipelago"] = block
     return result
@@ -456,6 +505,9 @@ def apply_v11_bingo_export(m: dict, result: dict) -> dict:
     # C2 (F3): death_link_lock_tasks after death_link_amnesty.
     data["Taskipelago"] = _insert_after(data["Taskipelago"], "death_link_amnesty", "death_link_lock_tasks",
                                         bool(m.get("deathLinkLockTasks")))
+    style = style_colors_export(m, ALL_STYLE_COLORS)
+    if style:
+        data["Taskipelago"] = _insert_after(data["Taskipelago"], "bingoal", "style_colors", style)
     block = data["Taskipelago"]
     names, types, fillers = [], [], []
     for name, typ, fil, count in zip(block["items"], block["item_types"], block["item_fillers"], block["item_count"]):
@@ -490,7 +542,9 @@ def apply_v11_bingo_counts(m: dict, result: dict) -> dict:
 
 def apply_v11_bingo_settings(m: dict, result: dict) -> dict:
     # C2 (F3): .bingo settings carry death_link_lock_tasks after death_link_amnesty.
-    return _insert_after(result, "death_link_amnesty", "death_link_lock_tasks", bool(m.get("deathLinkLockTasks")))
+    # C2 (F7): and style_colors last.
+    result = _insert_after(result, "death_link_amnesty", "death_link_lock_tasks", bool(m.get("deathLinkLockTasks")))
+    return _insert_after(result, "death_link_pool", "style_colors", style_colors_export(m, ALL_STYLE_COLORS))
 
 
 def apply_v11_bingo_load(doc, result: dict) -> dict:
@@ -503,6 +557,9 @@ def apply_v11_bingo_load(doc, result: dict) -> dict:
     elif result.get("ok"):
         lock = c2_toggle(_block(doc).get("death_link_lock_tasks", False))
     result["model"]["deathLinkLockTasks"] = lock
+    # C2 (F7): the bingo model carries every style color, board colors included.
+    source = doc if result["kind"] == "settings" else (_block(doc) if result.get("ok") else {})
+    result["model"]["styleColors"] = style_colors_from(source if isinstance(source, dict) else {}, ALL_STYLE_COLORS)
     return result
 
 

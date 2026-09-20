@@ -112,6 +112,15 @@ const V11_STEPS = [
     + 'The client also highlights DeathLink notifications in red and can play a short sound '
     + '("Sound on DeathLink" in the Notifications tab).',
   ]],
+  ['DeathLink (Optional Challenge)', [
+    'Slot Colors',
+    'The Style section sets the colors this client uses while it is connected to the slot made '
+    + 'from this YAML. Pick a color with the swatch or type a hex code; Default puts one row back, '
+    + 'and Reset Colors puts them all back.\n\n'
+    + 'Nothing changes until you connect: disconnecting restores the standard color scheme, and '
+    + 'slots exported without color changes leave it alone. The Taskipelabingo tab has its own '
+    + 'Style panel, including the two bingo board colors.',
+  ]],
   [null, [
     'While Playing: Hints and Item Filters',
     'The Hints tab lists every hint for your slot, like the Archipelago text client: who receives '

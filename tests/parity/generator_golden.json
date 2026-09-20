@@ -107,7 +107,21 @@
      },
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -192,7 +206,21 @@
      "progGroupColors": {},
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -282,7 +310,21 @@
      "progGroupColors": {},
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -376,7 +418,21 @@
      "progGroupColors": {},
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -461,7 +517,21 @@
      "progGroupColors": {},
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -546,7 +616,21 @@
      "progGroupColors": {},
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -631,7 +715,21 @@
      "progGroupColors": {},
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -720,7 +818,21 @@
      },
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -831,7 +943,21 @@
      },
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -942,7 +1068,21 @@
      },
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -1053,7 +1193,21 @@
      },
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -1164,7 +1318,21 @@
      },
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -1283,7 +1451,21 @@
      },
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -1386,7 +1568,21 @@
      },
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": [
      [
@@ -1432,7 +1628,21 @@
      "progGroupColors": {},
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": [
      [
@@ -1583,7 +1793,21 @@
      },
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -1884,6 +2108,20 @@
        "pick": "",
        "pct": "50"
       }
+     },
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
      }
     },
     "messages": []
@@ -1982,7 +2220,21 @@
      },
      "deathLinkLockTasks": true,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": []
    }
@@ -2142,7 +2394,21 @@
      },
      "deathLinkLockTasks": false,
      "regionRandom": {},
-     "groupSettings": {}
+     "groupSettings": {},
+     "styleColors": {
+      "bg": "#1e1e1e",
+      "panel": "#252526",
+      "field": "#2d2d30",
+      "fg": "#e6e6e6",
+      "muted": "#bdbdbd",
+      "desc": "#d4d4d4",
+      "border": "#3a3a3a",
+      "tab-bg": "#3a3a3a",
+      "tab-active": "#4a4a4a",
+      "btn-bg": "#3a3a3a",
+      "btn-hover": "#484848",
+      "warning": "#e07070"
+     }
     },
     "messages": [
      [
@@ -5121,7 +5387,21 @@
     },
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -5332,7 +5612,21 @@
     "progGroupColors": {},
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -5518,7 +5812,21 @@
     "progGroupColors": {},
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -5712,7 +6020,21 @@
     "progGroupColors": {},
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -5899,7 +6221,21 @@
     "progGroupColors": {},
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -6080,7 +6416,21 @@
     "progGroupColors": {},
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -6263,7 +6613,21 @@
     "progGroupColors": {},
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -6450,7 +6814,21 @@
     },
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -6661,7 +7039,21 @@
     },
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -6898,7 +7290,21 @@
     },
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -7135,7 +7541,21 @@
     },
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -7372,7 +7792,21 @@
     },
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -7617,7 +8051,21 @@
     },
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -7852,7 +8300,21 @@
     },
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": null,
@@ -7903,7 +8365,21 @@
     "progGroupColors": {},
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": null,
@@ -8054,7 +8530,21 @@
     },
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": null,
@@ -8352,6 +8842,20 @@
       "pick": "",
       "pct": "50"
      }
+    },
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
     }
    },
    "result": {
@@ -8721,7 +9225,21 @@
     },
     "deathLinkLockTasks": true,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -8983,7 +9501,21 @@
     },
     "deathLinkLockTasks": false,
     "regionRandom": {},
-    "groupSettings": {}
+    "groupSettings": {},
+    "styleColors": {
+     "bg": "#1e1e1e",
+     "panel": "#252526",
+     "field": "#2d2d30",
+     "fg": "#e6e6e6",
+     "muted": "#bdbdbd",
+     "desc": "#d4d4d4",
+     "border": "#3a3a3a",
+     "tab-bg": "#3a3a3a",
+     "tab-active": "#4a4a4a",
+     "btn-bg": "#3a3a3a",
+     "btn-hover": "#484848",
+     "warning": "#e07070"
+    }
    },
    "result": {
     "data": {
@@ -10773,7 +11305,8 @@
      "death_link_pool": [
       "Pushups",
       "Plank"
-     ]
+     ],
+     "style_colors": []
     }
    },
    {
@@ -10873,7 +11406,8 @@
      "death_link_enabled": false,
      "death_link_amnesty": 0,
      "death_link_lock_tasks": false,
-     "death_link_pool": []
+     "death_link_pool": [],
+     "style_colors": []
     }
    },
    {
@@ -10915,7 +11449,8 @@
      "death_link_enabled": false,
      "death_link_amnesty": 0,
      "death_link_lock_tasks": false,
-     "death_link_pool": []
+     "death_link_pool": [],
+     "style_colors": []
     }
    },
    {
@@ -10948,7 +11483,8 @@
      "death_link_enabled": false,
      "death_link_amnesty": 0,
      "death_link_lock_tasks": true,
-     "death_link_pool": []
+     "death_link_pool": [],
+     "style_colors": []
     }
    },
    {
@@ -10987,7 +11523,8 @@
      "death_link_enabled": false,
      "death_link_amnesty": 0,
      "death_link_lock_tasks": false,
-     "death_link_pool": []
+     "death_link_pool": [],
+     "style_colors": []
     }
    }
   ],
@@ -11114,7 +11651,23 @@
       "spaces": "a\nb\n",
       "rewards": "",
       "deathLinkPool": "",
-      "deathLinkLockTasks": true
+      "deathLinkLockTasks": true,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -11161,7 +11714,23 @@
       "spaces": "t\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\n",
       "rewards": "",
       "deathLinkPool": "",
-      "deathLinkLockTasks": true
+      "deathLinkLockTasks": true,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -11201,7 +11770,23 @@
       "spaces": "a\nb\n",
       "rewards": "",
       "deathLinkPool": "1\nNone\np\n",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -11231,7 +11816,23 @@
       "spaces": "",
       "rewards": "",
       "deathLinkPool": "",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -11282,7 +11883,23 @@
       "spaces": "a\nb\nNone\nd\n",
       "rewards": "",
       "deathLinkPool": "x\ny\n",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -11358,7 +11975,23 @@
       "spaces": "t\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\nt\n",
       "rewards": "Treat\nTreat\nNap\n",
       "deathLinkPool": "",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -11389,7 +12022,23 @@
       "spaces": "",
       "rewards": "",
       "deathLinkPool": "",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": [
       [
@@ -11423,7 +12072,23 @@
       "spaces": "",
       "rewards": "",
       "deathLinkPool": "",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": [
       [
@@ -11502,7 +12167,8 @@
      "death_link_pool": [
       "Pushups",
       "Plank"
-     ]
+     ],
+     "style_colors": []
     },
     "result": {
      "kind": "settings",
@@ -11520,7 +12186,23 @@
       "spaces": "Space 1\nSpace 2\nSpace 3\nSpace 4\nSpace 5\nSpace 6\nSpace 7\nSpace 8\nSpace 9\nSpace 10\nSpace 11\nSpace 12\nSpace 13\nSpace 14\nSpace 15\nSpace 16\nSpace 17\nSpace 18\nSpace 19\nSpace 20\nSpace 21\nSpace 22\nSpace 23\nSpace 24\nSpace 25\nSpace 26\nSpace 27\nSpace 28\nSpace 3\nSpace 5\n",
       "rewards": "Cookie\nNap\nCookie\n",
       "deathLinkPool": "Pushups\nPlank\n",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -11609,7 +12291,8 @@
      "death_link_enabled": false,
      "death_link_amnesty": 0,
      "death_link_lock_tasks": false,
-     "death_link_pool": []
+     "death_link_pool": [],
+     "style_colors": []
     },
     "result": {
      "kind": "settings",
@@ -11627,7 +12310,23 @@
       "spaces": "Cell 1\nCell 2\nCell 3\nCell 4\nCell 5\nCell 6\nCell 7\nCell 8\nCell 9\nCell 10\nCell 11\nCell 12\nCell 13\nCell 14\nCell 15\nCell 16\nCell 17\nCell 18\nCell 19\nCell 20\nCell 21\nCell 22\nCell 23\nCell 24\nCell 25\nCell 26\nCell 27\nCell 28\nCell 29\nCell 30\nCell 31\nCell 32\nCell 33\nCell 34\nCell 35\nCell 36\nCell 37\nCell 38\nCell 39\nCell 40\n",
       "rewards": "Prize 1\nPrize 2\nPrize 3\nPrize 4\nPrize 5\nPrize 6\nPrize 7\nPrize 8\nPrize 9\nPrize 10\nPrize 11\nPrize 12\nPrize 13\nPrize 14\nPrize 15\nPrize 16\nPrize 17\nPrize 18\nPrize 19\nPrize 20\nPrize 1\nPrize 2\nBingo Bonus\nExtra\nExtra\nExtra\nExtra\nExtra\n",
       "deathLinkPool": "",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -11658,7 +12357,8 @@
      "death_link_enabled": false,
      "death_link_amnesty": 0,
      "death_link_lock_tasks": false,
-     "death_link_pool": []
+     "death_link_pool": [],
+     "style_colors": []
     },
     "result": {
      "kind": "settings",
@@ -11676,7 +12376,23 @@
       "spaces": "a\nb\nc\nd\ne\nf\ng\nh\ni\n",
       "rewards": "only one\n",
       "deathLinkPool": "",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -11697,7 +12413,8 @@
      "death_link_enabled": false,
      "death_link_amnesty": 0,
      "death_link_lock_tasks": true,
-     "death_link_pool": []
+     "death_link_pool": [],
+     "style_colors": []
     },
     "result": {
      "kind": "settings",
@@ -11715,7 +12432,23 @@
       "spaces": "Only\n",
       "rewards": "",
       "deathLinkPool": "",
-      "deathLinkLockTasks": true
+      "deathLinkLockTasks": true,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -11743,7 +12476,8 @@
      "death_link_enabled": false,
      "death_link_amnesty": 0,
      "death_link_lock_tasks": false,
-     "death_link_pool": []
+     "death_link_pool": [],
+     "style_colors": []
     },
     "result": {
      "kind": "settings",
@@ -11761,7 +12495,23 @@
       "spaces": "S 1\nS 2\nS 3\nS 4\nS 5\nS 6\nS 7\nS 8\n",
       "rewards": "",
       "deathLinkPool": "",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -12076,7 +12826,23 @@
       "spaces": "Space 5\nSpace 3\nSpace 28\nSpace 27\nSpace 26\nSpace 25\nSpace 24\nSpace 23\nSpace 22\nSpace 21\nSpace 20\nSpace 19\nSpace 18\nSpace 17\nSpace 16\nSpace 15\nSpace 14\nSpace 13\nSpace 12\nSpace 11\nSpace 10\nSpace 9\nSpace 8\nSpace 7\nSpace 6\n",
       "rewards": "Cookie\nCookie\nNap\n",
       "deathLinkPool": "Pushups\nPlank\n",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -12546,7 +13312,23 @@
       "spaces": "Cell 40\nCell 39\nCell 38\nCell 37\nCell 36\nCell 35\nCell 34\nCell 33\nCell 32\nCell 31\nCell 30\nCell 29\nCell 28\nCell 27\nCell 26\nCell 25\nCell 24\nCell 23\nCell 22\nCell 21\nCell 20\nCell 19\nCell 18\nCell 17\nCell 16\nCell 15\nCell 14\nCell 13\nCell 12\nCell 11\nCell 10\nCell 9\nCell 8\nCell 7\nCell 6\n",
       "rewards": "Extra\nExtra\nExtra\nExtra\nExtra\nPrize 2\nPrize 1\nPrize 20\nPrize 19\nPrize 18\nPrize 17\nPrize 16\nPrize 15\nPrize 14\nPrize 13\nPrize 12\nPrize 11\nPrize 10\n",
       "deathLinkPool": "",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -12713,7 +13495,23 @@
       "spaces": "i\nh\ng\nf\ne\nd\nc\nb\na\n",
       "rewards": "only one\n",
       "deathLinkPool": "",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -12799,7 +13597,23 @@
       "spaces": "Only\n",
       "rewards": "",
       "deathLinkPool": "",
-      "deathLinkLockTasks": true
+      "deathLinkLockTasks": true,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -12965,7 +13779,23 @@
       "spaces": "S 8\nS 7\nS 6\nS 5\nS 4\nS 3\nS 2\nS 1\n",
       "rewards": "",
       "deathLinkPool": "",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -13267,7 +14097,23 @@
       "spaces": "S 25\nS 24\nS 23\nS 22\nS 21\nS 20\nS 19\nS 18\nS 17\nS 16\nS 15\nS 14\nS 13\nS 12\nS 11\nS 10\nS 9\nS 8\nS 7\nS 6\nS 5\nS 4\nS 3\nS 2\nS 1\n",
       "rewards": "",
       "deathLinkPool": "",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -13357,7 +14203,23 @@
       "spaces": "Only\n",
       "rewards": "",
       "deathLinkPool": "",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }
@@ -13527,7 +14389,23 @@
       "spaces": "S 8\nS 7\nS 6\nS 5\nS 4\nS 3\nS 2\nS 1\n",
       "rewards": "",
       "deathLinkPool": "",
-      "deathLinkLockTasks": false
+      "deathLinkLockTasks": false,
+      "styleColors": {
+       "bg": "#1e1e1e",
+       "panel": "#252526",
+       "field": "#2d2d30",
+       "fg": "#e6e6e6",
+       "muted": "#bdbdbd",
+       "desc": "#d4d4d4",
+       "border": "#3a3a3a",
+       "tab-bg": "#3a3a3a",
+       "tab-active": "#4a4a4a",
+       "btn-bg": "#3a3a3a",
+       "btn-hover": "#484848",
+       "warning": "#e07070",
+       "bingo-line": "#1a4a1a",
+       "bingo-done": "#4a3a00"
+      }
      },
      "messages": []
     }

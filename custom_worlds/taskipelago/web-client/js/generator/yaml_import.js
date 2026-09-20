@@ -10,6 +10,7 @@ import { collapseCopyGroups, remapPrereqIndices, remapCostIndices } from '../sha
 import {
   PyError, isDict, pyGet, pyInt, pyList, pyListOr, pyStr, pyStrip, pyTruthy,
 } from '../shared/pyish.js';
+import { decodeThemeColors, normalizeStyleColors } from '../shared/theme.js';
 import {
   REGION_COLOR_PALETTE, REWARD_TYPE_VALUES, limitPlayerName,
   newItem, newTask, newDeathLink, onFillerToggle, onConsumableToggle, setItemProgGroup,
@@ -107,6 +108,9 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     const v = pyGet(block, 'death_link_amnesty', pyInt(model.deathLinkAmnesty));
     model.deathLinkAmnesty = pyInt(pyTruthy(v) ? v : 0);
   });
+
+  // v1.1 F7: style colors; keys the export omitted fall back to their defaults.
+  model.styleColors = normalizeStyleColors(decodeThemeColors(pyListOr(block, 'style_colors').map(pyStr)));
 
   model.lockPrereqs = pyTruthy(pyGet(block, 'lock_prereqs', !!model.lockPrereqs));
   model.hideUnreachable = pyTruthy(pyGet(block, 'hide_unreachable_tasks', !!model.hideUnreachable));

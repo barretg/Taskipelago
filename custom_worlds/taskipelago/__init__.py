@@ -1477,6 +1477,12 @@ class TaskipelagoWorld(World):
             "bingo_dimension_y": int(self.options.bingo_dimension_y),
             "bingoal": int(self.options.bingoal),
             "task_reward_previews": int(self.options.task_reward_previews),
+            # v1.1 F7: "key:#rrggbb" client colors, applied only while connected.
+            "style_colors": [
+                str(x).strip()
+                for x in (self.options.style_colors.value or [])
+                if str(x).strip()
+            ],
         }
 
 
