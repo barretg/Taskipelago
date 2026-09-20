@@ -170,6 +170,7 @@ function applySlotData(sd) {
     && !Array.isArray(sd.region_parent)) ? sd.region_parent : {};
   state.taskRegion          = sd.task_region || [];
   state.taskRegionReqs      = sd.task_region_reqs || [];
+  state.regionPrereqExprs   = sd.region_prereq_exprs || {};
   state.taskDescriptions    = sd.task_description || [];
   state.bingoMode           = !!sd.bingo_mode;
   state.bingoDimX           = parseInt(sd.bingo_dimension_x || 5);
@@ -298,6 +299,7 @@ function clearPlayState() {
   state.regionParent = {};
   state.taskRegion = [];
   state.taskRegionReqs = [];
+  state.regionPrereqExprs = {};
   state.taskDescriptions = [];
   state.bingoMode = false;
   state.bingoDimX = 5;

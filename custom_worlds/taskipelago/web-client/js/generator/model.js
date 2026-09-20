@@ -7,6 +7,7 @@
 // the ItemRow's saved values and disabled flags; it is never exported.
 import { RESERVED_WORDS, validateRefName } from '../shared/prereq_parser.js';
 import { remapCostIndices, remapPrereqIndices, renameNameRefs } from '../shared/expr_rewrite.js';
+import { mapScopedText } from '../shared/prereq_parser.js';
 import { isFillerExact, randomFiller as defaultRandomFiller } from '../shared/filler.js';
 import { pyInt, pyStrip } from '../shared/pyish.js';
 import { defaultThemeColors, normalizeStyleColors } from '../shared/theme.js';
@@ -468,7 +469,11 @@ export function renameProgGroup(model, oldName, rawNew) {
 
 /** [object, key] pairs of every expression field that can name a region or group. */
 export function nameRefFields(model, kind) {
-  if (kind === 'group') return model.tasks.map(t => [t, 'itemPrereq']);
+  // A region's item(...) scope can name a progressive group, so region "Depends on"
+  // is a group reference site as well as a region one.
+  if (kind === 'group') {
+    return [...model.tasks.map(t => [t, 'itemPrereq']), ...model.regions.map(r => [r, 'prereq'])];
+  }
   return [...model.tasks.map(t => [t, 'prereq']), ...model.regions.map(r => [r, 'prereq']), [model, 'goalTasks']];
 }
 
@@ -510,11 +515,14 @@ export function moveRow(model, kind, i, j, updateRefs = true) {
   if (kind === 'tasks') {
     for (const t of model.tasks) t.prereq = prereq(t.prereq);
     model.goalTasks = prereq(model.goalTasks);
+    // Only the task(...) scope of a region "Depends on" holds task indices.
+    for (const r of model.regions) r.prereq = mapScopedText(r.prereq, prereq, null);
   } else {
     for (const t of model.tasks) {
       t.itemPrereq = prereq(t.itemPrereq);
       t.cost = remapCostIndices(t.cost, indexMap);
     }
+    for (const r of model.regions) r.prereq = mapScopedText(r.prereq, null, prereq);
   }
   return true;
 }

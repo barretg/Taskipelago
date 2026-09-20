@@ -2,7 +2,7 @@ import { state, els } from './state.js';
 import { $ } from '../shared/dom.js';
 import {
   allChecked, prereqsSatisfied, itemPrereqsSatisfied, progressiveReqSatisfied,
-  regionReqSatisfied, regionReqSatisfiedAbs, taskCostIsPaid,
+  regionPrereqSatisfied, regionReqSatisfied, regionReqSatisfiedAbs, taskCostIsPaid,
   completeTask, attemptPurchase, attemptMakeChange,
 } from './logic.js';
 import { renderBingo } from './bingo_board.js';
@@ -255,6 +255,12 @@ export function taskAvailability(i, checked = allChecked(), effectiveLock = stat
   const hasCost  = branches.length > 0;
   const costPaid = !hasCost || !effectiveLock || taskCostIsPaid(i);
 
+  // A region "Depends on" that uses task(...) / item(...) ships as one expression.
+  const regionName = state.taskRegion[i] || '';
+  const regionExprText = (state.regionPrereqExprs || {})[regionName] || '';
+  const regionExprOk = !regionExprText || regionPrereqSatisfied(regionName, checked);
+  if (!regionExprOk) regionOk = false;
+
   const otherPrereqsOk = taskPrereqOk && itemPrereqOk && regionOk;
   const costOnlyLocked = otherPrereqsOk && !costPaid;
 
@@ -267,6 +273,7 @@ export function taskAvailability(i, checked = allChecked(), effectiveLock = stat
     reasons.push(`Locked behind item(s): ${parts.join(', ')}`);
   }
   if (regionHints.length && !regionOk) reasons.push(`Locked behind region(s): ${regionHints.join(', ')}`);
+  if (!regionExprOk) reasons.push(`Locked behind region '${regionName}': ${regionExprText}`);
   if (costOnlyLocked && effectiveLock) reasons.push('Requires purchase');
 
   return {

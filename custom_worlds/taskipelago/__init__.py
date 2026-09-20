@@ -38,6 +38,7 @@ from .prereq_parser import (
     collect_cost_groups_per_branch,
     eval_node, parse_prereq, parse_cost_expr, resolve_ast_refs, Node,
     has_seq_flag, ast_to_text, RESERVED_WORDS, RESERVED_NAMES,
+    has_scoped, map_scoped_text,
 )
 from .rules import set_rules as _set_rules
 from .randomize import (
@@ -114,6 +115,7 @@ class TaskipelagoWorld(World):
     _region_to_task_indices: Dict[str, List[int]]
     _region_token_names: Dict[str, List[str]]
     _region_prereq_text: Dict[str, str]
+    _region_prereq_exprs: Dict[str, str]
     _region_prereq_reqs: Dict[str, List[dict]]
     _parsed_region_prereqs: Dict[str, Node | None]
     _consumable_groups: Dict[str, List[int]]   # name -> [0-based item indices]
@@ -387,6 +389,25 @@ class TaskipelagoWorld(World):
                 raw_task_priority.append(task_priority_editor[i])
                 task_seq_prev_idx.append(yaml_idxs[c - 1] if c > 0 else None)
 
+        # Region "Depends on" expressions. The task(...) / item(...) contents are
+        # ordinary task / item prereq expressions, so their indices translate out
+        # of editor space exactly the way a task's own prereqs do; everything
+        # outside a wrapper (region names) is left untouched.
+        _region_prereqs_editor = [str(x).strip() for x in (self.options.region_prereqs.value or [])]
+        if len(_region_prereqs_editor) < len(_opt_regions):
+            _region_prereqs_editor += [""] * (len(_opt_regions) - len(_region_prereqs_editor))
+        region_prereqs_input: Dict[str, str] = {
+            _rname: map_scoped_text(
+                _region_prereqs_editor[_ri],
+                task_fn=lambda _t: _translate_prereq_indices(
+                    _t, editor_to_yaml_task, and_multi=True),
+                item_fn=lambda _t: _translate_prereq_indices(
+                    _resolve_quoted_copy_names(_t, items_raw_editor),
+                    editor_to_yaml_item, and_multi=False),
+            )
+            for _ri, _rname in enumerate(_opt_regions)
+        }
+
         # ------------------------------------------------------------------ #
         # 5. Resolve quoted names in task/item prereqs                       #
         # ------------------------------------------------------------------ #
@@ -409,6 +430,28 @@ class TaskipelagoWorld(World):
                     + "; ".join(_errs)
                 )
             raw_reward_prereqs_input[_j] = _resolved
+
+        # Quoted task / item names inside a region's task(...) / item(...) wrappers
+        _region_name_errors: List[str] = []
+
+        def _region_quoted(_txt: str, _names: list) -> str:
+            _res, _errs = _resolve_quoted_names(_txt, _names)
+            _region_name_errors.extend(_errs)
+            return _res
+
+        for _rname in list(region_prereqs_input):
+            _region_name_errors.clear()
+            region_prereqs_input[_rname] = map_scoped_text(
+                region_prereqs_input[_rname],
+                task_fn=lambda _t: _region_quoted(_t, tasks),
+                item_fn=lambda _t: _region_quoted(
+                    _t, items_full if randomize_on else items_raw),
+            )
+            if _region_name_errors:
+                raise Exception(
+                    f"Taskipelago: region '{_rname}' depends on unknown task or item name(s): "
+                    + "; ".join(_region_name_errors)
+                )
 
         # ------------------------------------------------------------------ #
         # 5c. Tasclickpelago: activations, production and multipliers         #
@@ -506,6 +549,35 @@ class TaskipelagoWorld(World):
                     if _g and group_types.get(_g) == "random-choice":
                         raise Exception(
                             f"Taskipelago: task {_j + 1} item prereq references item {_leaf + 1} inside "
+                            f"random-choice group '{_g}'. Reference the group instead."
+                        )
+            # The same two checks for a region's task(...) / item(...) scopes.
+            _region_scopes_pre = {
+                "task": {"n": n, "groups": None, "regions": _region_names_set,
+                         "const": n, "label": "region task prereq"},
+                "item": {"n": _n_item_range, "groups": _group_names_set, "regions": None,
+                         "const": n, "label": "region item prereq"},
+            }
+            for _rname, _txt in region_prereqs_input.items():
+                if not _txt:
+                    continue
+                _ast = parse_prereq(
+                    _txt, 0, 0, "region prereq", known_groups=None,
+                    known_regions=_region_names_set, location_label=f"region '{_rname}'",
+                    n_tasks_const=n, scoped_domains=_region_scopes_pre,
+                )
+                for _leaf in collect_leaves(_ast, "task"):
+                    if _rand_region(_leaf):
+                        raise Exception(
+                            f"Taskipelago: region '{_rname}' depends on task {_leaf + 1} inside "
+                            f"randomized region '{_rand_region(_leaf)}'. Reference the region as "
+                            f"a whole instead."
+                        )
+                for _leaf in collect_leaves(_ast, "item"):
+                    _g = item_group_full[_leaf] if _leaf < len(item_group_full) else ""
+                    if _g and group_types.get(_g) == "random-choice":
+                        raise Exception(
+                            f"Taskipelago: region '{_rname}' depends on item {_leaf + 1} inside "
                             f"random-choice group '{_g}'. Reference the group instead."
                         )
 
@@ -617,6 +689,17 @@ class TaskipelagoWorld(World):
             raw_reward_prereqs_input = [
                 remap_int_tokens(raw_reward_prereqs_input[_old], item_map) for _old in task_order
             ]
+            # Region "Depends on": only the task(...) / item(...) contents hold indices.
+            for _rname in list(region_prereqs_input):
+                try:
+                    region_prereqs_input[_rname] = map_scoped_text(
+                        region_prereqs_input[_rname],
+                        task_fn=lambda _t: remap_int_tokens(_t, task_map),
+                        item_fn=lambda _t: remap_int_tokens(_t, item_map),
+                    )
+                except Exception as _e:
+                    raise Exception(f"Taskipelago: region '{_rname}' depends on a task or item "
+                                    f"removed by randomization.") from _e
             if _dropped_items:
                 raw_costs_input = [
                     cost_indices_to_names(raw_costs_input[_old], rewards) for _old in task_order
@@ -891,88 +974,6 @@ class TaskipelagoWorld(World):
                 region_to_task_indices[rname].append(i)
 
         # ------------------------------------------------------------------ #
-        # 7b. Parse region-to-region prereqs                                   #
-        # ------------------------------------------------------------------ #
-        raw_rpr = [str(x).strip() for x in (self.options.region_prereqs.value or [])]
-        if len(raw_rpr) < len(raw_regions):
-            raw_rpr += [""] * (len(raw_regions) - len(raw_rpr))
-        raw_rpr = raw_rpr[:len(raw_regions)]
-        raw_prereq_by_region: Dict[str, str] = dict(zip(raw_regions, raw_rpr))
-        region_prereq_text: Dict[str, str] = dict(zip(raw_regions, raw_rpr))
-
-        # A subregion always depends on its parent implicitly: the parent's bare
-        # region reference (its default percentage) is ANDed onto whatever the
-        # subregion's own 'Depends on' expression says. A parent that holds no
-        # tasks of its own has nothing to complete, so the subregion inherits the
-        # parent's gate instead; nesting is one level, so parent text is never
-        # itself rewritten here. Cycles (a parent depending on its own subregion)
-        # are caught by _assert_no_region_cycles below.
-        for _rname, _pname in region_parent.items():
-            _implicit = _pname if region_to_task_indices.get(_pname) else raw_prereq_by_region.get(_pname, "")
-            if not _implicit:
-                continue
-            _own = region_prereq_text.get(_rname, "")
-            region_prereq_text[_rname] = f"({_implicit}) && ({_own})" if _own else _implicit
-
-        region_prereqs_unresolved: Dict[str, Node | None] = {}
-        for rname in raw_regions:
-            ast_r = parse_prereq(
-                region_prereq_text[rname], 0, 0, "region prereq",
-                known_groups=None, known_regions=region_set,
-                location_label=f"region '{rname}'",
-                n_tasks_const=n,
-            )
-            region_prereqs_unresolved[rname] = ast_r
-
-        region_prereq_reqs: Dict[str, List[dict]] = {}
-        for rname, ast_r in region_prereqs_unresolved.items():
-            pct_refs = collect_region_refs(ast_r)
-            abs_refs = collect_region_abs_refs(ast_r)
-            reqs: List[dict] = []
-            for dep_name, pct_val in pct_refs:
-                if dep_name == rname:
-                    raise Exception(f"Taskipelago: region '{rname}' cannot depend on itself.")
-                pct = pct_val if pct_val is not None else region_default_pcts.get(dep_name, 100)
-                if pct < 0 or pct > 100:
-                    raise Exception(
-                        f"Taskipelago: region '{rname}' prereq on region '{dep_name}' "
-                        f"percentage {pct} must be 0-100."
-                    )
-                if not region_to_task_indices.get(dep_name):
-                    raise Exception(
-                        f"Taskipelago: region '{rname}' depends on region '{dep_name}' "
-                        f"which has no tasks assigned."
-                    )
-                reqs.append({"region": dep_name, "pct": pct})
-            for dep_name, abs_n in abs_refs:
-                if dep_name == rname:
-                    raise Exception(f"Taskipelago: region '{rname}' cannot depend on itself.")
-                dep_size = len(region_to_task_indices.get(dep_name, []))
-                if dep_size == 0:
-                    raise Exception(
-                        f"Taskipelago: region '{rname}' depends on region '{dep_name}' "
-                        f"which has no tasks assigned."
-                    )
-                if abs_n < 1 or abs_n > dep_size:
-                    raise Exception(
-                        f"Taskipelago: region '{rname}' uses '{dep_name}*{abs_n}' but region "
-                        f"'{dep_name}' only has {dep_size} task(s)."
-                    )
-                reqs.append({"region": dep_name, "abs_count": abs_n})
-            region_prereq_reqs[rname] = reqs
-
-        _assert_no_region_cycles(raw_regions, region_prereq_reqs)
-
-        parsed_region_prereqs: Dict[str, Node | None] = {}
-        for rname, ast_r in region_prereqs_unresolved.items():
-            region_pct = {
-                req["region"]: req["pct"]
-                for req in region_prereq_reqs[rname]
-                if "pct" in req
-            }
-            parsed_region_prereqs[rname] = resolve_ast_refs(ast_r, {}, region_pct)
-
-        # ------------------------------------------------------------------ #
         # 8. Parse progressive groups                                         #
         # ------------------------------------------------------------------ #
         raw_prog_groups = [
@@ -1178,6 +1179,148 @@ class TaskipelagoWorld(World):
             parsed_reward_prereqs.append(resolve_ast_refs(ast, group_thresh, {}))
 
         # ------------------------------------------------------------------ #
+        # 9b. Parse region-to-region prereqs                                  #
+        # ------------------------------------------------------------------ #
+        # Runs after the progressive groups and item prereqs so a region's
+        # item(...) scope can resolve group names against the finished groups.
+        # region_prereqs_input already carries editor->YAML index translation,
+        # quoted-name resolution and randomization renumbering (steps 4, 5, 5b).
+        raw_prereq_by_region: Dict[str, str] = {
+            rname: region_prereqs_input.get(rname, "") for rname in raw_regions
+        }
+        region_prereq_text: Dict[str, str] = dict(raw_prereq_by_region)
+
+        # A subregion always depends on its parent implicitly: the parent's bare
+        # region reference (its default percentage) is ANDed onto whatever the
+        # subregion's own 'Depends on' expression says. A parent that holds no
+        # tasks of its own has nothing to complete, so the subregion inherits the
+        # parent's gate instead; nesting is one level, so parent text is never
+        # itself rewritten here. Cycles (a parent depending on its own subregion)
+        # are caught by _assert_no_region_cycles below.
+        for _rname, _pname in region_parent.items():
+            _implicit = _pname if region_to_task_indices.get(_pname) else raw_prereq_by_region.get(_pname, "")
+            if not _implicit:
+                continue
+            _own = region_prereq_text.get(_rname, "")
+            region_prereq_text[_rname] = f"({_implicit}) && ({_own})" if _own else _implicit
+
+        # task(...) / item(...) scopes: inside the wrapper the expression is an
+        # ordinary task or item prereq. Items are padded/trimmed to the task
+        # count, so both scopes index 1..n.
+        region_scoped_domains = {
+            "task": {"n": n, "groups": None, "regions": region_set,
+                     "const": n, "label": "region task prereq"},
+            "item": {"n": n, "groups": prog_group_set, "regions": None,
+                     "const": n, "label": "region item prereq"},
+        }
+
+        region_prereqs_unresolved: Dict[str, Node | None] = {}
+        for rname in raw_regions:
+            ast_r = parse_prereq(
+                region_prereq_text[rname], 0, 0, "region prereq",
+                known_groups=None, known_regions=region_set,
+                location_label=f"region '{rname}'",
+                n_tasks_const=n,
+                scoped_domains=region_scoped_domains,
+            )
+            region_prereqs_unresolved[rname] = ast_r
+
+        # Validate the scoped task / item references.
+        region_scoped_group_reqs: Dict[str, List[Tuple[str, int]]] = {r: [] for r in raw_regions}
+        for rname, ast_r in region_prereqs_unresolved.items():
+            if not has_scoped(ast_r):
+                continue
+            for leaf in collect_leaves(ast_r, "task"):
+                if task_region[leaf] == rname:
+                    raise Exception(
+                        f"Taskipelago: region '{rname}' depends on task {leaf + 1}, which is in "
+                        f"that same region, so the task would have to unlock itself."
+                    )
+            for leaf in collect_leaves(ast_r, "item"):
+                g = reward_to_group[leaf] if leaf < len(reward_to_group) else ""
+                if g and group_types.get(g) == "random-choice":
+                    raise Exception(
+                        f"Taskipelago: region '{rname}' depends on item {leaf + 1} inside "
+                        f"random-choice group '{g}'. Reference the group instead."
+                    )
+            for gname, _pos in collect_group_refs(ast_r):
+                raise Exception(
+                    f"Taskipelago: region '{rname}' uses progressive group '{gname}' in ordering "
+                    f"mode. A region dependency must use count mode ('{gname}*N'), since an "
+                    f"ordering position belongs to a single task."
+                )
+            for gname, cnt in collect_group_count_refs(ast_r):
+                group_size = len(group_to_reward_indices.get(gname, []))
+                if group_size == 0:
+                    raise Exception(
+                        f"Taskipelago: region '{rname}' references progressive group '{gname}' "
+                        f"which has no rewards assigned to it."
+                    )
+                if cnt < 1 or cnt > group_size:
+                    raise Exception(
+                        f"Taskipelago: region '{rname}' uses '{gname}*{cnt}' but group "
+                        f"'{gname}' only has {group_size} reward(s)."
+                    )
+                region_scoped_group_reqs[rname].append((gname, cnt))
+
+        region_prereq_reqs: Dict[str, List[dict]] = {}
+        for rname, ast_r in region_prereqs_unresolved.items():
+            pct_refs = collect_region_refs(ast_r)
+            abs_refs = collect_region_abs_refs(ast_r)
+            reqs: List[dict] = []
+            for dep_name, pct_val in pct_refs:
+                if dep_name == rname:
+                    raise Exception(f"Taskipelago: region '{rname}' cannot depend on itself.")
+                pct = pct_val if pct_val is not None else region_default_pcts.get(dep_name, 100)
+                if pct < 0 or pct > 100:
+                    raise Exception(
+                        f"Taskipelago: region '{rname}' prereq on region '{dep_name}' "
+                        f"percentage {pct} must be 0-100."
+                    )
+                if not region_to_task_indices.get(dep_name):
+                    raise Exception(
+                        f"Taskipelago: region '{rname}' depends on region '{dep_name}' "
+                        f"which has no tasks assigned."
+                    )
+                reqs.append({"region": dep_name, "pct": pct})
+            for dep_name, abs_n in abs_refs:
+                if dep_name == rname:
+                    raise Exception(f"Taskipelago: region '{rname}' cannot depend on itself.")
+                dep_size = len(region_to_task_indices.get(dep_name, []))
+                if dep_size == 0:
+                    raise Exception(
+                        f"Taskipelago: region '{rname}' depends on region '{dep_name}' "
+                        f"which has no tasks assigned."
+                    )
+                if abs_n < 1 or abs_n > dep_size:
+                    raise Exception(
+                        f"Taskipelago: region '{rname}' uses '{dep_name}*{abs_n}' but region "
+                        f"'{dep_name}' only has {dep_size} task(s)."
+                    )
+                reqs.append({"region": dep_name, "abs_count": abs_n})
+            region_prereq_reqs[rname] = reqs
+
+        _assert_no_region_cycles(raw_regions, region_prereq_reqs)
+
+        parsed_region_prereqs: Dict[str, Node | None] = {}
+        for rname, ast_r in region_prereqs_unresolved.items():
+            region_pct = {
+                req["region"]: req["pct"]
+                for req in region_prereq_reqs[rname]
+                if "pct" in req
+            }
+            parsed_region_prereqs[rname] = resolve_ast_refs(ast_r, {}, region_pct)
+
+        # Regions that use a task(...) / item(...) scope ship their resolved
+        # expression so the client can gate on it; a plain region-to-region
+        # dependency keeps travelling as task_region_reqs alone, exactly as before.
+        region_prereq_exprs: Dict[str, str] = {
+            rname: ast_to_text(ast_r)
+            for rname, ast_r in parsed_region_prereqs.items()
+            if ast_r is not None and has_scoped(ast_r)
+        }
+
+        # ------------------------------------------------------------------ #
         # 10. Parse task prereqs                                              #
         # ------------------------------------------------------------------ #
         parsed_prereqs_unresolved = []
@@ -1248,7 +1391,7 @@ class TaskipelagoWorld(World):
                 region_ast = parsed_region_prereqs[rname_i]
                 ast = region_ast if ast is None else ("and", [ast, region_ast])
 
-            if ast is not None and i in collect_leaves(ast):
+            if ast is not None and i in collect_leaves(ast, "task"):
                 raise Exception(f"Taskipelago: task {i + 1} cannot require itself.")
             parsed_prereqs.append(ast)
 
@@ -1256,6 +1399,10 @@ class TaskipelagoWorld(World):
             # don't affect the pct map used to resolve the task's own ast above.
             if rname_i:
                 task_region_reqs[i].extend(region_prereq_reqs.get(rname_i, []))
+                # Count-mode progressive group refs from the region's item(...) scope
+                # gate every task in the region; appended after the reward prereqs
+                # were resolved, so a task's own thresholds are untouched.
+                task_progressive_reqs[i].extend(region_scoped_group_reqs.get(rname_i, []))
         _assert_no_cycles(parsed_prereqs, n)
 
         # ------------------------------------------------------------------ #
@@ -1470,8 +1617,14 @@ class TaskipelagoWorld(World):
         forced_prog: set = set()
         for ast in parsed_reward_prereqs:
             forced_prog.update(collect_leaves(ast))
+        # Items a region's item(...) scope depends on gate every task in that
+        # region, so they must be progression just like an item prereq's.
+        for ast in parsed_region_prereqs.values():
+            forced_prog.update(collect_leaves(ast, "item"))
         referenced_groups: set = set()
         for ast in parsed_reward_prereqs:
+            referenced_groups.update(_collect_group_names(ast))
+        for ast in parsed_region_prereqs.values():
             referenced_groups.update(_collect_group_names(ast))
         for gname, indices in group_to_reward_indices.items():
             # Progressive groups are always forced; other types only when referenced.
@@ -1531,6 +1684,7 @@ class TaskipelagoWorld(World):
         self._task_region_reqs = task_region_reqs
         self._region_to_task_indices = region_to_task_indices
         self._region_prereq_text = region_prereq_text
+        self._region_prereq_exprs = region_prereq_exprs
         self._region_prereq_reqs = region_prereq_reqs
         self._parsed_region_prereqs = parsed_region_prereqs
         self._consumable_groups = consumable_groups
@@ -1740,6 +1894,8 @@ class TaskipelagoWorld(World):
             "region_default_pcts": dict(self._region_default_pcts),
             "region_colors": list(self._region_colors),
             "region_parent": dict(self._region_parent),
+            # Only regions that use task(...) / item(...); older clients ignore it.
+            "region_prereq_exprs": dict(self._region_prereq_exprs),
             "task_region": list(self._task_region),
             "task_region_reqs": [list(reqs) for reqs in self._task_region_reqs],
             "task_description": list(self._task_descriptions),
@@ -1955,7 +2111,7 @@ def _collect_group_names(node: Node | None) -> set:
     op = node[0]
     if op in ("group", "group_count", "group_ref"):
         return {node[1]}
-    if op in ("and", "or"):
+    if op in ("and", "or", "scoped_task", "scoped_item"):
         out: set = set()
         for c in node[1]:
             out |= _collect_group_names(c)
@@ -1975,7 +2131,7 @@ def _compute_topo_depths(parsed_prereqs: list, n: int) -> List[int]:
             return 0  # cycle; handled elsewhere
         computing[v] = True
         prereq_ast = parsed_prereqs[v] if v < len(parsed_prereqs) else None
-        deps = collect_leaves(prereq_ast)
+        deps = collect_leaves(prereq_ast, "task")
         d = (max(depth(u) for u in deps) + 1) if deps else 0
         computing[v] = False
         depths[v] = d
@@ -1997,7 +2153,7 @@ def _assert_no_cycles(parsed_prereqs: list, n: int) -> None:
         if v in visited:
             return
         visiting.add(v)
-        for u in collect_leaves(parsed_prereqs[v]):
+        for u in collect_leaves(parsed_prereqs[v], "task"):
             dfs(u)
         visiting.discard(v)
         visited.add(v)

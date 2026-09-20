@@ -1,7 +1,7 @@
 // Port of export_yaml (legacy_client/client.py:2947-3292), UNIFY 5.3.
 // Every validation, its order and its message text match the legacy client;
 // tests/parity/export_golden.json holds the reference results.
-import { parsePrereq, parseCostExpr, validateRefName } from '../shared/prereq_parser.js';
+import { parsePrereq, parseCostExpr, mapScopedText, validateRefName } from '../shared/prereq_parser.js';
 import { randomFiller as defaultRandomFiller } from '../shared/filler.js';
 import { remapPrereqIndices, remapCostIndices } from '../shared/expr_rewrite.js';
 import { pyInt, pySlice, pyStrip } from '../shared/pyish.js';
@@ -199,7 +199,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   let totalTaskSlots = taskCounts.reduce((a, b) => a + b, 0);
   let totalItemSlots = itemCounts.reduce((a, b) => a + b, 0);
   const randomized = usesRandomization(model);
-  const regionPrereqs = regionNames.map(n => regionByName.get(n).prereq ?? '');
+  let regionPrereqs = regionNames.map(n => regionByName.get(n).prereq ?? '');
   const randomCheck = () => checkRandomization({
     model, tasks, taskCounts, taskRegions, regionNames, regionPrereqs, itemRows,
     taskPrereqs: taskPrereqs.map(t => resolveNameRefs(t, tasks)[0]),
@@ -230,6 +230,12 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   });
   itemPrereqsRaw.forEach((ipr, i) => {
     nameErrors.push(...resolveNameRefs(ipr, rawItemNames)[1].map(e => `Task ${i + 1} item prereqs: ${e}`));
+  });
+  // Quoted names inside a region's task(...) / item(...) scopes.
+  regionNames.forEach(name => {
+    mapScopedText(regionByName.get(name).prereq,
+      t => { nameErrors.push(...resolveNameRefs(t, tasks)[1].map(e => `Region '${name}' depends on: ${e}`)); return t; },
+      t => { nameErrors.push(...resolveNameRefs(t, rawItemNames)[1].map(e => `Region '${name}' depends on: ${e}`)); return t; });
   });
   if (nameErrors.length) return fail('Unresolved Names', 'Unresolved name references:\n\n' + nameErrors.join('\n'));
 
@@ -291,9 +297,19 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     if (goalNameErrors.length) exprErrors.push('Goal tasks: ' + goalNameErrors.join('; '));
     else attempt(() => parsePrereq(resolvedGoal, nTasks, 0, 'goal tasks', null, regionSet), 'Goal tasks: ');
   }
+  // A region "Depends on" may wrap an ordinary task or item expression in
+  // task(...) / item(...); each scope validates in its own index space.
+  const regionScopes = {
+    task: { n: nTasks, groups: null, regions: regionSet, const: nTasks, label: 'region task prereq' },
+    item: { n: nItems, groups: groupSet, regions: null, const: nTasks, label: 'region item prereq' },
+  };
   for (const name of regionNames) {
     const rpr = regionByName.get(name).prereq;
-    if (rpr) attempt(() => parsePrereq(rpr, 0, 0, 'region prereq', null, regionSet));
+    if (!rpr) continue;
+    const resolved = mapScopedText(rpr,
+      t => resolveNameRefs(t, tasks)[0], t => resolveNameRefs(t, rawItemNames)[0]);
+    attempt(() => parsePrereq(
+      resolved, 0, 0, 'region prereq', null, regionSet, `region '${name}'`, nTasks, regionScopes));
   }
   if (exprErrors.length) {
     return fail('Invalid Expressions',
@@ -311,6 +327,9 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   if (itemRowExportIdxs.some((idxs, i) => idxs.length !== 1 || idxs[0] !== i + 1)) {
     itemPrereqsRaw = itemPrereqsRaw.map(t => remapPrereqIndices(t, itemRowExportIdxs));
     taskCosts = taskCosts.map(t => remapCostIndices(t, itemRowExportIdxs));
+    // Only the item(...) scope of a region "Depends on" holds item indices.
+    regionPrereqs = regionPrereqs.map(t =>
+      mapScopedText(t, null, inner => remapPrereqIndices(inner, itemRowExportIdxs)));
   }
 
   const clickerError = validateClicker(model, {

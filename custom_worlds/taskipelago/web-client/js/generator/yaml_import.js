@@ -7,6 +7,7 @@
 // (tests/parity/yaml_corpus/) importing exactly as it did in the Tk client.
 import { isFillerExact, randomFiller as defaultRandomFiller } from '../shared/filler.js';
 import { collapseCopyGroups, remapPrereqIndices, remapCostIndices } from '../shared/expr_rewrite.js';
+import { mapScopedText } from '../shared/prereq_parser.js';
 import {
   PyError, isDict, pyGet, pyInt, pyList, pyListOr, pyStr, pyStrip, pyTruthy,
 } from '../shared/pyish.js';
@@ -285,6 +286,11 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     for (const t of tasks) {
       t.itemPrereq = remapPrereqIndices(collapseCopyGroups(t.itemPrereq, flatToRow), flatToRow);
       t.cost = remapCostIndices(t.cost, flatToRow);
+    }
+    // A region "Depends on" carries item indices only inside its item(...) scope.
+    for (const r of model.regions) {
+      r.prereq = mapScopedText(r.prereq, null,
+        t => remapPrereqIndices(collapseCopyGroups(t, flatToRow), flatToRow));
     }
   }
 

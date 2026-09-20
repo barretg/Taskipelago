@@ -238,10 +238,25 @@ class RegionPrereqs(OptionList):
         otherregion       -> that region's default percentage of tasks must be completed
         otherregion-75    -> exactly 75% of that region's tasks must be completed
         otherregion*5     -> exactly 5 tasks in that region must be completed
-    Combine with &&, ||, and (). A region cannot depend on itself, and dependency
-    cycles between regions are not allowed. Task/item indices and progressive groups
-    are not valid here - only other region names. Missing or empty entries mean the
-    region has no additional requirement of its own.
+    Combine with &&, ||, and ().
+    A specific task or item can also gate the region by wrapping it in task( ... )
+    or item( ... ):
+        task(3)           -> task 3 must be completed
+        task("Do dishes") -> that task must be completed (quoted name)
+        task(1 || 2)      -> task 1 or task 2 must be completed
+        task(caves-50)    -> 50% of the caves region must be completed
+        item(4)           -> item 4 must have been received
+        item("Blue Key")  -> that item must have been received (quoted name)
+        item(keys*3)      -> 3 items from progressive group "keys" (count mode only;
+                             the ordering form "keys" on its own is not allowed here)
+    Inside task( ... ) any task prereq expression is valid except 'prev' and
+    'sequential'; inside item( ... ) any item prereq expression is valid except item
+    copy counts. task( ... ) may not reference a task in the region it gates, may not
+    reference a task in a randomized region, and item( ... ) may not name an
+    individual item inside a random-choice progressive group.
+    A region cannot depend on itself, and dependency cycles between regions are not
+    allowed. Missing or empty entries mean the region has no additional requirement
+    of its own.
     """
     display_name = "Region Prereqs"
     default: List[str] = []

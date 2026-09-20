@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, List
-from .prereq_parser import Node, eval_node, _has_or, collect_leaves
+from .prereq_parser import Node, eval_node, _has_or, collect_leaves, has_scoped
 
 try:
     from RuleBuilder import RuleBuilder as _RuleBuilder
@@ -27,7 +27,10 @@ def _set_rules_builder(world: "TaskipelagoWorld", player: int, n: int) -> None:
     has_prog = any(reqs for reqs in world._task_progressive_reqs)
     has_region = any(reqs for reqs in world._task_region_reqs)
     has_cost = any(reqs for reqs in world._task_cost_reqs)
-    if (has_prog or has_region or has_cost
+    # A task(...) / item(...) scope mixes both item name lists into one AST, which
+    # the RuleBuilder path (one flat has() list) cannot express.
+    has_scope = any(has_scoped(ast) for ast in world._parsed_prereqs)
+    if (has_prog or has_region or has_cost or has_scope
             or any(_has_or(ast) for ast in world._parsed_prereqs + world._parsed_reward_prereqs)):
         _set_rules_lambda(world, player, n)
         return
@@ -62,6 +65,8 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
     region_tokens = world._region_token_names           # Dict[str, List[str]]
     consumable_display = world._consumable_group_display_names  # Dict[str, List[str]]
     task_cost_reqs = world._task_cost_reqs              # List[List[List[Tuple[str, int]]]] - OR of AND branches
+    # Name list each region task(...) / item(...) scope resolves its leaves against.
+    scoped_names = {"task": token_names, "item": reward_names}
 
     for i in range(n):
         token_ast = world._parsed_prereqs[i]
@@ -77,10 +82,10 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
             def complete_rule(state, ta=token_ast, ra=reward_ast, cr=cost_reqs,
                               p=player, tn=token_names, rn=reward_names,
                               gi=group_items, rt=region_tokens,
-                              cd=consumable_display) -> bool:
-                if not eval_node(ta, state, p, tn, gi, rt):
+                              cd=consumable_display, sn=scoped_names) -> bool:
+                if not eval_node(ta, state, p, tn, gi, rt, sn):
                     return False
-                if not eval_node(ra, state, p, rn, gi, rt):
+                if not eval_node(ra, state, p, rn, gi, rt, sn):
                     return False
                 if cr and not any(
                     all(state.has_from_list(cd.get(cname, []), p, thr) for cname, thr in branch)
@@ -97,12 +102,12 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
         def reward_rule(state, mt=my_token, ta=token_ast, ra=reward_ast, cr=cost_reqs,
                         p=player, tn=token_names, rn=reward_names,
                         gi=group_items, rt=region_tokens,
-                        cd=consumable_display) -> bool:
+                        cd=consumable_display, sn=scoped_names) -> bool:
             if not state.has(mt, p):
                 return False
-            if not eval_node(ta, state, p, tn, gi, rt):
+            if not eval_node(ta, state, p, tn, gi, rt, sn):
                 return False
-            if not eval_node(ra, state, p, rn, gi, rt):
+            if not eval_node(ra, state, p, rn, gi, rt, sn):
                 return False
             if cr and not any(
                 all(state.has_from_list(cd.get(cname, []), p, thr) for cname, thr in branch)

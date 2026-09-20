@@ -11,7 +11,8 @@ const { parsePrereq, parseCostExpr, RESERVED_WORDS } = await importModule('share
 function run(c) {
   try {
     const ast = c.kind === 'prereq'
-      ? parsePrereq(c.text, c.n, c.task_index, c.label, c.groups, c.regions, c.location_label)
+      ? parsePrereq(c.text, c.n, c.task_index, c.label, c.groups, c.regions, c.location_label,
+        c.n_tasks_const ?? null, c.scopes ?? null)
       : parseCostExpr(c.text, c.consumables, c.items, c.n_tasks ?? 0);
     return { ast };
   } catch (e) {

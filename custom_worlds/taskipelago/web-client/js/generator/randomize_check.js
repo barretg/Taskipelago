@@ -79,10 +79,24 @@ export function finalCounts(model, taskRows, itemRows) {
   return { tasks, items };
 }
 
+const WALK_PARENTS = ['and', 'or', 'scoped_task', 'scoped_item'];
+
 function walk(node, fn) {
   if (node === null || node === undefined) return;
   fn(node);
-  if (Array.isArray(node) && (node[0] === 'and' || node[0] === 'or')) node[1].forEach(c => walk(c, fn));
+  if (Array.isArray(node) && WALK_PARENTS.includes(node[0])) node[1].forEach(c => walk(c, fn));
+}
+
+/** Int leaves of one scope only: 'task' keeps task(...), 'item' keeps item(...). */
+export function scopedLeaves(node, domain) {
+  if (node === null || node === undefined) return [];
+  if (typeof node === 'number') return [];
+  const op = node[0];
+  if (op === 'scoped_task' || op === 'scoped_item') {
+    return op === `scoped_${domain}` ? leaves(node[1][0]) : [];
+  }
+  if (op === 'and' || op === 'or') return node[1].flatMap(c => scopedLeaves(c, domain));
+  return [];
 }
 
 export function leaves(node) {
@@ -183,14 +197,31 @@ export function checkRandomization(o) {
       }
     }
   });
+  const nItemRows = o.itemRows.length;
+  const regionScopes = {
+    task: { n: o.tasks.length, groups: null, regions: regionSet,
+            const: o.tasks.length, label: 'region task prereq' },
+    item: { n: nItemRows, groups: groupSet, regions: null,
+            const: o.tasks.length, label: 'region item prereq' },
+  };
   o.regionNames.forEach((name, ri) => {
     const text = o.regionPrereqs[ri];
     if (!text) return;
     let ast;
-    try { ast = parsePrereq(text, 0, 0, 'region prereq', null, regionSet); } catch (_) { return; }
+    try {
+      ast = parsePrereq(text, 0, 0, 'region prereq', null, regionSet,
+        `region '${name}'`, o.tasks.length, regionScopes);
+    } catch (_) { return; }
     for (const [, dep, k] of nodesOf(ast, ['region_abs'])) {
       if (regionKeep.has(dep) && k > regionKeep.get(dep)) {
         errors.push(`Region '${name}' uses '${dep}*${k}' but randomized region '${dep}' keeps ${regionKeep.get(dep)}.`);
+      }
+    }
+    // task(...) must not single out a task that randomization may drop.
+    for (const leaf of scopedLeaves(ast, 'task')) {
+      if (randomOf(leaf)) {
+        errors.push(`Region '${name}' depends on task ${leaf + 1} inside randomized region `
+          + `'${randomOf(leaf)}'. Reference the region as a whole instead.`);
       }
     }
   });
@@ -261,6 +292,31 @@ export function checkRandomization(o) {
       }
       if (op === 'group_ref' && n !== null && n > 100) {
         errors.push(`Task ${i + 1} uses '${g}-${n}' but the percentage must be 0-100.`);
+      }
+    }
+  });
+
+  // Region item(...) scopes, once the per-group keep counts are known.
+  o.regionNames.forEach((name, ri) => {
+    const text = o.regionPrereqs[ri];
+    if (!text) return;
+    let ast;
+    try {
+      ast = parsePrereq(text, 0, 0, 'region prereq', null, regionSet,
+        `region '${name}'`, o.tasks.length, regionScopes);
+    } catch (_) { return; }
+    for (const leaf of scopedLeaves(ast, 'item')) {
+      const row = o.itemRows[leaf];
+      if (row && !row.filler && row.group && groupSetting(model, row.group).type === 'random-choice') {
+        errors.push(`Region '${name}' depends on item ${leaf + 1} inside random-choice group `
+          + `'${row.group}'. Reference the group instead.`);
+      }
+    }
+    for (const [op, g, k] of nodesOf(ast, ['group_ref', 'group_count'])) {
+      if (op === 'group_ref') continue; // rejected at generation; count mode only
+      if (groupSetting(model, g).type === 'progressive') continue;
+      if (k > (groupSize.get(g) || 0)) {
+        errors.push(`Region '${name}' uses '${g}*${k}' but group '${g}' keeps ${groupSize.get(g) || 0} item(s).`);
       }
     }
   });

@@ -43,11 +43,23 @@ def run_case(parser, case: dict) -> dict:
         if case["kind"] == "prereq":
             groups = case.get("groups")
             regions = case.get("regions")
+            scopes = case.get("scopes")
+            if scopes is not None:
+                scopes = {
+                    key: {
+                        **spec,
+                        "groups": set(spec["groups"]) if spec.get("groups") is not None else None,
+                        "regions": set(spec["regions"]) if spec.get("regions") is not None else None,
+                    }
+                    for key, spec in scopes.items()
+                }
             ast = parser.parse_prereq(
                 case["text"], case["n"], case["task_index"], case["label"],
                 known_groups=set(groups) if groups is not None else None,
                 known_regions=set(regions) if regions is not None else None,
                 location_label=case.get("location_label"),
+                n_tasks_const=case.get("n_tasks_const"),
+                scoped_domains=scopes,
             )
         else:
             ast = parser.parse_cost_expr(case["text"], set(case["consumables"]), case.get("items"), case.get("n_tasks", 0))

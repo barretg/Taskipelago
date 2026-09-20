@@ -6,12 +6,18 @@ Grammar:
     or_expr  := and_expr ('||' and_expr)*
     and_expr := atom ('&&' atom | ',' atom)*
     atom     := INTEGER | INTEGER*INTEGER | NAME | NAME*INTEGER | NAME-INTEGER | '(' expr ')'
+                | 'task' '(' expr ')' | 'item' '(' expr ')'   (region prereqs only)
 
     INTEGER   - 1-based task/item index
     INDEX*Y   - item prereqs only: the first Y copies of item INDEX (a row with count > 1)
     NAME      - group or region reference (resolved against known_groups / known_regions)
     NAME*N    - group count mode (N items from group) or region absolute count (N tasks)
     NAME-N    - group ordering mode (N-th position) or region percentage (N%)
+
+    task(EXPR) / item(EXPR) - region "Depends on" only: EXPR is an ordinary task or item
+                   prereq expression, and the whole region waits on it. task(...) sees task
+                   indices and region names, item(...) sees item indices and progressive
+                   group names.
 
     "prev" and "sequential" are reserved keywords, valid only in task prereqs
     (label == "task prereq"):
@@ -34,6 +40,10 @@ Output AST nodes:
     ("seq_flag",)               - "sequential" marker; always true, carries no dependency
     ("item_copies", idx, y)     - first y copies of item idx (0-based); expanded to an AND of
                                   YAML indices by _translate_prereq_indices before generation
+    ("scoped_task", [node])     - region prereqs only: task(...) - the wrapped expression is
+                                  evaluated against task indices / regions
+    ("scoped_item", [node])     - region prereqs only: item(...) - the wrapped expression is
+                                  evaluated against item indices / progressive groups
 
 group_count and region_abs nodes are already resolved (count embedded) and pass through
 resolve_ast_refs unchanged.
@@ -322,6 +332,61 @@ def resolve_suffix_int(suffix, n_tasks: int, label: str, loc: str) -> "int | Non
     return num_expr_to_int(fold_num_expr(suffix, n_tasks, label, loc))
 
 
+def map_scoped_text(text: str, task_fn=None, item_fn=None) -> str:
+    """
+    Rewrite the contents of the task(...) / item(...) wrappers in a region prereq.
+    task_fn / item_fn each take the inner expression text and return its
+    replacement; text outside a wrapper is left exactly as written. Quoted
+    names are skipped over so a '(' inside a name never opens a scope.
+    """
+    if not text:
+        return text
+    out: List[str] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if c == '"':
+            j = text.find('"', i + 1)
+            j = n if j < 0 else j + 1
+            out.append(text[i:j])
+            i = j
+            continue
+        if c.isalpha() or c == "_":
+            j = i
+            while j < n and (text[j].isalnum() or text[j] == "_"):
+                j += 1
+            word = text[i:j]
+            if word in ("task", "item") and j < n and text[j] == "(":
+                depth = 0
+                k = j
+                while k < n:
+                    ch = text[k]
+                    if ch == '"':
+                        q = text.find('"', k + 1)
+                        k = n if q < 0 else q + 1
+                        continue
+                    if ch == "(":
+                        depth += 1
+                    elif ch == ")":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    k += 1
+                if k < n:
+                    inner = text[j + 1:k]
+                    fn = task_fn if word == "task" else item_fn
+                    out.append(f"{word}({inner if fn is None else fn(inner)})")
+                    i = k + 1
+                    continue
+            out.append(word)
+            i = j
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def parse_prereq(
     text: str,
     n_tasks: int,
@@ -331,6 +396,7 @@ def parse_prereq(
     known_regions=None,
     location_label: str | None = None,
     n_tasks_const: int | None = None,
+    scoped_domains: dict | None = None,
 ) -> Node | None:
     """
     Parse a prereq expression string into an AST.
@@ -343,6 +409,11 @@ def parse_prereq(
                      (e.g. "region 'chores'") - for non-task callers like region prereqs.
     n_tasks_const: value bound to N_TASKS in -N / *N suffix expressions; defaults to
                      n_tasks (which is the item count for item prereqs).
+    scoped_domains: enables the task(...) / item(...) scope wrappers (region prereqs).
+                     {"task": {...}, "item": {...}} where each spec may set
+                     "n", "groups", "regions", "const" and "label"; the wrapped
+                     expression parses in that context and becomes a
+                     ("scoped_task"|"scoped_item", [node]) node.
     """
     text = text.strip()
     if not text:
@@ -354,6 +425,15 @@ def parse_prereq(
     if not tokens:
         return None
 
+    # Parsing context; task(...) / item(...) push a scoped copy onto the stack.
+    ctx = [{
+        "n": n_tasks,
+        "groups": known_groups,
+        "regions": known_regions,
+        "const": n_tasks if n_tasks_const is None else n_tasks_const,
+        "label": label,
+    }]
+
     pos = [0]
 
     def peek():
@@ -364,7 +444,7 @@ def parse_prereq(
         if expected is not None and tok != expected:
             raise Exception(
                 f"Taskipelago: expected '{expected}' but got '{_tok_text(tok)}' "
-                f"in {label} on {loc}."
+                f"in {ctx[-1]['label']} on {loc}."
             )
         pos[0] += 1
         return tok
@@ -389,37 +469,60 @@ def parse_prereq(
         return _simplify("and", nodes)
 
     def parse_atom():
+        c = ctx[-1]
+        c_label = c["label"]
+        c_n = c["n"]
+        c_groups = c["groups"]
+        c_regions = c["regions"]
         tok = peek()
         if tok is None:
             raise Exception(
-                f"Taskipelago: unexpected end of {label} expression on {loc}."
+                f"Taskipelago: unexpected end of {c_label} expression on {loc}."
             )
         if tok == "(":
             consume("(")
             node = parse_expr()
             consume(")")
             return node
+        if (scoped_domains and isinstance(tok, str) and tok in scoped_domains
+                and pos[0] + 1 < len(tokens) and tokens[pos[0] + 1] == "("):
+            consume()
+            consume("(")
+            spec = scoped_domains[tok]
+            ctx.append({
+                "n": spec.get("n", 0),
+                "groups": spec.get("groups"),
+                "regions": spec.get("regions"),
+                "const": spec.get("const", spec.get("n", 0)),
+                "label": spec.get("label", c_label),
+            })
+            try:
+                node = parse_expr()
+                consume(")")
+            finally:
+                ctx.pop()
+            return (f"scoped_{tok}", [node])
         if isinstance(tok, int):
             consume()
             idx_1 = tok
-            if idx_1 < 1 or idx_1 > n_tasks:
+            if idx_1 < 1 or idx_1 > c_n:
                 raise Exception(
-                    f"Taskipelago: {label} index '{idx_1}' on {loc} "
-                    f"is out of range (1..{n_tasks})."
+                    f"Taskipelago: {c_label} index '{idx_1}' on {loc} "
+                    f"is out of range (1..{c_n})."
                 )
             return idx_1 - 1  # 0-based
         if isinstance(tok, tuple) and tok[0] == "copies":
             consume()
             _, idx_1, y = tok
-            if label != "item prereq":
+            if c_label != "item prereq":
                 raise Exception(
                     f"Taskipelago: '{idx_1}*{y}' copy counts can only be used in item prereqs "
-                    f"(used in {label} on {loc})."
+                    f"(used in {c_label} on {loc})."
                 )
-            if idx_1 < 1 or idx_1 > n_tasks:
+            if idx_1 < 1 or idx_1 > c_n:
                 raise Exception(
-                    f"Taskipelago: {label} index '{idx_1}' on {loc} "
-                    f"is out of range (1..{n_tasks})."
+                    f"Taskipelago: {c_label} index '{idx_1}' on {loc} "
+                    f"is out of range (1..{c_n})."
                 )
             if y < 1:
                 raise Exception(
@@ -429,10 +532,10 @@ def parse_prereq(
         if isinstance(tok, str) and tok not in ("&&", "||", "(", ")", ","):
             consume()
             if tok in RESERVED_WORDS:
-                if label != "task prereq":
+                if c_label != "task prereq":
                     raise Exception(
                         f"Taskipelago: '{tok}' can only be used in task prereqs "
-                        f"(used in {label} on {loc})."
+                        f"(used in {c_label} on {loc})."
                     )
                 if tok == "prev":
                     if task_index < 1:
@@ -443,27 +546,25 @@ def parse_prereq(
                     return task_index - 1
                 return ("seq_flag",)
             _known = set()
-            if known_groups:
-                _known |= set(known_groups)
-            if known_regions:
-                _known |= set(known_regions)
+            if c_groups:
+                _known |= set(c_groups)
+            if c_regions:
+                _known |= set(c_regions)
             base, suffix, mode = split_name_suffix(tok, _known or None)
-            suffix = resolve_suffix_int(
-                suffix, n_tasks if n_tasks_const is None else n_tasks_const, label, loc
-            )
-            if known_groups is not None and base in known_groups:
+            suffix = resolve_suffix_int(suffix, c["const"], c_label, loc)
+            if c_groups is not None and base in c_groups:
                 if mode == "star":
                     return ("group_count", base, suffix)
                 return ("group_ref", base, suffix)
-            if known_regions is not None and base in known_regions:
+            if c_regions is not None and base in c_regions:
                 if mode == "star":
                     return ("region_abs", base, suffix)
                 return ("region_ref", base, suffix)
             raise Exception(
-                f"Taskipelago: unknown name '{base}' in {label} on {loc}."
+                f"Taskipelago: unknown name '{base}' in {c_label} on {loc}."
             )
         raise Exception(
-            f"Taskipelago: unexpected token '{tok}' in {label} on {loc}."
+            f"Taskipelago: unexpected token '{tok}' in {c_label} on {loc}."
         )
 
     result = parse_expr()
@@ -545,6 +646,17 @@ def _fold_to_text(node: Node | None) -> Tuple[str, str]:
     if op == "region_abs":
         _, name, n = node
         return ("atom", f"{name}*{n}")
+    if op == "group":
+        _, name, count = node
+        return ("atom", f"{name}*{count}")
+    if op == "region":
+        _, name, pct = node
+        return ("atom", f"{name}-{pct}")
+    if op in ("scoped_task", "scoped_item"):
+        kind, text = _fold_to_text(node[1][0])
+        if kind == "true":
+            return ("true", "")
+        return ("atom", f"{'task' if op == 'scoped_task' else 'item'}({text})")
     if op == "item_copies":
         _, idx, y = node
         return ("atom", f"{idx + 1}*{y}")
@@ -625,8 +737,11 @@ def _tokenize(text: str, task_index: int, label: str, location_label: str | None
     return tokens
 
 
-def collect_leaves(node: Node | None) -> List[int]:
-    """Return all 0-based task/item indices (int leaves) referenced in an AST node."""
+def collect_leaves(node: Node | None, domain: str | None = None) -> List[int]:
+    """Return all 0-based task/item indices (int leaves) referenced in an AST node.
+    domain ("task" or "item") keeps only leaves of that scope: scoped_task /
+    scoped_item subtrees of the other domain are skipped. The default (None)
+    descends into everything, which is what every pre-scope AST needs."""
     if node is None:
         return []
     if isinstance(node, int):
@@ -636,11 +751,27 @@ def collect_leaves(node: Node | None) -> List[int]:
         return [node[1]]
     if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region", "seq_flag"):
         return []
+    if op in ("scoped_task", "scoped_item"):
+        if domain is not None and op != f"scoped_{domain}":
+            return []
+        return collect_leaves(node[1][0], domain)
     _, children = node
     result = []
     for child in children:
-        result.extend(collect_leaves(child))
+        result.extend(collect_leaves(child, domain))
     return result
+
+
+def has_scoped(node: Node | None) -> bool:
+    """True when the AST carries a task(...) / item(...) scope wrapper."""
+    if node is None or isinstance(node, int):
+        return False
+    op = node[0]
+    if op in ("scoped_task", "scoped_item"):
+        return True
+    if op in ("and", "or"):
+        return any(has_scoped(c) for c in node[1])
+    return False
 
 
 def has_seq_flag(node: Node | None) -> bool:
@@ -727,22 +858,29 @@ def eval_node(
     item_names: List[str],
     group_items: dict = None,
     region_tokens: dict = None,
+    scoped_names: dict = None,
 ) -> bool:
     """
     Evaluate an AST node against a CollectionState.
     item_names: list of item name strings indexed by 0-based task/item index.
     group_items: dict {group_name: [item_name, ...]}
     region_tokens: dict {region_name: [token_item_name, ...]}
+    scoped_names: dict {"task": [...], "item": [...]} - the name list each
+                  task(...) / item(...) scope resolves its int leaves against.
     """
     if node is None:
         return True
     if isinstance(node, int):
         return state.has(item_names[node], player)
     op = node[0]
+    if op in ("scoped_task", "scoped_item"):
+        dom = "task" if op == "scoped_task" else "item"
+        names = (scoped_names or {}).get(dom, item_names)
+        return eval_node(node[1][0], state, player, names, group_items, region_tokens, scoped_names)
     if op == "and":
-        return all(eval_node(c, state, player, item_names, group_items, region_tokens) for c in node[1])
+        return all(eval_node(c, state, player, item_names, group_items, region_tokens, scoped_names) for c in node[1])
     if op == "or":
-        return any(eval_node(c, state, player, item_names, group_items, region_tokens) for c in node[1])
+        return any(eval_node(c, state, player, item_names, group_items, region_tokens, scoped_names) for c in node[1])
     if op == "group":
         _, name, count = node
         return state.has_from_list(group_items[name], player, count)
