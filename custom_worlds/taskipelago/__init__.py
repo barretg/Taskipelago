@@ -897,7 +897,22 @@ class TaskipelagoWorld(World):
         if len(raw_rpr) < len(raw_regions):
             raw_rpr += [""] * (len(raw_regions) - len(raw_rpr))
         raw_rpr = raw_rpr[:len(raw_regions)]
+        raw_prereq_by_region: Dict[str, str] = dict(zip(raw_regions, raw_rpr))
         region_prereq_text: Dict[str, str] = dict(zip(raw_regions, raw_rpr))
+
+        # A subregion always depends on its parent implicitly: the parent's bare
+        # region reference (its default percentage) is ANDed onto whatever the
+        # subregion's own 'Depends on' expression says. A parent that holds no
+        # tasks of its own has nothing to complete, so the subregion inherits the
+        # parent's gate instead; nesting is one level, so parent text is never
+        # itself rewritten here. Cycles (a parent depending on its own subregion)
+        # are caught by _assert_no_region_cycles below.
+        for _rname, _pname in region_parent.items():
+            _implicit = _pname if region_to_task_indices.get(_pname) else raw_prereq_by_region.get(_pname, "")
+            if not _implicit:
+                continue
+            _own = region_prereq_text.get(_rname, "")
+            region_prereq_text[_rname] = f"({_implicit}) && ({_own})" if _own else _implicit
 
         region_prereqs_unresolved: Dict[str, Node | None] = {}
         for rname in raw_regions:

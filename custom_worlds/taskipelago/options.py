@@ -256,6 +256,11 @@ class RegionParent(OptionList):
     region for tasks, prereqs, randomization and colors; the only difference is that
     the client's region progress list hides it until its parent row is expanded, and
     the parent's bar also counts its subregions' tasks.
+    A subregion always depends on its parent implicitly: the parent's bare region
+    reference (its default percentage of tasks) is added to the subregion's own
+    region_prereqs entry, so none of the subregion's tasks unlock until the parent
+    is that far along. A parent with no tasks of its own has nothing to complete, so
+    its subregions inherit the parent's region_prereqs entry instead.
     Nesting is one level deep: a region named here as a parent may not itself have a
     parent. A randomized region (region_random_pick) may not be a parent, but a
     subregion may be randomized.
