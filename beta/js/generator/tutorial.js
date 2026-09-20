@@ -32,11 +32,26 @@ const V11_STEPS = [
     + '  intro-75          75% of intro\'s tasks done\n'
     + '  intro*5           5 tasks in intro done\n'
     + 'Combine them with &&, || and parentheses: intro && (caves || cliffs).\n\n'
-    + "Individual tasks, items, 'prev' and 'sequential' are not allowed here; put those in the "
-    + "task's own prereqs instead.\n\n"
-    + 'A region cannot depend on itself, the region it names must have at least one task '
-    + 'assigned, and cycles between regions (a depends on b, b depends on a) are an error. '
-    + 'Leave the field blank for a region with no gate.\n\n'
+    + 'To gate the region on one specific task or item, wrap it in task( ... ) or item( ... ). '
+    + 'Whatever goes inside the parentheses is an ordinary Task Prereq or Item Prereq '
+    + 'expression:\n'
+    + '  task(3)                   task 3 completed\n'
+    + '  task("Do the dishes")     that named task completed\n'
+    + '  task(1 || 2)              task 1 or task 2 completed\n'
+    + '  task(caves-50)            region refs work inside task( ... ) too\n'
+    + '  item(4)                   item 4 received\n'
+    + '  item("Blue Key")          that named item received\n'
+    + '  item(keys*3)              3 items from progressive group keys\n'
+    + 'Mix the two freely with the rest of the expression: '
+    + 'task(3) && (item("Blue Key") || caves-50).\n\n'
+    + 'Inside task( ... ) you may use task numbers, quoted task names and region refs. '
+    + 'Inside item( ... ) you may use item numbers, quoted item names and group counts '
+    + '(keys*3). A progressive group must use count mode here, never ordering mode '
+    + '(keys or keys-2), because an ordering position belongs to a single task. '
+    + "'prev' and 'sequential' are never allowed in a region dependency.\n\n"
+    + 'A region cannot depend on itself or on a task inside itself, the region it names must '
+    + 'have at least one task assigned, and cycles between regions (a depends on b, b depends '
+    + 'on a) are an error. Leave the field blank for a region with no gate.\n\n'
     + 'Renaming or removing a region that other regions depend on asks what to do with those '
     + 'expressions, the same as for Task Prereqs.',
   ]],
@@ -50,7 +65,9 @@ const V11_STEPS = [
     + '  chores*5          5 of the kept tasks done (at most the Keep value)\n'
     + 'Tasks inside a randomized region may depend on tasks in normal regions.\n\n'
     + 'Not allowed: referencing an individual task in or from inside a randomized region, by '
-    + "number, quoted name, 'prev' or 'sequential'. Reference the region as a whole instead.\n\n"
+    + "number, quoted name, 'prev' or 'sequential'. Reference the region as a whole instead. "
+    + "That includes a region dependency's task( ... ), and item( ... ) may not name an "
+    + 'individual item inside a random-choice group.\n\n'
     + 'Goal Tasks may name individual tasks in a randomized region. Generation guarantees at least '
     + 'one way to meet the goal: with 4 || 10, at least one of tasks 4 and 10 is kept. Export '
     + 'fails if no way to meet the goal fits within the Keep values.\n\n'

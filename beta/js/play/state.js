@@ -45,6 +45,9 @@ export const state = {
   regionParent: {},            // subregion name -> parent region name
   taskRegion: [],
   taskRegionReqs: [],
+  // Region name -> resolved "Depends on" expression, only for regions that use
+  // a task(...) / item(...) scope; plain region deps still ride taskRegionReqs.
+  regionPrereqExprs: {},
   taskDescriptions: [],
   bingoMode: false,
   bingoDimX: 5,

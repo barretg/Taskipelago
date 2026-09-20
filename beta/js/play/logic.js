@@ -118,6 +118,30 @@ export function regionReqSatisfiedAbs(rname, requiredCount, checked) {
   return done >= requiredCount;
 }
 
+/**
+ * A region's "Depends on" expression, for regions that use a task(...) or
+ * item(...) scope. Bare names outside a scope are region references, exactly as
+ * they are inside task(...).
+ */
+export function regionPrereqSatisfied(rname, checked) {
+  const text = (state.regionPrereqExprs || {})[rname];
+  if (!text) return true;
+  const taskScope = {
+    leafFn: idx1 => state.baseCompleteId !== null && checked.has(state.baseCompleteId + idx1 - 1),
+    nameFn: (name, starN, dashN) => (starN !== null && starN !== undefined
+      ? regionReqSatisfiedAbs(name, starN, checked)
+      : regionReqSatisfied(name, dashN === null || dashN === undefined ? 100 : dashN, checked)),
+  };
+  const have = receivedItemIds();
+  const base = state.baseItemId;
+  const itemScope = {
+    leafFn: idx1 => typeof base === 'number' && have.has(base + idx1 - 1),
+    nameFn: (name, starN) => progressiveReqSatisfied(name, starN === null || starN === undefined ? 1 : starN),
+  };
+  return evalPrereqExpr(text, taskScope.leafFn, taskScope.nameFn,
+    { task: taskScope, item: itemScope });
+}
+
 // =============================================================
 // Consumable helpers
 // =============================================================

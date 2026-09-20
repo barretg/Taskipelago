@@ -12,6 +12,8 @@
 //   ['region_ref', name, pct|null]  ['region_abs', name, n]
 //   ['seq_flag']
 //   ['item_copies', idx, y]      first y copies of item idx (INDEX*Y, item prereqs only)
+//   ['scoped_task', [node]]      task(...) wrapper (region prereqs only)
+//   ['scoped_item', [node]]      item(...) wrapper (region prereqs only)
 //   ['cost_group', name, count]  (cost expressions)
 //
 // Python details kept for parity: str.isspace()/strip() character set,
@@ -218,12 +220,75 @@ function tokenize(chars, taskIndex, label, locationLabel) {
 }
 
 /**
+ * Port of prereq_parser.py map_scoped_text. Rewrites the contents of the
+ * task(...) / item(...) wrappers in a region prereq; text outside a wrapper is
+ * left exactly as written and quoted names are skipped over.
+ */
+export function mapScopedText(text, taskFn = null, itemFn = null) {
+  if (!text) return text;
+  const chars = Array.from(text);
+  const n = chars.length;
+  const findQuote = from => {
+    for (let k = from; k < n; k++) if (chars[k] === '"') return k;
+    return -1;
+  };
+  const out = [];
+  let i = 0;
+  while (i < n) {
+    const c = chars[i];
+    if (c === '"') {
+      const q = findQuote(i + 1);
+      const j = q < 0 ? n : q + 1;
+      out.push(chars.slice(i, j).join(''));
+      i = j;
+      continue;
+    }
+    if (isAlpha(c) || c === '_') {
+      let j = i;
+      while (j < n && (isAlpha(chars[j]) || isDigit(chars[j]) || chars[j] === '_')) j++;
+      const word = chars.slice(i, j).join('');
+      if ((word === 'task' || word === 'item') && chars[j] === '(') {
+        let depth = 0;
+        let k = j;
+        while (k < n) {
+          const ch = chars[k];
+          if (ch === '"') {
+            const q = findQuote(k + 1);
+            k = q < 0 ? n : q + 1;
+            continue;
+          }
+          if (ch === '(') depth++;
+          else if (ch === ')') {
+            depth--;
+            if (depth === 0) break;
+          }
+          k++;
+        }
+        if (k < n) {
+          const inner = chars.slice(j + 1, k).join('');
+          const fn = word === 'task' ? taskFn : itemFn;
+          out.push(`${word}(${fn ? fn(inner) : inner})`);
+          i = k + 1;
+          continue;
+        }
+      }
+      out.push(word);
+      i = j;
+      continue;
+    }
+    out.push(c);
+    i++;
+  }
+  return out.join('');
+}
+
+/**
  * Parse a prereq expression. Returns null for an empty expression, throws Error
  * with the Python message otherwise. Integer leaves are 0-based.
  */
 export function parsePrereq(text, nTasks, taskIndex, label,
                             knownGroups = null, knownRegions = null, locationLabel = null,
-                            nTasksConst = null) {
+                            nTasksConst = null, scopedDomains = null) {
   const chars = pyStrip(text);
   if (!chars.length) return null;
 
@@ -234,13 +299,22 @@ export function parsePrereq(text, nTasks, taskIndex, label,
   const tokens = tokenize(chars, taskIndex, label, locationLabel);
   if (!tokens.length) return null;
 
+  // Parsing context; task(...) / item(...) push a scoped copy onto the stack.
+  const ctx = [{
+    n: nTasks,
+    groups,
+    regions,
+    const: nTasksConst === null ? nTasks : nTasksConst,
+    label,
+  }];
+
   let pos = 0;
   const peek = () => (pos < tokens.length ? tokens[pos] : null);
   const consume = (expected = null) => {
     if (pos >= tokens.length) fail(INDEX_ERROR);
     const tok = tokens[pos];
     if (expected !== null && tok !== expected) {
-      fail(`Taskipelago: expected '${expected}' but got '${tokText(tok)}' in ${label} on ${loc}.`);
+      fail(`Taskipelago: expected '${expected}' but got '${tokText(tok)}' in ${ctx[ctx.length - 1].label} on ${loc}.`);
     }
     pos++;
     return tok;
@@ -267,9 +341,14 @@ export function parsePrereq(text, nTasks, taskIndex, label,
   }
 
   function parseAtom() {
+    const c = ctx[ctx.length - 1];
+    const cLabel = c.label;
+    const cN = c.n;
+    const cGroups = c.groups;
+    const cRegions = c.regions;
     const tok = peek();
     if (tok === null) {
-      fail(`Taskipelago: unexpected end of ${label} expression on ${loc}.`);
+      fail(`Taskipelago: unexpected end of ${cLabel} expression on ${loc}.`);
     }
     if (tok === '(') {
       consume('(');
@@ -277,21 +356,42 @@ export function parsePrereq(text, nTasks, taskIndex, label,
       consume(')');
       return node;
     }
+    if (scopedDomains && typeof tok === 'string' && Object.hasOwn(scopedDomains, tok)
+        && tokens[pos + 1] === '(') {
+      consume();
+      consume('(');
+      const spec = scopedDomains[tok];
+      ctx.push({
+        n: spec.n ?? 0,
+        groups: toSet(spec.groups ?? null),
+        regions: toSet(spec.regions ?? null),
+        const: spec.const ?? spec.n ?? 0,
+        label: spec.label ?? cLabel,
+      });
+      let node;
+      try {
+        node = parseExpr();
+        consume(')');
+      } finally {
+        ctx.pop();
+      }
+      return [`scoped_${tok}`, [node]];
+    }
     if (typeof tok === 'bigint') {
       consume();
-      if (tok < 1n || tok > BigInt(nTasks)) {
-        fail(`Taskipelago: ${label} index '${tok}' on ${loc} is out of range (1..${nTasks}).`);
+      if (tok < 1n || tok > BigInt(cN)) {
+        fail(`Taskipelago: ${cLabel} index '${tok}' on ${loc} is out of range (1..${cN}).`);
       }
       return Number(tok) - 1;
     }
     if (Array.isArray(tok) && tok[0] === 'copies') {
       consume();
       const [, idx, y] = tok;
-      if (label !== 'item prereq') {
-        fail(`Taskipelago: '${idx}*${y}' copy counts can only be used in item prereqs (used in ${label} on ${loc}).`);
+      if (cLabel !== 'item prereq') {
+        fail(`Taskipelago: '${idx}*${y}' copy counts can only be used in item prereqs (used in ${cLabel} on ${loc}).`);
       }
-      if (idx < 1n || idx > BigInt(nTasks)) {
-        fail(`Taskipelago: ${label} index '${idx}' on ${loc} is out of range (1..${nTasks}).`);
+      if (idx < 1n || idx > BigInt(cN)) {
+        fail(`Taskipelago: ${cLabel} index '${idx}' on ${loc} is out of range (1..${cN}).`);
       }
       if (y < 1n) fail(`Taskipelago: copy count in '${idx}*${y}' on ${loc} must be at least 1.`);
       return ['item_copies', Number(idx) - 1, Number(y)];
@@ -299,8 +399,8 @@ export function parsePrereq(text, nTasks, taskIndex, label,
     if (typeof tok === 'string' && !['&&', '||', '(', ')', ','].includes(tok)) {
       consume();
       if (RESERVED_WORDS.has(tok)) {
-        if (label !== 'task prereq') {
-          fail(`Taskipelago: '${tok}' can only be used in task prereqs (used in ${label} on ${loc}).`);
+        if (cLabel !== 'task prereq') {
+          fail(`Taskipelago: '${tok}' can only be used in task prereqs (used in ${cLabel} on ${loc}).`);
         }
         if (tok === 'prev') {
           if (taskIndex < 1) {
@@ -310,19 +410,18 @@ export function parsePrereq(text, nTasks, taskIndex, label,
         }
         return ['seq_flag'];
       }
-      const known = new Set([...(groups || []), ...(regions || [])]);
+      const known = new Set([...(cGroups || []), ...(cRegions || [])]);
       const [base, suffix, mode] = splitNameSuffix(
-        tok, known.size ? known : null, nTasksConst === null ? nTasks : nTasksConst,
-        { label, loc });
-      if (groups !== null && groups.has(base)) {
+        tok, known.size ? known : null, c.const, { label: cLabel, loc });
+      if (cGroups !== null && cGroups.has(base)) {
         return mode === 'star' ? ['group_count', base, suffix] : ['group_ref', base, suffix];
       }
-      if (regions !== null && regions.has(base)) {
+      if (cRegions !== null && cRegions.has(base)) {
         return mode === 'star' ? ['region_abs', base, suffix] : ['region_ref', base, suffix];
       }
-      fail(`Taskipelago: unknown name '${base}' in ${label} on ${loc}.`);
+      fail(`Taskipelago: unknown name '${base}' in ${cLabel} on ${loc}.`);
     }
-    fail(`Taskipelago: unexpected token '${tok}' in ${label} on ${loc}.`);
+    fail(`Taskipelago: unexpected token '${tok}' in ${cLabel} on ${loc}.`);
   }
 
   const result = parseExpr();
