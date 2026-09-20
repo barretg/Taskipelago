@@ -96,6 +96,19 @@ export function isManualTask(i) {
   return !!state.taskManual[i];
 }
 
+/**
+ * An auto-complete task completes the moment it reaches its activations; any
+ * other task stops accruing there and waits on its Complete button.
+ */
+export function isAutoComplete(i) {
+  return state.taskAutoComplete === null || !!state.taskAutoComplete[i];
+}
+
+/** Full progress, awaiting the player's Complete (or an auto-complete). */
+export function isReadyTask(i) {
+  return taskProgress(i) >= requiredActivations(i);
+}
+
 export function taskProgress(i) {
   const v = state.clickerProgress[i];
   return Number.isFinite(v) && v > 0 ? v : 0;
@@ -122,7 +135,8 @@ export function clickerModel({ offline = false, checked = allChecked() } = {}) {
     avail.push(a);
     if (a.completed) nCompleted++;
     if (a.unlocked || a.completed) nUnlocked++;
-    if (a.unlocked && !a.completed && !isManualTask(i)) eligible.push(i);
+    // A ready task has nothing left to earn, so production flows to the rest.
+    if (a.unlocked && !a.completed && !isManualTask(i) && !isReadyTask(i)) eligible.push(i);
   }
   const bindings = numExprBindings(n, nUnlocked, nCompleted);
   const counts = itemCopyCounts();
@@ -307,7 +321,7 @@ export function offlineRateFactor(i, bindings) {
 export function settle(seconds, { offline = false } = {}) {
   let remaining = seconds;
   let guard = state.tasks.length + 1;
-  let completedAny = false;
+  let completedAny = completeReadyAuto();
 
   while (remaining > 1e-9 && guard-- > 0) {
     const m = clickerModel({ offline });
@@ -334,10 +348,38 @@ export function settle(seconds, { offline = false } = {}) {
     }
     remaining -= step;
     if (!finished.length) break;
-    for (const i of finished) completeTask(i);
+    // A task that is not auto-complete just leaves the eligible pool, which
+    // still re-binds the next segment (a distributed share grows).
+    for (const i of finished) if (isAutoComplete(i)) completeTask(i);
     completedAny = true;
   }
   return completedAny;
+}
+
+/**
+ * Complete any unlocked auto-complete task already at full progress, e.g.
+ * progress synced from another client. Returns true when one completed.
+ */
+function completeReadyAuto() {
+  const checked = allChecked();
+  let any = false;
+  for (let i = 0; i < state.tasks.length; i++) {
+    if (isManualTask(i) || !isAutoComplete(i) || !isReadyTask(i)) continue;
+    const a = taskAvailability(i, checked);
+    if (!a.unlocked || a.completed) continue;
+    completeTask(i);
+    any = true;
+  }
+  return any;
+}
+
+/** The Complete button on a ready, non-auto-complete card. */
+export function completeReadyTask(i) {
+  if (!state.clickerMode || isDeathLinkLocked() || isManualTask(i) || !isReadyTask(i)) return false;
+  const a = taskAvailability(i, allChecked());
+  if (!a.unlocked || a.completed) return false;
+  completeTask(i);
+  return true;
 }
 
 /** A manual click on one task. Returns true when the task completed. */
@@ -349,7 +391,7 @@ export function clickTask(i) {
   // Click power is per target, so a click is worth this task's click value.
   state.clickerProgress[i] = Math.min(need, taskProgress(i) + m.taskClickValue[i]);
   saveClickerProgress();
-  if (state.clickerProgress[i] >= need) {
+  if (state.clickerProgress[i] >= need && isAutoComplete(i)) {
     completeTask(i);
     return true;
   }
@@ -368,7 +410,7 @@ function clickerTick() {
   if (dt <= 0) return;
   const completedAny = settle(dt);
   writeClickerProgress(state.clickerProgress, now);
-  if (completedAny) return; // completeTask already re-rendered
+  // completeTask re-renders, but a task that only became ready did not.
   renderClicker();
 }
 
@@ -481,6 +523,7 @@ function visibleTasks(m) {
       locked: !a.unlocked,
       hiddenName: wouldHide,
       completed: a.completed,
+      ready: !a.completed && !!a.unlocked && isReadyTask(i),
       reasons: a.reasons,
       branches,
       purchasable: !!a.costOnlyLocked && effectiveLock && branches.length > 0,
@@ -495,7 +538,7 @@ export function renderClicker() {
   const m = clickerModel();
   const rows = visibleTasks(m);
 
-  const sig = rows.map(r => `${r.i}:${r.locked ? 'L' : ''}${r.completed ? 'C' : ''}${r.hiddenName ? 'H' : ''}${r.purchasable ? '$' : ''}${r.canMakeChange ? 'M' : ''}`).join(',');
+  const sig = rows.map(r => `${r.i}:${r.locked ? 'L' : ''}${r.completed ? 'C' : ''}${r.ready ? 'R' : ''}${r.hiddenName ? 'H' : ''}${r.purchasable ? '$' : ''}${r.canMakeChange ? 'M' : ''}`).join(',');
   if (sig !== lastSignature) {
     lastSignature = sig;
     buildGrid(rows, m);
@@ -510,7 +553,8 @@ function buildGrid(rows, m) {
   for (const row of rows) {
     const i = row.i;
     const card = document.createElement('div');
-    card.className = 'clicker-card' + (row.completed ? ' is-done' : row.locked ? ' is-locked' : '');
+    card.className = 'clicker-card'
+      + (row.completed ? ' is-done' : row.locked ? ' is-locked' : row.ready ? ' is-ready' : '');
 
     const name = document.createElement('div');
     name.className = 'clicker-name';
@@ -566,6 +610,12 @@ function buildGrid(rows, m) {
           card.appendChild(price);
         }
         if (row.purchasable || row.canMakeChange) card.appendChild(cardActions(row));
+      } else if (row.ready) {
+        btn = document.createElement('button');
+        btn.className = 'clicker-click-btn clicker-complete-btn';
+        btn.textContent = 'Complete';
+        btn.onclick = () => completeReadyTask(i);
+        card.appendChild(btn);
       } else {
         btn = document.createElement('button');
         btn.className = 'clicker-click-btn';
@@ -613,8 +663,8 @@ function updateGrid(rows, m) {
     n.prog.textContent = `${fmt(have, 1)} / ${need}`;
     n.bar.style.width = `${Math.min(100, (have / need) * 100)}%`;
     const r = m.rate[i] || 0;
-    n.rate.textContent = row.locked ? 'locked' : r > 0 ? `+${fmt(r)}/s` : 'click only';
-    n.click.textContent = row.locked ? '' : `click +${fmt(m.taskClickValue[i])}`;
+    n.rate.textContent = row.locked ? 'locked' : row.ready ? 'ready' : r > 0 ? `+${fmt(r)}/s` : 'click only';
+    n.click.textContent = row.locked || row.ready ? '' : `click +${fmt(m.taskClickValue[i])}`;
 
     // Targeted grants: what makes this task different from the rest.
     const aimed = grantsForTask(m, i).filter(g => g.spec && g.spec.kind !== KIND_ALL);
@@ -624,7 +674,7 @@ function updateGrid(rows, m) {
     n.card.title = cardBreakdown(m, i, row);
     if (n.btn) {
       n.btn.disabled = dlLocked;
-      n.btn.textContent = `Click +${fmt(m.taskClickValue[i])}`;
+      if (!row.ready) n.btn.textContent = `Click +${fmt(m.taskClickValue[i])}`;
     }
   }
   // Purchase / Make Change buttons live outside `nodes` (a completed card has

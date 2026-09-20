@@ -180,6 +180,8 @@ function applySlotData(sd) {
   state.clickerMode         = !!sd.clicker_mode;
   state.taskActivations     = Array.isArray(sd.task_activations) ? sd.task_activations : [];
   state.taskManual          = Array.isArray(sd.task_manual) ? sd.task_manual : [];
+  // A seed from before the flag always auto-completed, so absence keeps that.
+  state.taskAutoComplete    = Array.isArray(sd.task_auto_complete) ? sd.task_auto_complete : null;
   state.itemProduction      = Array.isArray(sd.item_production) ? sd.item_production : [];
   // Click power and the two multipliers are targeted lists like the rest, but a
   // seed generated before targeting sends one slot-wide value per item, so each
@@ -309,6 +311,7 @@ function clearPlayState() {
   state.clickerMode = false;
   state.taskActivations = [];
   state.taskManual = [];
+  state.taskAutoComplete = null;
   state.itemProduction = [];
   state.itemClickPower = [];
   state.itemProductionMult = [];

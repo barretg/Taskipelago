@@ -127,6 +127,13 @@ class TaskManualTest(unittest.TestCase):
         self.assertEqual(world().fill_slot_data()["task_manual"], [False, False, False])
 
 
+    def test_auto_complete_defaults_off(self):
+        self.assertEqual(world().fill_slot_data()["task_auto_complete"], [False, False, False])
+        w = world(task_auto_complete=["", "true", ""])
+        self.assertEqual(w.fill_slot_data()["task_auto_complete"], [False, True, False])
+        with self.assertRaises(Exception):
+            world(task_auto_complete=["maybe"])
+
 class ItemProductionTest(unittest.TestCase):
     def test_targets_resolve(self):
         w = world(item_production=['"Bake Bread"-1.5', 'Kitchen-0.5', '*-0.1'])

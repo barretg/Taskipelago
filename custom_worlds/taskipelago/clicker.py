@@ -132,7 +132,7 @@ def parse_task_activations(raw: List[str], n_rows: int, n_tasks: int,
 
 def parse_task_flags(raw: List[str], n_rows: int, label: str,
                      row_label: str = "task") -> List[bool]:
-    """'true'/'false'/blank per row; blank is False. Used by task_manual."""
+    """'true'/'false'/blank per row; blank is False. Used by task_manual and task_auto_complete."""
     out: List[bool] = []
     for i in range(n_rows):
         text = (raw[i].strip().lower() if i < len(raw) else "")

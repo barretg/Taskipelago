@@ -365,6 +365,35 @@ test('manual tasks take no production and leave the clicker grid', async () => {
   assert.equal(document.getElementById('clicker-manual').classList.contains('hidden'), false);
 });
 
+test('without auto-complete a full task waits for its Complete button', async () => {
+  await boot({
+    task_auto_complete: [false, true, false, false],
+    item_production: [[{ kind: 'task', ref: 0, rate: 1 }, { kind: 'task', ref: 1, rate: 1 }], [], [], [], []],
+  });
+  give('Sponge');
+  board.settle(20);
+  const checks = () => sent.filter(m => m.cmd === 'LocationChecks').flatMap(m => m.locations);
+  // Task 2 auto-completed; task 1 sits full and leaves the eligible pool.
+  assert.deepEqual(checks(), [201, 101]);
+  assert.equal(board.taskProgress(0), 10);
+  assert.equal(board.isReadyTask(0), true);
+  assert.ok(!board.clickerModel().eligible.includes(0));
+  assert.equal(board.clickTask(0), false);
+
+  board.renderClicker();
+  const btn = document.querySelector('#clicker-grid .clicker-complete-btn');
+  assert.ok(btn);
+  btn.click();
+  assert.deepEqual(checks(), [201, 101, 200, 100]);
+});
+
+test('an older seed without the flag still auto-completes', async () => {
+  await boot({ item_production: [[{ kind: 'task', ref: 0, rate: 1 }], [], [], [], []] });
+  give('Sponge');
+  board.settle(20);
+  assert.deepEqual(sent.filter(m => m.cmd === 'LocationChecks').flatMap(m => m.locations), [200, 100]);
+});
+
 test('with no manual tasks the manual section stays hidden', async () => {
   await boot({ item_production: [[{ kind: 'all', ref: null, rate: 1 }], [], [], [], []] });
   assert.equal(document.getElementById('clicker-manual').classList.contains('hidden'), true);

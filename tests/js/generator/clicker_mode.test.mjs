@@ -211,6 +211,18 @@ test('a slot with nothing manual writes no manual keys', async () => {
   assert.deepEqual(model.regions.map(g => g.manual), [false, false]);
 });
 
+test('auto-complete exports only when set and round-trips', async () => {
+  let r = await build(clickerModel());
+  assert.ok(!('task_auto_complete' in r.data.Taskipelago));
+  const m = clickerModel();
+  m.tasks[1].autoComplete = true;
+  r = await build(m);
+  assert.deepEqual(r.data.Taskipelago.task_auto_complete, ['false', 'true']);
+  const { ok, model } = roundTrip(r.data);
+  assert.ok(ok);
+  assert.deepEqual(model.tasks.map(t => t.autoComplete), [false, true]);
+});
+
 test('click power and the multipliers carry a target too', async () => {
   const m = clickerModel();
   m.items[2].clickerTarget = 'Bake Bread';          // click power on one task

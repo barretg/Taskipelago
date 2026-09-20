@@ -594,6 +594,8 @@ button:disabled {
   font-size: 13px;
 }
 
+.clicker-card.is-ready { border-color: var(--accent, #5c8de0); }
+
 /* Purchase / Make Change on a cost-locked card. */
 .clicker-actions {
   display: flex;
@@ -1058,7 +1060,7 @@ button.primary { border-color: var(--accent); }
 
 /* Clicker mode grows both tables by its own columns. */
 .gen-task-table.clicker .gt-row {
-  grid-template-columns: 70px minmax(200px, 3fr) minmax(140px, 2fr) minmax(120px, 2fr) minmax(110px, 2fr) minmax(100px, 1.4fr) 40px 64px minmax(150px, 1.6fr) 56px 76px;
+  grid-template-columns: 70px minmax(200px, 3fr) minmax(140px, 2fr) minmax(120px, 2fr) minmax(110px, 2fr) minmax(100px, 1.4fr) 40px 64px minmax(150px, 1.6fr) 56px 56px 76px;
 }
 
 .gen-item-table.clicker .gt-row {

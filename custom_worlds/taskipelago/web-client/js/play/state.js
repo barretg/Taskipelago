@@ -59,6 +59,7 @@ export const state = {
   clickerMode: false,
   taskActivations: [],         // ints, parallel to tasks
   taskManual: [],              // bools, parallel to tasks: a normal task row, never clickable
+  taskAutoComplete: null,      // bools, parallel to tasks; null (an older seed) auto-completes all
   // Every grant kind carries a target, so each entry is a list of resolved
   // specs. A pre-targeting seed sends one bare value per item, which
   // connection.js normalizes to a single '*' spec.

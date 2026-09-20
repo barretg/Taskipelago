@@ -34,6 +34,8 @@
 
 * A task can opt out: tick **Manual** on the task row (`task_manual`), or on a region row (`region_manual`) to opt out every task in it. A manual task is never clickable, never receives production, and appears as an ordinary task row with a Complete button below the clicker cards
 
+* A clicker task that reaches its activations stops accruing and waits for its **Complete** button. Tick **Auto** on the task row (`task_auto_complete`) to have it complete itself instead
+
 * Build one in the YAML Generator tab: tick **Enable Tasclickpelago** and the task, item and region tables grow the clicker columns. `clicker_mode` and `bingo_mode` cannot both be enabled
 
 ## Setup:

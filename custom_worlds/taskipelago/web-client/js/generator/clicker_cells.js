@@ -36,6 +36,8 @@ export const TIPS = {
     + 'curve, with CPS at its base value of 1.',
   manual: 'On: this task is a normal Taskipelago task even in clicker mode. It is never clickable, never receives production, and the client shows it with a Complete button below the clicker cards.\n\n'
     + 'A task is also manual when its region is marked manual.',
+  autoComplete: 'On: this task completes itself the moment it reaches its activations.\n\n'
+    + 'Off (the default): a full task stops accruing and waits for you to press its Complete button.',
   regionManual: 'On: every task in this region is a normal (non-clicker) task, as if each were marked Manual in the task table.',
   distributed: 'Off: the rate applies in full to each eligible task in the region.\n\n'
     + 'On: the rate is split evenly among them, so the region\'s total throughput stays constant '
@@ -77,6 +79,7 @@ export function exprInput(obj, key, ctx, field, placeholder = '') {
 /** Header cells appended to the task table in clicker mode. */
 export const taskHeadCells = () => [
   tipHeader('Activations', TIPS.activations), tipHeader('Manual', TIPS.manual),
+  tipHeader('Auto', TIPS.autoComplete),
 ];
 
 /** Body cells appended to a task row in clicker mode. */
@@ -87,14 +90,22 @@ export function taskCells(task, i, ctx) {
     dataset: { field: `tasks.${i}.manual` },
     onchange: e => {
       task.manual = e.target.checked;
-      // A manual task never accrues, so its activations column is moot.
+      // A manual task never accrues, so its activations and auto-complete are moot.
       activations.querySelector('input').disabled = e.target.checked;
+      auto.disabled = e.target.checked;
       ctx.changed();
     },
   });
+  const auto = h('input', {
+    type: 'checkbox', 'aria-label': 'Auto-complete',
+    dataset: { field: `tasks.${i}.autoComplete` },
+    onchange: e => { task.autoComplete = e.target.checked; ctx.changed(); },
+  });
   manual.checked = !!task.manual;
+  auto.checked = !!task.autoComplete;
   activations.querySelector('input').disabled = !!task.manual;
-  return [activations, manual];
+  auto.disabled = !!task.manual;
+  return [activations, manual, auto];
 }
 
 /** Header cells appended to the item table in clicker mode. */

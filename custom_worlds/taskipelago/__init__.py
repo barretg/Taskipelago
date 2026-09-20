@@ -98,6 +98,7 @@ class TaskipelagoWorld(World):
     _clicker_mode: bool
     _clicker_activations: List[int]
     _clicker_manual: List[bool]
+    _clicker_auto_complete: List[bool]
     _clicker_production: List[List[dict]]
     _clicker_click_power: List[List[dict]]
     _clicker_production_mult: List[List[dict]]
@@ -140,6 +141,7 @@ class TaskipelagoWorld(World):
         clicker_mode = bool(self.options.clicker_mode)
         task_activations_raw = [str(x).strip() for x in (self.options.task_activations.value or [])]
         task_manual_raw = [str(x).strip() for x in (self.options.task_manual.value or [])]
+        task_auto_complete_raw = [str(x).strip() for x in (self.options.task_auto_complete.value or [])]
         item_production_raw = [str(x).strip() for x in (self.options.item_production.value or [])]
         item_click_power_raw = [str(x).strip() for x in (self.options.item_click_power.value or [])]
         item_production_mult_raw = [str(x).strip() for x in (self.options.item_production_mult.value or [])]
@@ -470,6 +472,11 @@ class TaskipelagoWorld(World):
             parse_task_flags(task_manual_raw, n_editor_tasks, "task_manual"),
             task_counts_editor,
         )
+        # Off by default: a full task waits for the player to press Complete.
+        clicker_auto_complete = expand_rows(
+            parse_task_flags(task_auto_complete_raw, n_editor_tasks, "task_auto_complete"),
+            task_counts_editor,
+        )
 
         def _clicker_specs(raw: List[str], label: str, **kw) -> List[List[dict]]:
             rows = [
@@ -709,6 +716,7 @@ class TaskipelagoWorld(World):
             tasks = [tasks[_old] for _old in task_order]
             clicker_activations = [clicker_activations[_old] for _old in task_order]
             clicker_manual = [clicker_manual[_old] for _old in task_order]
+            clicker_auto_complete = [clicker_auto_complete[_old] for _old in task_order]
             clicker_production_full = [
                 remap_spec_tasks(specs, task_map) for specs in clicker_production_full
             ]
@@ -772,6 +780,7 @@ class TaskipelagoWorld(World):
         clicker_click_mult = [list(v) for v in _pad_clicker(clicker_click_mult_full, [])]
         clicker_activations = _pad_clicker(clicker_activations, 1)
         clicker_manual = _pad_clicker(clicker_manual, False)
+        clicker_auto_complete = _pad_clicker(clicker_auto_complete, False)
 
         # ------------------------------------------------------------------ #
         # 6. DeathLink validation                                             #
@@ -1674,6 +1683,7 @@ class TaskipelagoWorld(World):
         self._clicker_mode = clicker_mode
         self._clicker_activations = clicker_activations
         self._clicker_manual = clicker_manual
+        self._clicker_auto_complete = clicker_auto_complete
         self._clicker_production = clicker_production
         self._clicker_click_power = clicker_click_power
         self._clicker_production_mult = clicker_production_mult
@@ -1911,6 +1921,7 @@ class TaskipelagoWorld(World):
             "clicker_mode": bool(self._clicker_mode),
             "task_activations": list(self._clicker_activations),
             "task_manual": [bool(v) for v in self._clicker_manual],
+            "task_auto_complete": [bool(v) for v in self._clicker_auto_complete],
             "item_production": [list(v) for v in self._clicker_production],
             "item_click_power": [list(v) for v in self._clicker_click_power],
             "item_production_mult": [list(v) for v in self._clicker_production_mult],

@@ -97,7 +97,7 @@ _DEFAULTS = {
     "bingo_dimension_x": 5, "bingo_dimension_y": 5, "bingoal": 1, "task_reward_previews": 0,
     "style_colors": [],
     # Tasclickpelago
-    "clicker_mode": False, "task_activations": [], "item_production": [], "task_manual": [], "region_manual": [],
+    "clicker_mode": False, "task_activations": [], "item_production": [], "task_manual": [], "task_auto_complete": [], "region_manual": [],
     "item_click_power": [], "item_production_mult": [], "item_click_mult": [],
     "item_offline_mult": [], "region_distributed_production": [],
     "clicker_distribute_global": False, "clicker_offline_progress": True,

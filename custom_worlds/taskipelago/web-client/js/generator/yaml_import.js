@@ -309,7 +309,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     name: t.name, prereq: t.prereq, itemPrereq: t.itemPrereq, cost: t.cost,
     priority: !!t.priority, count: t.count, desc: t.desc,
     region: regionSet.has(t.region) ? t.region : '',
-    activations: t.activations, manual: !!t.manual,
+    activations: t.activations, manual: !!t.manual, autoComplete: !!t.autoComplete,
   }));
 
   model.items = items.map(src => {

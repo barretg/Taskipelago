@@ -534,6 +534,18 @@ class TaskManual(OptionList):
     default: List[str] = []
 
 
+class TaskAutoComplete(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with tasks. 'true' makes a clicker task complete itself
+    the moment it reaches its activations. 'false' or blank (the default) leaves
+    it waiting at full progress until the player presses its Complete button.
+    Ignored for manual tasks.
+    """
+    display_name = "Task Auto Complete"
+    default: List[str] = []
+
+
 class RegionManual(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -747,6 +759,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     clicker_mode: ClickerMode
     task_activations: TaskActivations
     task_manual: TaskManual
+    task_auto_complete: TaskAutoComplete
     region_manual: RegionManual
     item_production: ItemProduction
     item_click_power: ItemClickPower

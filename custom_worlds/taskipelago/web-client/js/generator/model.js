@@ -46,6 +46,7 @@ export function newTask() {
     name: '', prereq: '', itemPrereq: '', cost: '', region: '', priority: false, count: 1, desc: '',
     activations: '',   // clicker mode
     manual: false,     // clicker mode: a normal task row, never clickable
+    autoComplete: false, // clicker mode: completes on reaching its activations
   };
 }
 
@@ -155,7 +156,7 @@ export function taskData(t) {
     name: pyStrip(t.name), prereq: pyStrip(t.prereq), itemPrereq: pyStrip(t.itemPrereq),
     cost: pyStrip(t.cost), region: pyStrip(t.region), priority: !!t.priority,
     count: rowCount(t.count), desc: pyStrip(t.desc),
-    activations: pyStrip(t.activations), manual: !!t.manual,
+    activations: pyStrip(t.activations), manual: !!t.manual, autoComplete: !!t.autoComplete,
   };
 }
 

@@ -62,7 +62,7 @@ export function renderTaskTable(container, ctx) {
   const clicker = !!model.clickerMode;
   container.classList.toggle('clicker', clicker);
   const extraHead = clicker ? taskHeadCells().map(c => cell(c)) : [];
-  const extraHint = clicker ? [cell(''), cell('')] : [];
+  const extraHint = clicker ? [cell(''), cell(''), cell('')] : [];
   container.replaceChildren(
     h('div', { className: 'gt-row gt-head' },
       cell('#'), cell('Task'),
