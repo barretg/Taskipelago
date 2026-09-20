@@ -73,6 +73,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   const taskDescriptions = [];
   const taskActivations = [];
   const taskManual = [];
+  const taskAutoComplete = [];
   for (const row of model.tasks) {
     const t = taskData(row);
     if (!t.name) continue;
@@ -86,6 +87,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     taskDescriptions.push(pySlice(t.desc, MAX_TASK_DESCRIPTION_LEN));
     taskActivations.push(t.activations);
     taskManual.push(t.manual);
+    taskAutoComplete.push(t.autoComplete);
   }
   if (!tasks.length) return fail('Error', 'No tasks defined.');
 
@@ -415,7 +417,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       death_link_lock_tasks: !!model.deathLinkLockTasks, // v1.1 F3
       // v1.1 F7: only non-default colors, so an all-default Style section adds nothing.
       ...clickerExportKeys(model, {
-        taskActivations, taskManual, itemSpecs, taskNames: tasks,
+        taskActivations, taskManual, taskAutoComplete, itemSpecs, taskNames: tasks,
         regionRows: regionNames.map(n => regionByName.get(n)),
       }),
       ...(styleColors.length ? { style_colors: styleColors } : {}),

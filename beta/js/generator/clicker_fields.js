@@ -248,7 +248,9 @@ function manualLookup(model, { taskNames, taskManual, taskRegions }) {
  * The clicker-only keys for the Taskipelago block, given the same expanded rows
  * the normal export uses. Returns {} when clicker mode is off.
  */
-export function clickerExportKeys(model, { taskActivations, taskManual, itemSpecs, taskNames, regionRows }) {
+export function clickerExportKeys(model, {
+  taskActivations, taskManual, taskAutoComplete, itemSpecs, taskNames, regionRows,
+}) {
   if (!model.clickerMode) return {};
   const some = list => list.some(Boolean);
   const spec = (s, kind) => {
@@ -267,6 +269,8 @@ export function clickerExportKeys(model, { taskActivations, taskManual, itemSpec
   // exports exactly the keys it did before.
   const manual = (taskManual || []).map(v => (v ? 'true' : 'false'));
   if (manual.some(v => v === 'true')) out.task_manual = manual;
+  const auto = (taskAutoComplete || []).map(v => (v ? 'true' : 'false'));
+  if (auto.some(v => v === 'true')) out.task_auto_complete = auto;
   for (const [kind, key] of Object.entries(KIND_KEYS)) {
     const list = itemSpecs.map(s => spec(s, kind));
     // item_production is always written so a clicker slot is recognizable.
@@ -295,9 +299,11 @@ const at = (list, i) => (i < list.length ? pyStrip(pyStr(list[i])) : '');
 export function clickerTaskFields(block) {
   const activations = pyListOr(block, 'task_activations');
   const manual = pyListOr(block, 'task_manual');
+  const auto = pyListOr(block, 'task_auto_complete');
   return i => ({
     activations: at(activations, i),
     manual: at(manual, i).toLowerCase() === 'true',
+    autoComplete: at(auto, i).toLowerCase() === 'true',
   });
 }
 

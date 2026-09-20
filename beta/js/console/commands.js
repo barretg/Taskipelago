@@ -192,7 +192,11 @@ const HANDLERS = {
       return false;
     }
     if (!model.eligible.includes(idx)) {
-      ctx.output(`${idx + 1}. ${state.tasks[idx]} is locked or already complete.`);
+      const ready = !board.isManualTask(idx) && board.isReadyTask(idx)
+        && model.avail[idx].unlocked && !model.avail[idx].completed;
+      ctx.output(ready
+        ? `${idx + 1}. ${state.tasks[idx]} is full; press its Complete button.`
+        : `${idx + 1}. ${state.tasks[idx]} is locked or already complete.`);
       return false;
     }
     const done = board.clickTask(idx);
