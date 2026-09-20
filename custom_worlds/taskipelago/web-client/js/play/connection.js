@@ -166,6 +166,8 @@ function applySlotData(sd) {
   state.itemConsumable      = sd.item_consumable || [];
   state.regions             = sd.regions || [];
   state.regionColors        = sd.region_colors || [];
+  state.regionParent        = (sd.region_parent && typeof sd.region_parent === 'object'
+    && !Array.isArray(sd.region_parent)) ? sd.region_parent : {};
   state.taskRegion          = sd.task_region || [];
   state.taskRegionReqs      = sd.task_region_reqs || [];
   state.taskDescriptions    = sd.task_description || [];
@@ -293,6 +295,7 @@ function clearPlayState() {
   state.itemConsumable = [];
   state.regions = [];
   state.regionColors = [];
+  state.regionParent = {};
   state.taskRegion = [];
   state.taskRegionReqs = [];
   state.taskDescriptions = [];

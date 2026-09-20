@@ -247,6 +247,23 @@ class RegionPrereqs(OptionList):
     default: List[str] = []
 
 
+class RegionParent(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with regions.
+    Each entry names another region that this region is a subregion of, or is empty
+    (the default) for a top-level region. A subregion behaves exactly like any other
+    region for tasks, prereqs, randomization and colors; the only difference is that
+    the client's region progress list hides it until its parent row is expanded, and
+    the parent's bar also counts its subregions' tasks.
+    Nesting is one level deep: a region named here as a parent may not itself have a
+    parent. A randomized region (region_random_pick) may not be a parent, but a
+    subregion may be randomized.
+    """
+    display_name = "Region Parent"
+    default: List[str] = []
+
+
 class RegionRandomPick(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -697,6 +714,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     region_default_pcts: RegionDefaultPcts
     region_colors: RegionColors
     region_prereqs: RegionPrereqs
+    region_parent: RegionParent
     region_random_pick: RegionRandomPick
     region_random_order: RegionRandomOrder
     task_region: TaskRegion

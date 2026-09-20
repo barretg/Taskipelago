@@ -25,6 +25,7 @@
        "pct": 75,
        "color": "#e05c5c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -34,6 +35,7 @@
        "pct": 100,
        "color": "#e0955c",
        "prereq": "chores-50",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -1027,6 +1029,7 @@
        "pct": 75,
        "color": "#e05c5c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -1036,6 +1039,7 @@
        "pct": 100,
        "color": "#e0955c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -1178,6 +1182,7 @@
        "pct": 75,
        "color": "#e05c5c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -1187,6 +1192,7 @@
        "pct": 100,
        "color": "#e0955c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -1329,6 +1335,7 @@
        "pct": 75,
        "color": "#e05c5c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -1338,6 +1345,7 @@
        "pct": 100,
        "color": "#e0955c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -1480,6 +1488,7 @@
        "pct": 75,
        "color": "#e05c5c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -1489,6 +1498,7 @@
        "pct": 100,
        "color": "#e0955c",
        "prereq": "chores-50",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -1631,6 +1641,7 @@
        "pct": 75,
        "color": "#e05c5c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -1640,6 +1651,7 @@
        "pct": 100,
        "color": "#e0955c",
        "prereq": "chores-50",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -2012,6 +2024,7 @@
        "pct": 100,
        "color": "#8de05c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -2021,6 +2034,7 @@
        "pct": 100,
        "color": "#e0955c",
        "prereq": "2",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -2030,6 +2044,7 @@
        "pct": 3,
        "color": "#e0d45c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -2039,6 +2054,7 @@
        "pct": 100,
        "color": "#8de05c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -2217,6 +2233,7 @@
        "pct": 100,
        "color": "#e05c5c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -2226,6 +2243,7 @@
        "pct": 100,
        "color": "#5cb85c",
        "prereq": "",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -2235,6 +2253,7 @@
        "pct": 100,
        "color": "#8e7cc3",
        "prereq": "fitness*1",
+       "parent": "",
        "distributed": false,
        "offlineRate": "",
        "manual": false
@@ -3426,6 +3445,7 @@
       "pct": 100,
       "color": "",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      },
@@ -3434,6 +3454,7 @@
       "pct": 100,
       "color": "",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      },
@@ -3442,6 +3463,7 @@
       "pct": 100,
       "color": "",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      },
@@ -3450,6 +3472,7 @@
       "pct": 100,
       "color": "",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      },
@@ -3458,6 +3481,7 @@
       "pct": 100,
       "color": "",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      },
@@ -3466,6 +3490,7 @@
       "pct": 100,
       "color": "",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      }
@@ -3557,6 +3582,7 @@
       "pct": 100,
       "color": "",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      },
@@ -3565,6 +3591,7 @@
       "pct": 100,
       "color": "",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      }
@@ -3831,6 +3858,7 @@
       "pct": 100,
       "color": "",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      }
@@ -4457,6 +4485,7 @@
       "pct": 100,
       "color": "",
       "prereq": "fun-50",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      },
@@ -4465,6 +4494,7 @@
       "pct": 100,
       "color": "",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      }
@@ -4646,6 +4676,7 @@
       "pct": 75,
       "color": "#e05c5c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      },
@@ -4654,6 +4685,7 @@
       "pct": "100",
       "color": "",
       "prereq": "chores-50",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      }
@@ -5574,6 +5606,7 @@
       "pct": 10,
       "color": "#111111",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      },
@@ -5582,6 +5615,7 @@
       "pct": 100,
       "color": "",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      },
@@ -5590,6 +5624,7 @@
       "pct": 20,
       "color": "",
       "prereq": "fun",
+      "parent": "",
       "distributed": false,
       "offlineRate": ""
      }
@@ -6118,6 +6153,7 @@
       "pct": 75,
       "color": "#e05c5c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -6127,6 +6163,7 @@
       "pct": 100,
       "color": "#e0955c",
       "prereq": "chores-50",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -7936,6 +7973,7 @@
       "pct": 75,
       "color": "#e05c5c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -7945,6 +7983,7 @@
       "pct": 100,
       "color": "#e0955c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -8213,6 +8252,7 @@
       "pct": 75,
       "color": "#e05c5c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -8222,6 +8262,7 @@
       "pct": 100,
       "color": "#e0955c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -8490,6 +8531,7 @@
       "pct": 75,
       "color": "#e05c5c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -8499,6 +8541,7 @@
       "pct": 100,
       "color": "#e0955c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -8767,6 +8810,7 @@
       "pct": 75,
       "color": "#e05c5c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -8776,6 +8820,7 @@
       "pct": 100,
       "color": "#e0955c",
       "prereq": "chores-50",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -9044,6 +9089,7 @@
       "pct": 75,
       "color": "#e05c5c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -9053,6 +9099,7 @@
       "pct": 100,
       "color": "#e0955c",
       "prereq": "chores-50",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -9562,6 +9609,7 @@
       "pct": 100,
       "color": "#8de05c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -9571,6 +9619,7 @@
       "pct": 100,
       "color": "#e0955c",
       "prereq": "2",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -9580,6 +9629,7 @@
       "pct": 3,
       "color": "#e0d45c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -9589,6 +9639,7 @@
       "pct": 100,
       "color": "#8de05c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -9764,6 +9815,7 @@
       "pct": 100,
       "color": "#e05c5c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -9773,6 +9825,7 @@
       "pct": 100,
       "color": "#5cb85c",
       "prereq": "",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false
@@ -9782,6 +9835,7 @@
       "pct": 100,
       "color": "#8e7cc3",
       "prereq": "fitness*1",
+      "parent": "",
       "distributed": false,
       "offlineRate": "",
       "manual": false

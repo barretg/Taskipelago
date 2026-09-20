@@ -93,6 +93,7 @@ class TaskipelagoWorld(World):
     _group_item_display_names: Dict[str, List[str]]
     _regions: List[str]
     _region_default_pcts: Dict[str, int]
+    _region_parent: Dict[str, str]
     _clicker_mode: bool
     _clicker_activations: List[int]
     _clicker_manual: List[bool]
@@ -766,6 +767,36 @@ class TaskipelagoWorld(World):
         if len(raw_rcolors) < len(raw_regions):
             raw_rcolors += [""] * (len(raw_regions) - len(raw_rcolors))
         region_colors = raw_rcolors[:len(raw_regions)]
+
+        # Subregions: region_parent names the region this one is displayed under.
+        # A subregion is an ordinary region everywhere else, so nothing below cares.
+        raw_rparent = [str(x).strip() for x in (self.options.region_parent.value or [])]
+        if len(raw_rparent) < len(raw_regions):
+            raw_rparent += [""] * (len(raw_regions) - len(raw_rparent))
+        raw_rparent = raw_rparent[:len(raw_regions)]
+        region_parent: Dict[str, str] = {}
+        for rname, pname in zip(raw_regions, raw_rparent):
+            if not pname:
+                continue
+            if pname == rname:
+                raise Exception(
+                    f"Taskipelago: region '{rname}' cannot be its own parent."
+                )
+            if pname not in region_set:
+                raise Exception(
+                    f"Taskipelago: region '{rname}' names unknown parent region '{pname}'."
+                )
+            region_parent[rname] = pname
+        for rname, pname in region_parent.items():
+            if region_parent.get(pname):
+                raise Exception(
+                    f"Taskipelago: region '{rname}' has parent '{pname}', which is itself a "
+                    "subregion; region nesting is only one level deep."
+                )
+            if pname in region_picks:
+                raise Exception(
+                    f"Taskipelago: region '{pname}' is randomized and cannot be a parent region."
+                )
 
         # --- Tasclickpelago: region-parallel and slot-level options ---
         def _clicker_warn(message: str) -> None:
@@ -1479,6 +1510,7 @@ class TaskipelagoWorld(World):
         self._clicker_offline_cap_hours = clicker_offline_cap_hours
         self._region_default_pcts = region_default_pcts
         self._region_colors = region_colors
+        self._region_parent = region_parent
         self._task_region = task_region
         self._task_descriptions = raw_task_description
         self._task_region_reqs = task_region_reqs
@@ -1692,6 +1724,7 @@ class TaskipelagoWorld(World):
             "regions": list(self._regions),
             "region_default_pcts": dict(self._region_default_pcts),
             "region_colors": list(self._region_colors),
+            "region_parent": dict(self._region_parent),
             "task_region": list(self._task_region),
             "task_region_reqs": [list(reqs) for reqs in self._task_region_reqs],
             "task_description": list(self._task_descriptions),

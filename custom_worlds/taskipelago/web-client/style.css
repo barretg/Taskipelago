@@ -302,6 +302,32 @@ button:disabled {
   font-size: 12px;
 }
 
+.region-progress-caret {
+  width: 12px;
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 9px;
+  text-align: center;
+  user-select: none;
+}
+
+.region-progress-row.has-subregions {
+  cursor: pointer;
+}
+
+.region-progress-row.has-subregions:hover .region-progress-name {
+  color: var(--fg);
+}
+
+.region-progress-sub .region-progress-name {
+  padding-left: 12px;
+  color: var(--muted);
+}
+
+.region-progress-sub .region-progress-bar-outer {
+  height: 7px;
+}
+
 .region-progress-name {
   width: 110px;
   flex-shrink: 0;
@@ -1087,6 +1113,8 @@ button.primary { border-color: var(--accent); }
 .region-name { width: 160px; }
 .region-prereq { width: 200px; }
 .region-head .col-prereq { width: 200px; }
+.region-head .col-parent { width: 140px; }
+.region-parent { width: 140px; }
 .region-head .col-random { width: 110px; }
 .region-head .col-pick { width: 64px; }
 .region-head .col-order { width: 130px; }
@@ -1163,7 +1191,7 @@ button.primary { border-color: var(--accent); }
   .region-row:not(.region-head) { padding-bottom: 6px; border-bottom: 1px solid var(--border); }
   .bingo-columns { grid-template-columns: 1fr; }
   .gen-namebar #gen-player-name { width: 100%; }
-  .region-name, .region-prereq { width: 100%; }
+  .region-name, .region-prereq, .region-parent { width: 100%; }
 }
 
 /* =============================================================

@@ -42,6 +42,7 @@ export const state = {
   itemConsumable: [],
   regions: [],
   regionColors: [],
+  regionParent: {},            // subregion name -> parent region name
   taskRegion: [],
   taskRegionReqs: [],
   taskDescriptions: [],

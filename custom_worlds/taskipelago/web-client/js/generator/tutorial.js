@@ -23,6 +23,24 @@ const GROUPS_TITLE = 'Item Groups (Progressive, Random-Choice, Aesthetic)';
 // v1.1 steps, each inserted after the legacy step with the given title.
 const V11_STEPS = [
   ['Regions', [
+    'Region Dependencies',
+    "Each region row has a 'Depends on' field: an expression that gates every task in that "
+    + 'region. It is added to each of the region\'s tasks on top of that task\'s own Task Prereqs, '
+    + 'so none of them unlock until it is met.\n\n'
+    + 'Only whole regions may be named:\n'
+    + '  intro             intro\'s default % of its tasks done\n'
+    + '  intro-75          75% of intro\'s tasks done\n'
+    + '  intro*5           5 tasks in intro done\n'
+    + 'Combine them with &&, || and parentheses: intro && (caves || cliffs).\n\n'
+    + "Individual tasks, items, 'prev' and 'sequential' are not allowed here; put those in the "
+    + "task's own prereqs instead.\n\n"
+    + 'A region cannot depend on itself, the region it names must have at least one task '
+    + 'assigned, and cycles between regions (a depends on b, b depends on a) are an error. '
+    + 'Leave the field blank for a region with no gate.\n\n'
+    + 'Renaming or removing a region that other regions depend on asks what to do with those '
+    + 'expressions, the same as for Task Prereqs.',
+  ]],
+  ['Regions', [
     'Randomized Regions and Dependencies',
     'A randomized region keeps only some of its tasks in each seed, so references into it '
     + 'follow stricter rules.\n\n'

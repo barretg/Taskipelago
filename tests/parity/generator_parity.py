@@ -49,7 +49,7 @@ def filler(count=1):
 
 
 def region(name, pct=100, color="", prereq=""):
-    return {"name": name, "pct": pct, "color": color, "prereq": prereq,
+    return {"name": name, "pct": pct, "color": color, "prereq": prereq, "parent": "",
             "distributed": False, "offlineRate": ""}
 
 
@@ -426,6 +426,8 @@ def apply_v11_import(doc, result: dict) -> dict:
         it["clickerTarget"] = "*"
         it["clickerValue"] = ""
     for r in m["regions"]:
+        # Subregions are a post-legacy extension; the legacy corpus has no parents.
+        r["parent"] = ""
         r["distributed"] = False
         r["offlineRate"] = ""
         r["manual"] = False

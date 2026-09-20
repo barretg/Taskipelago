@@ -142,7 +142,7 @@ test('regions: add, invalid name error, rename updates task rows, remove', async
   button(addRow, 'Add Region').click();
   await wait(5);
   assert.deepEqual(generatorModel().regions,
-    [{ name: 'chores', pct: 100, color: '#e05c5c', prereq: '', distributed: false, offlineRate: '' }]);
+    [{ name: 'chores', pct: 100, color: '#e05c5c', prereq: '', parent: '', distributed: false, offlineRate: '' }]);
 
   const taskRegion = root().querySelector('.gt-task select');
   change(taskRegion, { value: 'chores' });
@@ -401,10 +401,11 @@ test('tutorial shows the legacy steps plus the hosted/launcher and v1.1 steps', 
   button(root(), 'Tutorial').click();
   const panel = doc.querySelector('.tutorial-panel');
   assert.ok(panel);
-  assert.equal(STEPS.length, 29);
+  assert.equal(STEPS.length, 30);
   const titles = STEPS.map(s => s[0]);
   const after = (a, b) => assert.equal(titles.indexOf(b), titles.indexOf(a) + 1, `${b} follows ${a}`);
-  after('Regions', 'Randomized Regions and Dependencies');
+  after('Regions', 'Region Dependencies');
+  after('Region Dependencies', 'Randomized Regions and Dependencies');
   after('Item Groups (Progressive, Random-Choice, Aesthetic)', 'Group Types, Keep and Default %');
   after('Group Types, Keep and Default %', 'Group Colors and Renaming');
   after('Item Count and Item Settings', 'Reordering Tasks and Items');
@@ -414,9 +415,9 @@ test('tutorial shows the legacy steps plus the hosted/launcher and v1.1 steps', 
   after('Clicker Mode (Tasclickpelago)', 'Clicker Values and Constants');
   after('While Playing: Hints and Item Filters', 'Hosted Page and Launcher Client');
   assert.match(panel.textContent, /Welcome to the YAML Generator/);
-  assert.match(panel.textContent, /Step 1 of 29/);
+  assert.match(panel.textContent, /Step 1 of 30/);
   after('DeathLink Task Cards and Lock', 'Slot Colors');
-  for (let i = 0; i < 27; i++) button(panel, 'Next >').click();
+  for (let i = 0; i < 28; i++) button(panel, 'Next >').click();
   assert.match(panel.textContent, /Hosted Page and Launcher Client/);
   button(panel, 'Next >').click();
   assert.match(panel.textContent, /Export, Import, and Reset/);

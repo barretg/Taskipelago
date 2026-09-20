@@ -122,6 +122,31 @@ V11_NEW_TIPS = {
         "On: their order is shuffled per seed.\n\n"
         "Only applies when Randomize is checked for this region."
     ),
+    "rg_prereq": (
+        "Gate every task in this region behind other regions.\n\n"
+        "The expression here is added to each of this region's tasks, on top of that\n"
+        "task's own prereqs, so none of them unlock until it is satisfied:\n"
+        "  otherregion     ->  that region's default % of its tasks completed\n"
+        "  otherregion-75  ->  75% of that region's tasks completed\n"
+        "  otherregion*5   ->  5 tasks in that region completed\n"
+        "Combine with && , || and parentheses: intro && (caves || cliffs)\n\n"
+        "Only whole regions may be named here, never individual tasks, items or\n"
+        "'prev'/'sequential'. A region cannot depend on itself, the region named must\n"
+        "have at least one task, and dependency cycles between regions are an error.\n\n"
+        "Blank (the default) means the region's tasks are gated only by their own prereqs."
+    ),
+    "rg_parent": (
+        "Make this region a subregion of another region.\n\n"
+        "Blank (the default) leaves it as a top-level region.\n\n"
+        "A subregion behaves exactly like any other region: tasks are assigned to it,\n"
+        "prereqs reference it by name, it can be randomized, and it has its own color.\n"
+        "The only difference is display: the play client's region progress list hides\n"
+        "subregions until you click their parent's row to expand it. The parent's bar\n"
+        "counts its own tasks plus every task in its subregions.\n\n"
+        "Nesting is one level deep, so a region that already has subregions cannot be\n"
+        "given a parent of its own. A randomized region cannot be a parent, but a\n"
+        "subregion may be randomized."
+    ),
     "group_type": (
         "How the group behaves:\n\n"
         "  progressive    ->  items are interchangeable; grp-N is the Nth position,\n"
@@ -167,6 +192,12 @@ V11_STEP_CHANGES = {
          "The tasks are chosen when the seed is generated, so every seed can differ. The YAML keeps "
          "every task. Duplicated tasks (Count > 1) count separately. Keeping every task only warns; "
          "keeping more tasks than the region has is an error.\n\n"
+         "Subregions:\n"
+         "Set a region's Parent to file it under another region. A subregion works exactly like "
+         "any other region - tasks, prereqs, randomizing and colors all behave the same - but the "
+         "client's region progress list hides it until you click its parent's row to expand it, and "
+         "the parent's bar counts its subregions' tasks too. Nesting is one level deep, and a "
+         "randomized region cannot be a parent (though a subregion may be randomized).\n\n"
          "Regions also appear as Archipelago regions for location hinting."),
     ],
     # Item group types.
