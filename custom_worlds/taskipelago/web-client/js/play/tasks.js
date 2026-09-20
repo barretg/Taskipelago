@@ -6,7 +6,7 @@ import {
   completeTask, attemptPurchase, attemptMakeChange,
 } from './logic.js';
 import { renderBingo } from './bingo_board.js';
-import { renderClicker } from './clicker_board.js';
+import { isManualTask, renderClicker } from './clicker_board.js';
 import { ap } from './state.js';
 import { getUiPref, setUiPref } from '../shared/ui_prefs.js';
 import { h } from '../shared/dom.js';
@@ -253,17 +253,36 @@ export function renderTasks() {
     els.bingoSection.classList.add('hidden');
     els.clickerSection.classList.remove('hidden');
     renderClicker();
+    // Manual tasks opt out of clicking, so they keep the ordinary task row,
+    // Complete button and all, in their own section under the cards.
+    if (els.clickerManualList) {
+      renderTaskCards(els.clickerManualList, effectiveLock, dlLocked, isManualTask);
+      if (els.clickerManual) {
+        els.clickerManual.classList.toggle('hidden', !els.clickerManualList.children.length);
+      }
+    }
     return;
   }
 
   els.bingoSection.classList.add('hidden');
   if (els.clickerSection) els.clickerSection.classList.add('hidden');
   els.tasksList.classList.remove('hidden');
+  if (els.clickerManual) els.clickerManual.classList.add('hidden');
 
+  renderTaskCards(els.tasksList, effectiveLock, dlLocked);
+}
+
+/**
+ * The ordinary task cards, into `container`. `include` filters which task
+ * indices are drawn, which is how clicker mode puts its manual tasks in a
+ * section of their own; everything else renders the full list.
+ */
+function renderTaskCards(container, effectiveLock, dlLocked, include = null) {
   const checked = allChecked();
   const frag = document.createDocumentFragment();
 
   for (let i = 0; i < state.tasks.length; i++) {
+    if (include && !include(i)) continue;
     const taskName = state.tasks[i];
     const { completed,
       taskPrereqOk, taskPrereqText, itemPrereqOk, itemPrereqText, progHints,
@@ -390,8 +409,8 @@ export function renderTasks() {
     frag.appendChild(card);
   }
 
-  els.tasksList.innerHTML = '';
-  els.tasksList.appendChild(frag);
+  container.innerHTML = '';
+  container.appendChild(frag);
 }
 
 function makeHint(text) {

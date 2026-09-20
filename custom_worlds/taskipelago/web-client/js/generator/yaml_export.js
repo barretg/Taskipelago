@@ -72,6 +72,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   const taskCounts = [];
   const taskDescriptions = [];
   const taskActivations = [];
+  const taskManual = [];
   for (const row of model.tasks) {
     const t = taskData(row);
     if (!t.name) continue;
@@ -84,6 +85,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     taskCounts.push(t.count);
     taskDescriptions.push(pySlice(t.desc, MAX_TASK_DESCRIPTION_LEN));
     taskActivations.push(t.activations);
+    taskManual.push(t.manual);
   }
   if (!tasks.length) return fail('Error', 'No tasks defined.');
 
@@ -294,6 +296,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
 
   const clickerError = validateClicker(model, {
     taskNames: tasks, taskActivations, items, itemSpecs, regionNames,
+    taskManual, taskRegions,
   });
   if (clickerError) return { error: clickerError };
 
@@ -361,7 +364,8 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       death_link_lock_tasks: !!model.deathLinkLockTasks, // v1.1 F3
       // v1.1 F7: only non-default colors, so an all-default Style section adds nothing.
       ...clickerExportKeys(model, {
-        taskActivations, itemSpecs, taskNames: tasks, regionRows: regionNames.map(n => regionByName.get(n)),
+        taskActivations, taskManual, itemSpecs, taskNames: tasks,
+        regionRows: regionNames.map(n => regionByName.get(n)),
       }),
       ...(styleColors.length ? { style_colors: styleColors } : {}),
     },

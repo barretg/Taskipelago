@@ -130,21 +130,63 @@ def parse_task_activations(raw: List[str], n_rows: int, n_tasks: int,
     return out
 
 
+def parse_task_flags(raw: List[str], n_rows: int, label: str,
+                     row_label: str = "task") -> List[bool]:
+    """'true'/'false'/blank per row; blank is False. Used by task_manual."""
+    out: List[bool] = []
+    for i in range(n_rows):
+        text = (raw[i].strip().lower() if i < len(raw) else "")
+        if text in ("", "false"):
+            out.append(False)
+        elif text == "true":
+            out.append(True)
+        else:
+            raise Exception(
+                f"Taskipelago: {label} on {row_label} {i + 1} is '{raw[i]}'; "
+                f"expected 'true', 'false' or blank."
+            )
+    return out
+
+
 # ---------------------------------------------------------------------------
-# Targeted specs (item_production, item_offline_mult)
+# Targeted specs (every grant kind: production, click power, the
+# multipliers and the offline multiplier)
 # ---------------------------------------------------------------------------
 
 def parse_target_specs(text: str, label: str, loc: str, *, task_names: List[str],
                        region_names: "set[str]", n_tasks: int,
-                       strictly_positive: bool = True) -> List[dict]:
+                       strictly_positive: bool = True, minimum: float | None = None,
+                       allow_cps: bool = True, round_2dp: bool = False,
+                       bare_ok: bool = False) -> List[dict]:
     """
     Parse '<target>-<value>' pairs joined with '&&' into resolved specs:
         {"kind": "task"|"region"|"all", "ref": idx | region name | None, "rate": number|AST}
     Task targets resolve to 0-based indices in the expanded task list.
+
+    With `bare_ok`, a part that carries no readable target is taken as a value
+    aimed at '*'. That is what keeps the untargeted fields written by older
+    YAMLs ('item_click_power: ["2"]') meaning exactly what they meant before.
     """
     text = (text or "").strip()
     if not text:
         return []
+    if minimum is None and not strictly_positive:
+        minimum = 0.0
+
+    def _value(value_text: str) -> Any:
+        return parse_value_expr(
+            value_text, label, loc, n_tasks, strictly_positive=strictly_positive,
+            minimum=minimum, allow_cps=allow_cps, round_2dp=round_2dp,
+        )
+
+    def _is_value(value_text: str) -> bool:
+        """Does this read as a numeric expression on its own?"""
+        try:
+            parse_num_expr(value_text, label, loc, allow_live=True)
+            return True
+        except Exception:
+            return False
+
     specs: List[dict] = []
     for part in text.split("&&"):
         part = part.strip()
@@ -152,26 +194,31 @@ def parse_target_specs(text: str, label: str, loc: str, *, task_names: List[str]
             continue
         m = _TARGET_RE.match(part)
         if not m:
+            # No '<target>-' at all. An untargeted field says so by omission;
+            # a targeted one has simply been written wrong.
+            if bare_ok:
+                specs.append({"kind": KIND_ALL, "ref": None, "rate": _value(part)})
+                continue
             raise Exception(
                 f"Taskipelago: could not read '{part}' in {label} on {loc}. "
                 f"Expected '<target>-<value>', for example '\"Bake Bread\"-1.5', "
                 f"'Kitchen-0.5' or '*-0.1'."
             )
         quoted, index, star, bare, value_text = m.groups()
-        value = parse_value_expr(
-            value_text, label, loc, n_tasks, strictly_positive=strictly_positive,
-            minimum=None if strictly_positive else 0.0,
-        )
         if star:
-            specs.append({"kind": KIND_ALL, "ref": None, "rate": value})
+            specs.append({"kind": KIND_ALL, "ref": None, "rate": _value(value_text)})
         elif bare is not None:
             bare = bare.strip()
             if bare not in region_names:
+                # 'N_TASKS - 1' is a value, not a region called 'N_TASKS'.
+                if bare_ok and _is_value(part):
+                    specs.append({"kind": KIND_ALL, "ref": None, "rate": _value(part)})
+                    continue
                 raise Exception(
                     f"Taskipelago: {label} on {loc} targets unknown region '{bare}'. "
                     f"Quote the name to target a task instead."
                 )
-            specs.append({"kind": KIND_REGION, "ref": bare, "rate": value})
+            specs.append({"kind": KIND_REGION, "ref": bare, "rate": _value(value_text)})
         elif quoted is not None:
             try:
                 idx = task_names.index(quoted)
@@ -179,7 +226,7 @@ def parse_target_specs(text: str, label: str, loc: str, *, task_names: List[str]
                 raise Exception(
                     f"Taskipelago: {label} on {loc} targets unknown task '{quoted}'."
                 )
-            specs.append({"kind": KIND_TASK, "ref": idx, "rate": value})
+            specs.append({"kind": KIND_TASK, "ref": idx, "rate": _value(value_text)})
         else:
             idx_1 = int(index)
             if idx_1 < 1 or idx_1 > len(task_names):
@@ -187,8 +234,27 @@ def parse_target_specs(text: str, label: str, loc: str, *, task_names: List[str]
                     f"Taskipelago: {label} on {loc} targets task index {idx_1}, "
                     f"which is out of range (1..{len(task_names)})."
                 )
-            specs.append({"kind": KIND_TASK, "ref": idx_1 - 1, "rate": value})
+            specs.append({"kind": KIND_TASK, "ref": idx_1 - 1, "rate": _value(value_text)})
     return specs
+
+
+def drop_manual_targets(specs: List[dict], manual: List[bool]) -> Tuple[List[dict], List[int]]:
+    """
+    Remove specs aimed straight at a manual task, which is an ordinary
+    Taskipelago task and reads no clicker grant. Returns the kept specs and the
+    1-based numbers of the tasks that were dropped, for the warning.
+
+    Region and '*' specs are left alone: the client skips the manual tasks
+    inside them, exactly as it skips locked ones.
+    """
+    kept: List[dict] = []
+    dropped: List[int] = []
+    for spec in specs:
+        if spec["kind"] == KIND_TASK and 0 <= spec["ref"] < len(manual) and manual[spec["ref"]]:
+            dropped.append(spec["ref"] + 1)
+            continue
+        kept.append(spec)
+    return kept, dropped
 
 
 def remap_spec_tasks(specs: List[dict], task_map: Dict[int, int]) -> List[dict]:

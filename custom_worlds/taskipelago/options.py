@@ -448,6 +448,13 @@ class Bingoal(Range):
 # The last four change during play and are therefore legal only in the clicker
 # fields, never in prereq, goal or cost expressions. CPS is additionally
 # rejected in item_click_power and item_click_mult, which are what define it.
+# In a production rate, CPS binds to the click value of the task that rate is
+# aimed at, since click power is itself per target.
+#
+# Every grant but "unlock only" takes a target: item_production,
+# item_click_power, item_production_mult, item_click_mult and item_offline_mult
+# all use the '<target>-<value>' grammar described under item_production. The
+# three that were slot-wide before still accept a bare value, which means '*'.
 
 
 class ClickerMode(Toggle):
@@ -475,6 +482,30 @@ class TaskActivations(OptionList):
     default: List[str] = []
 
 
+class TaskManual(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with tasks. 'true' marks a task as a normal (manual)
+    task even in clicker mode: it is never clickable, never receives production,
+    and the client shows it as an ordinary task row with a Complete button below
+    the clicker cards. 'false' or blank (the default) leaves it a clicker task.
+    A task is also manual when its region is marked in region_manual.
+    """
+    display_name = "Task Manual"
+    default: List[str] = []
+
+
+class RegionManual(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with regions. 'true' makes every task in that region a
+    manual (non-clicker) task, as if each were marked in task_manual. 'false' or
+    blank (the default) leaves the region's tasks clickable.
+    """
+    display_name = "Region Manual"
+    default: List[str] = []
+
+
 class ItemProduction(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -498,8 +529,13 @@ class ItemClickPower(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
     Parallel list aligned with items. Activations added to the value of one click
-    per received copy of the item. A non-negative numeric expression; blank is 0.
-    Click value is (1 + sum of click power) * product of item_click_mult.
+    per received copy of the item, for the targeted tasks. Uses the same
+    '<target>-<value>' grammar as item_production ("Bake Bread"-2, 3-2,
+    Kitchen-2, *-2, joined with &&), so click power is adjustable per target.
+    A bare value with no target (the pre-targeting spelling) means '*'.
+    Values are non-negative numeric expressions; blank is 0.
+    A task's click value is (1 + sum of the click power aimed at it)
+    * product of the click multipliers aimed at it.
     """
     display_name = "Item Click Power"
     default: List[str] = []
@@ -508,11 +544,13 @@ class ItemClickPower(OptionList):
 class ItemProductionMult(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
-    Parallel list aligned with items. Each received copy multiplies ALL production
-    (never click power); copies stack multiplicatively. A positive numeric
-    expression, rounded to 2 decimal places when it is a plain number. Values
-    below 1 are legal (a "curse" item); 0 and negatives are an error.
-    Blank means the item is not a production multiplier.
+    Parallel list aligned with items. Each received copy multiplies the production
+    of the targeted tasks (never click power); copies stack multiplicatively.
+    Uses the same '<target>-<value>' grammar as item_production; a bare value
+    with no target (the pre-targeting spelling) means '*', i.e. all production.
+    Values are positive numeric expressions, rounded to 2 decimal places when
+    plain numbers. Values below 1 are legal (a "curse" item); 0 and negatives
+    are an error. Blank means the item is not a production multiplier.
     """
     display_name = "Item Production Multiplier"
     default: List[str] = []
@@ -521,9 +559,11 @@ class ItemProductionMult(OptionList):
 class ItemClickMult(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
-    Parallel list aligned with items. Each received copy multiplies click power
-    only (never production); copies stack multiplicatively. Same rules as
-    item_production_mult.
+    Parallel list aligned with items. Each received copy multiplies the click
+    value of the targeted tasks only (never production); copies stack
+    multiplicatively. Same '<target>-<value>' grammar and rules as
+    item_production_mult, so the multiplier can be aimed at one task, a region
+    or '*'.
     """
     display_name = "Item Click Multiplier"
     default: List[str] = []
@@ -666,6 +706,8 @@ class TaskipelagoOptions(PerGameCommonOptions):
     bingoal: Bingoal
     clicker_mode: ClickerMode
     task_activations: TaskActivations
+    task_manual: TaskManual
+    region_manual: RegionManual
     item_production: ItemProduction
     item_click_power: ItemClickPower
     item_production_mult: ItemProductionMult

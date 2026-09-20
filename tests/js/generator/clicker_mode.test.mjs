@@ -179,3 +179,108 @@ test('CPS exports in a production value and is refused in a click field', async 
   r = await build(m);
   assert.match(r.error[1], /changes during play/);
 });
+
+test('manual tasks and manual regions export and round-trip', async () => {
+  const m = clickerModel();
+  m.tasks[0].manual = true;
+  m.regions[1].manual = true;
+  // Every task is manual here, so nothing may be aimed at one.
+  m.items[0].clickerKind = 'none';
+  m.items[1].clickerKind = 'none';
+  const r = await build(m);
+  assert.ok(r.data, JSON.stringify(r.error));
+  const b = r.data.Taskipelago;
+  assert.deepEqual(b.task_manual, ['true', 'false']);
+  assert.deepEqual(b.region_manual, ['false', 'true']);
+
+  const { ok, model } = roundTrip(r.data);
+  assert.ok(ok);
+  assert.deepEqual(model.tasks.map(t => t.manual), [true, false]);
+  assert.deepEqual(model.regions.map(g => g.manual), [false, true]);
+  const again = await build(model);
+  assert.deepEqual(again.data, r.data);
+});
+
+test('a slot with nothing manual writes no manual keys', async () => {
+  const r = await build(clickerModel());
+  const b = r.data.Taskipelago;
+  assert.ok(!('task_manual' in b));
+  assert.ok(!('region_manual' in b));
+  const { model } = roundTrip(r.data);
+  assert.deepEqual(model.tasks.map(t => t.manual), [false, false]);
+  assert.deepEqual(model.regions.map(g => g.manual), [false, false]);
+});
+
+test('click power and the multipliers carry a target too', async () => {
+  const m = clickerModel();
+  m.items[2].clickerTarget = 'Bake Bread';          // click power on one task
+  m.items[3].clickerKind = 'production_mult';
+  m.items[3].clickerTarget = 'Kitchen';
+  m.items[3].clickerValue = '2';
+  const r = await build(m);
+  assert.ok(r.data, JSON.stringify(r.error));
+  const b = r.data.Taskipelago;
+  assert.deepEqual(b.item_click_power, ['', '', '"Bake Bread"-2', '', '', '']);
+  assert.deepEqual(b.item_production_mult, ['', '', '', 'Kitchen-2', '', '']);
+
+  const { model } = roundTrip(r.data);
+  assert.deepEqual(model.items.map(it => [it.clickerKind, it.clickerTarget, it.clickerValue]), [
+    ['production', 'Kitchen', '0.5'],
+    ['production', 'Fix Car', '1'],
+    ['click_power', 'Bake Bread', '2'],
+    ['production_mult', 'Kitchen', '2'],
+    ['none', '*', ''],
+  ]);
+});
+
+test('an untargeted click value still imports as a slot-wide grant', async () => {
+  const r = await build(clickerModel());
+  // The pre-targeting spelling, including a value that contains a minus.
+  const data = JSON.parse(JSON.stringify(r.data));
+  data.Taskipelago.item_click_power = ['', '', 'N_TASKS - 1', '', '', ''];
+  const { model } = roundTrip(data);
+  assert.deepEqual(
+    [model.items[2].clickerKind, model.items[2].clickerTarget, model.items[2].clickerValue],
+    ['click_power', '*', 'N_TASKS - 1'],
+  );
+});
+
+test('a bad target on a click field is caught before export', async () => {
+  const m = clickerModel();
+  m.items[2].clickerTarget = 'Basement';
+  const r = await build(m);
+  assert.match(r.error[1], /Item 'Gloves' targets 'Basement'/);
+});
+
+test('a grant cannot be aimed at a non-clicker task', async () => {
+  // Straight at a manual task.
+  let m = clickerModel();
+  m.tasks[0].manual = true;
+  m.items[0].clickerKind = 'none';        // Oven aims at Kitchen, checked first
+  m.items[2].clickerTarget = 'Bake Bread';
+  let r = await build(m);
+  assert.match(r.error[1], /Item 'Gloves' targets manual task 'Bake Bread'/);
+
+  // Through its region: a task in a manual region is manual too.
+  m = clickerModel();
+  m.regions[1].manual = true;
+  m.items[1].clickerKind = 'none';        // Wrench aims at Fix Car, checked first
+  m.items[2].clickerTarget = 'Fix Car';
+  r = await build(m);
+  assert.match(r.error[1], /Item 'Gloves' targets manual task 'Fix Car'/);
+
+  // A region with no clicker task left in it.
+  m = clickerModel();
+  m.tasks[0].manual = true;
+  r = await build(m);
+  assert.match(r.error[1], /Item 'Oven' targets region 'Kitchen', in which every task is manual/);
+
+  // A region that still has a clicker task is fine.
+  m = clickerModel();
+  m.tasks[1].manual = true;
+  r = await build(m);
+  assert.match(r.error[1], /targets manual task 'Fix Car'/);   // Wrench aims straight at it
+  m.items[1].clickerKind = 'none';
+  r = await build(m);
+  assert.ok(r.data, JSON.stringify(r.error));
+});

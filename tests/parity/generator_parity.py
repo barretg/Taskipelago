@@ -32,7 +32,7 @@ F = lg.FILLER_PLACEHOLDER
 
 def task(name, **kw):
     t = {"name": name, "prereq": "", "itemPrereq": "", "cost": "", "region": "",
-         "priority": False, "count": 1, "desc": "", "activations": ""}
+         "priority": False, "count": 1, "desc": "", "activations": "", "manual": False}
     t.update(kw)
     return t
 
@@ -402,12 +402,25 @@ def apply_v11_import(doc, result: dict) -> dict:
                 group_settings[g] = st
     m["regionRandom"] = region_random
     m["groupSettings"] = group_settings
+    # Only progressive groups force their items to Progression; random-choice and
+    # aesthetic items keep the type the YAML declared (the legacy rows forced all three).
+    if result.get("ok"):
+        raw_types = list(_block(doc).get("item_types") or [])
+        for i, it in enumerate(m["items"]):
+            g = it.get("progGroup")
+            if not g or it.get("filler") or it.get("consumable"):
+                continue
+            if group_settings.get(g, {}).get("type", "progressive") == "progressive":
+                continue
+            declared = str(raw_types[i]).strip().lower() if i < len(raw_types) else ""
+            it["type"] = declared if declared in lg.load_client().REWARD_TYPE_VALUES else "useful"
     # C2 (F7): style colors, defaults filled in for every key the YAML omits.
     m["styleColors"] = style_colors_from(_block(doc) if result.get("ok") else {}, GENERAL_STYLE_COLORS)
     # Clicker mode is a post-legacy extension: the legacy corpus has none, so
     # every case carries the defaults.
     for t in m["tasks"]:
         t["activations"] = ""
+        t["manual"] = False
     for it in m["items"]:
         it["clickerKind"] = "none"
         it["clickerTarget"] = "*"
@@ -415,6 +428,7 @@ def apply_v11_import(doc, result: dict) -> dict:
     for r in m["regions"]:
         r["distributed"] = False
         r["offlineRate"] = ""
+        r["manual"] = False
     m["clickerMode"] = False
     m["clickerDistributeGlobal"] = False
     m["clickerOffline"] = True

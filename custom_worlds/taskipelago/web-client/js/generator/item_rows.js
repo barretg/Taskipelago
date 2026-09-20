@@ -40,18 +40,18 @@ function itemRow(it, i, ctx, container) {
 
   filler.addEventListener('change', () => {
     it.filler = filler.checked;
-    onFillerToggle(it);
+    onFillerToggle(it, undefined, model);
     sync();
     ctx.changed();
   });
   consumable.addEventListener('change', () => {
     it.consumable = consumable.checked;
-    onConsumableToggle(it);
+    onConsumableToggle(it, model);
     sync();
     ctx.changed();
   });
   group.addEventListener('change', () => {
-    setItemProgGroup(it, group.value);
+    setItemProgGroup(it, group.value, model);
     sync();
     ctx.changed();
   });

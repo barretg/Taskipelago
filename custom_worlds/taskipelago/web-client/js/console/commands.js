@@ -206,15 +206,20 @@ const HANDLERS = {
     const m = board.clickerModel();
     let total = 0;
     for (const i of m.eligible) total += m.rate[i];
-    ctx.output(`Production: ${total}/s across ${m.eligible.length} eligible task(s), global multiplier x${m.globalMult}`);
-    ctx.output(`Click value: ${m.clickValue}`);
+    ctx.output(`Production: ${total}/s across ${m.eligible.length} eligible task(s), slot-wide multiplier x${m.globalMult}`);
+    ctx.output(`Click value: ${m.clickValue} slot-wide (per task below; click power is per target)`);
+    for (const g of m.grants) {
+      ctx.output(`  ${g.name}: ${g.kind} ${g.rate ?? g.power ?? g.mult}`
+        + `${g.copies > 1 ? ` x${g.copies}` : ''} -> ${board.targetLabel(g.spec)}`);
+    }
     ctx.output(`N_TASKS ${m.nTasks}, N_TASKS_UNLOCKED ${m.nUnlocked}, N_TASKS_LOCKED ${m.nLocked}, `
       + `N_TASKS_COMPLETED ${m.nCompleted}, CPS ${m.clickValue}`);
     ctx.output(state.clickerOffline
       ? `Offline production on, capped at ${state.clickerOfflineCapHours}h`
       : 'Offline production off');
     for (const i of m.eligible) {
-      ctx.output(`  ${i + 1}. ${state.tasks[i]} - ${board.taskProgress(i)} / ${board.requiredActivations(i)} (+${m.rate[i]}/s)`);
+      ctx.output(`  ${i + 1}. ${state.tasks[i]} - ${board.taskProgress(i)} / ${board.requiredActivations(i)}`
+        + ` (+${m.rate[i]}/s, click +${m.taskClickValue[i]}, x${m.prodMult[i]} production)`);
     }
     return true;
   },

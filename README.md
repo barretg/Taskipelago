@@ -32,6 +32,8 @@
 
 * Rates, activation counts and multipliers can be plain numbers or small expressions over `N_TASKS`, `N_TASKS_UNLOCKED`, `N_TASKS_LOCKED`, `N_TASKS_COMPLETED` and `CPS` (the current click value), so a game can scale as it grows
 
+* A task can opt out: tick **Manual** on the task row (`task_manual`), or on a region row (`region_manual`) to opt out every task in it. A manual task is never clickable, never receives production, and appears as an ordinary task row with a Complete button below the clicker cards
+
 * Build one in the YAML Generator tab: tick **Enable Tasclickpelago** and the task, item and region tables grow the clicker columns. `clicker_mode` and `bingo_mode` cannot both be enabled
 
 ## Setup:

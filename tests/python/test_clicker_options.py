@@ -63,6 +63,70 @@ class TaskActivationsTest(unittest.TestCase):
         self.assertEqual(w._clicker_activations, [5, 5, 7, 9])
 
 
+class TaskManualTest(unittest.TestCase):
+    """task_manual / region_manual: tasks that stay ordinary task rows."""
+
+    def test_blank_leaves_every_task_clickable(self):
+        self.assertEqual(world()._clicker_manual, [False, False, False])
+
+    def test_per_task_flag(self):
+        w = world(task_manual=["true", "", "false"])
+        self.assertEqual(w._clicker_manual, [True, False, False])
+
+    def test_region_flag_marks_every_task_in_the_region(self):
+        w = world(region_manual=["true"])
+        # BASE puts tasks 1 and 2 in Kitchen; task 3 has no region.
+        self.assertEqual(w._clicker_manual, [True, True, False])
+
+    def test_the_two_flags_are_an_or(self):
+        w = world(task_manual=["", "", "true"], region_manual=["true"])
+        self.assertEqual(w._clicker_manual, [True, True, True])
+
+    def test_bad_value_is_rejected(self):
+        with self.assertRaises(Exception) as cm:
+            world(task_manual=["maybe"])
+        self.assertIn("expected 'true', 'false' or blank", str(cm.exception))
+
+    def test_expands_by_task_count(self):
+        w = _quiet(**{**BASE, "clicker_mode": True,
+                      "task_count": ["2", "1", "1"],
+                      "task_manual": ["true", "", ""]})[0]
+        self.assertEqual(w._clicker_manual, [True, True, False, False])
+
+    def test_production_aimed_at_a_manual_task_warns(self):
+        _, err = _quiet(**{**BASE, "clicker_mode": True,
+                           "task_manual": ["true", "", ""],
+                           "item_production": ['"Bake Bread"-1', "", ""]})
+        self.assertIn("targets manual task(s) 1", err)
+
+    def test_a_grant_aimed_at_a_manual_task_is_dropped(self):
+        w, err = _quiet(**{**BASE, "clicker_mode": True,
+                           "task_manual": ["true", "", ""],
+                           "item_production": ['"Bake Bread"-1', "", ""],
+                           "item_click_power": ['"Bake Bread"-5', "", ""],
+                           "item_click_mult": ['1-2', "", ""]})
+        sd = w.fill_slot_data()
+        # Nothing reaches a manual task, so slot_data does not claim it does.
+        self.assertEqual(sd["item_production"][0], [])
+        self.assertEqual(sd["item_click_power"][0], [])
+        self.assertEqual(sd["item_click_mult"][0], [])
+        for label in ("item_production", "item_click_power", "item_click_mult"):
+            self.assertIn(f"{label} targets manual task(s) 1", err)
+
+    def test_a_region_grant_survives_a_manual_task_in_the_region(self):
+        w = world(task_manual=["true", "", ""], item_production=["Kitchen-1", "", ""])
+        # The region spec stays; the client skips the manual task inside it.
+        self.assertEqual(w.fill_slot_data()["item_production"][0],
+                         [{"kind": "region", "ref": "Kitchen", "rate": 1}])
+
+    def test_slot_data_carries_the_flags(self):
+        w = world(task_manual=["true", "", ""])
+        self.assertEqual(w.fill_slot_data()["task_manual"], [True, False, False])
+
+    def test_off_by_default_in_slot_data(self):
+        self.assertEqual(world().fill_slot_data()["task_manual"], [False, False, False])
+
+
 class ItemProductionTest(unittest.TestCase):
     def test_targets_resolve(self):
         w = world(item_production=['"Bake Bread"-1.5', 'Kitchen-0.5', '*-0.1'])
@@ -132,17 +196,48 @@ class MultiplierTest(unittest.TestCase):
         w = world(item_click_power=["5", "", "2.5"],
                   item_production_mult=["1.15", "", ""],
                   item_click_mult=["", "2", ""])
-        self.assertEqual(w._clicker_click_power, [5, 0, 2.5])
-        self.assertEqual(w._clicker_production_mult, [1.15, None, None])
-        self.assertEqual(w._clicker_click_mult, [None, 2, None])
+        star = lambda v: [{"kind": "all", "ref": None, "rate": v}]
+        # A bare value keeps meaning '*', the whole slot.
+        self.assertEqual(w._clicker_click_power, [star(5), [], star(2.5)])
+        self.assertEqual(w._clicker_production_mult, [star(1.15), [], []])
+        self.assertEqual(w._clicker_click_mult, [[], star(2), []])
+
+    def test_every_kind_takes_a_target(self):
+        w = world(item_click_power=['"Knead"-3', "Kitchen-1", "*-2"],
+                  item_production_mult=["Kitchen-2", "", ""],
+                  item_click_mult=["2-1.5", "", ""])
+        self.assertEqual(w._clicker_click_power, [
+            [{"kind": "task", "ref": 1, "rate": 3}],
+            [{"kind": "region", "ref": "Kitchen", "rate": 1}],
+            [{"kind": "all", "ref": None, "rate": 2}],
+        ])
+        self.assertEqual(w._clicker_production_mult[0],
+                         [{"kind": "region", "ref": "Kitchen", "rate": 2}])
+        self.assertEqual(w._clicker_click_mult[0],
+                         [{"kind": "task", "ref": 1, "rate": 1.5}])
+
+    def test_several_targets_join_with_and(self):
+        w = world(item_click_power=['"Knead"-3 && Kitchen-1', "", ""])
+        self.assertEqual([s["kind"] for s in w._clicker_click_power[0]], ["task", "region"])
+
+    def test_an_untargeted_expression_is_not_a_region(self):
+        # 'N_TASKS - 1' is a value, not a region called 'N_TASKS'.
+        w = world(item_click_power=["N_TASKS - 1", "", ""])
+        self.assertEqual(w._clicker_click_power[0],
+                         [{"kind": "all", "ref": None, "rate": 2}])
+
+    def test_an_unknown_target_is_rejected(self):
+        with self.assertRaises(Exception) as cm:
+            world(item_click_power=["Basement-2", "", ""])
+        self.assertIn("unknown region", str(cm.exception))
 
     def test_multipliers_round_to_two_places(self):
         w = world(item_production_mult=["1.15555"])
-        self.assertEqual(w._clicker_production_mult[0], 1.16)
+        self.assertEqual(w._clicker_production_mult[0][0]["rate"], 1.16)
 
     def test_a_multiplier_below_one_is_legal(self):
         w = world(item_production_mult=["0.75"])
-        self.assertEqual(w._clicker_production_mult[0], 0.75)
+        self.assertEqual(w._clicker_production_mult[0][0]["rate"], 0.75)
 
     def test_zero_multiplier_is_rejected(self):
         with self.assertRaises(Exception) as cm:
@@ -228,8 +323,8 @@ class ConflictAndCompatTest(unittest.TestCase):
         self.assertFalse(plain._clicker_mode)
         self.assertEqual(plain._clicker_activations, [1, 1, 1])
         self.assertEqual(plain._clicker_production, [[], [], []])
-        self.assertEqual(plain._clicker_click_power, [0, 0, 0])
-        self.assertEqual(plain._clicker_production_mult, [None, None, None])
+        self.assertEqual(plain._clicker_click_power, [[], [], []])
+        self.assertEqual(plain._clicker_production_mult, [[], [], []])
 
 
 class SlotDataTest(unittest.TestCase):
@@ -255,9 +350,10 @@ class SlotDataTest(unittest.TestCase):
         self.assertTrue(sd["clicker_mode"])
         self.assertEqual(sd["task_activations"], [10, 20, 30])
         self.assertEqual(len(sd["item_production"]), 3)
-        self.assertEqual(sd["item_click_power"], [3, 0, 0])
-        self.assertEqual(sd["item_production_mult"], [1.5, None, None])
-        self.assertEqual(sd["item_click_mult"], [None, 2, None])
+        star = lambda v: [{"kind": "all", "ref": None, "rate": v}]
+        self.assertEqual(sd["item_click_power"], [star(3), [], []])
+        self.assertEqual(sd["item_production_mult"], [star(1.5), [], []])
+        self.assertEqual(sd["item_click_mult"], [[], star(2), []])
         self.assertEqual(sd["item_offline_mult"][0], [{"kind": "all", "ref": None, "rate": 2}])
         self.assertEqual(sd["region_distributed_production"], {"Kitchen": True})
         self.assertTrue(sd["clicker_distribute_global"])

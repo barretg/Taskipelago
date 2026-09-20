@@ -26,7 +26,9 @@ from .locations import (
     TaskipelagoLocation,
 )
 from .clicker import (
+    drop_manual_targets,
     parse_region_flags, parse_region_rates, parse_target_specs, parse_task_activations,
+    parse_task_flags,
     parse_value_expr, remap_spec_tasks, live_constants_used,
 )
 from .options import TaskipelagoOptions, MAX_TASK_DESCRIPTION_LEN
@@ -93,10 +95,11 @@ class TaskipelagoWorld(World):
     _region_default_pcts: Dict[str, int]
     _clicker_mode: bool
     _clicker_activations: List[int]
+    _clicker_manual: List[bool]
     _clicker_production: List[List[dict]]
-    _clicker_click_power: List[Any]
-    _clicker_production_mult: List[Any]
-    _clicker_click_mult: List[Any]
+    _clicker_click_power: List[List[dict]]
+    _clicker_production_mult: List[List[dict]]
+    _clicker_click_mult: List[List[dict]]
     _clicker_offline_mult: List[List[dict]]
     _clicker_distributed: Dict[str, bool]
     _clicker_distribute_global: bool
@@ -133,6 +136,7 @@ class TaskipelagoWorld(World):
         # Tasclickpelago: per-row clicker lists, all optional (see clicker.py).
         clicker_mode = bool(self.options.clicker_mode)
         task_activations_raw = [str(x).strip() for x in (self.options.task_activations.value or [])]
+        task_manual_raw = [str(x).strip() for x in (self.options.task_manual.value or [])]
         item_production_raw = [str(x).strip() for x in (self.options.item_production.value or [])]
         item_click_power_raw = [str(x).strip() for x in (self.options.item_click_power.value or [])]
         item_production_mult_raw = [str(x).strip() for x in (self.options.item_production_mult.value or [])]
@@ -416,43 +420,41 @@ class TaskipelagoWorld(World):
             parse_task_activations(task_activations_raw, n_editor_tasks, n),
             task_counts_editor,
         )
+        # A manual task is an ordinary task even in clicker mode: no clicking,
+        # no production, and the client renders it as a normal task row.
+        clicker_manual = expand_rows(
+            parse_task_flags(task_manual_raw, n_editor_tasks, "task_manual"),
+            task_counts_editor,
+        )
 
-        def _clicker_specs(raw: List[str], label: str, positive: bool) -> List[List[dict]]:
+        def _clicker_specs(raw: List[str], label: str, **kw) -> List[List[dict]]:
             rows = [
                 parse_target_specs(
                     raw[i] if i < len(raw) else "", label, f"item {i + 1}",
                     task_names=tasks, region_names=_clicker_region_names, n_tasks=n,
-                    strictly_positive=positive,
+                    **kw,
                 )
                 for i in range(n_editor_items)
             ]
             return expand_rows(rows, item_counts_editor)
 
-        def _clicker_values(raw: List[str], label: str, *, minimum=None,
-                            positive=False, round_2dp=False, allow_cps=True,
-                            blank) -> List[Any]:
-            rows = []
-            for i in range(n_editor_items):
-                text = raw[i] if i < len(raw) else ""
-                if not text:
-                    rows.append(blank)
-                    continue
-                rows.append(parse_value_expr(
-                    text, label, f"item {i + 1}", n,
-                    minimum=minimum, strictly_positive=positive, round_2dp=round_2dp,
-                    allow_cps=allow_cps,
-                ))
-            return expand_rows(rows, item_counts_editor)
-
-        clicker_production_full = _clicker_specs(item_production_raw, "item_production", True)
-        clicker_offline_mult_full = _clicker_specs(item_offline_mult_raw, "item_offline_mult", True)
-        clicker_click_power_full = _clicker_values(
-            item_click_power_raw, "item_click_power", minimum=0.0, allow_cps=False, blank=0)
-        clicker_production_mult_full = _clicker_values(
-            item_production_mult_raw, "item_production_mult", positive=True, round_2dp=True, blank=None)
-        clicker_click_mult_full = _clicker_values(
-            item_click_mult_raw, "item_click_mult", positive=True, round_2dp=True,
-            allow_cps=False, blank=None)
+        # Every grant kind but "unlock only" carries a target, so all five parse
+        # through the same '<target>-<value>' grammar. The three that used to be
+        # slot-wide keep reading an untargeted value as '*' (bare_ok), so an
+        # older YAML means exactly what it meant before.
+        clicker_production_full = _clicker_specs(
+            item_production_raw, "item_production", strictly_positive=True)
+        clicker_offline_mult_full = _clicker_specs(
+            item_offline_mult_raw, "item_offline_mult", strictly_positive=True)
+        clicker_click_power_full = _clicker_specs(
+            item_click_power_raw, "item_click_power", strictly_positive=False,
+            minimum=0.0, allow_cps=False, bare_ok=True)
+        clicker_production_mult_full = _clicker_specs(
+            item_production_mult_raw, "item_production_mult", strictly_positive=True,
+            round_2dp=True, bare_ok=True)
+        clicker_click_mult_full = _clicker_specs(
+            item_click_mult_raw, "item_click_mult", strictly_positive=True,
+            round_2dp=True, allow_cps=False, bare_ok=True)
 
         # ------------------------------------------------------------------ #
         # 5b. Randomized selection and renumbering                           #
@@ -622,11 +624,21 @@ class TaskipelagoWorld(World):
                 raw_costs_input = [raw_costs_input[_old] for _old in task_order]
             tasks = [tasks[_old] for _old in task_order]
             clicker_activations = [clicker_activations[_old] for _old in task_order]
+            clicker_manual = [clicker_manual[_old] for _old in task_order]
             clicker_production_full = [
                 remap_spec_tasks(specs, task_map) for specs in clicker_production_full
             ]
             clicker_offline_mult_full = [
                 remap_spec_tasks(specs, task_map) for specs in clicker_offline_mult_full
+            ]
+            clicker_click_power_full = [
+                remap_spec_tasks(specs, task_map) for specs in clicker_click_power_full
+            ]
+            clicker_production_mult_full = [
+                remap_spec_tasks(specs, task_map) for specs in clicker_production_mult_full
+            ]
+            clicker_click_mult_full = [
+                remap_spec_tasks(specs, task_map) for specs in clicker_click_mult_full
             ]
             raw_task_region = [raw_task_region[_old] for _old in task_order]
             raw_task_description = [raw_task_description[_old] for _old in task_order]
@@ -671,10 +683,11 @@ class TaskipelagoWorld(World):
 
         clicker_production = [list(v) for v in _pad_clicker(clicker_production_full, [])]
         clicker_offline_mult = [list(v) for v in _pad_clicker(clicker_offline_mult_full, [])]
-        clicker_click_power = _pad_clicker(clicker_click_power_full, 0)
-        clicker_production_mult = _pad_clicker(clicker_production_mult_full, None)
-        clicker_click_mult = _pad_clicker(clicker_click_mult_full, None)
+        clicker_click_power = [list(v) for v in _pad_clicker(clicker_click_power_full, [])]
+        clicker_production_mult = [list(v) for v in _pad_clicker(clicker_production_mult_full, [])]
+        clicker_click_mult = [list(v) for v in _pad_clicker(clicker_click_mult_full, [])]
         clicker_activations = _pad_clicker(clicker_activations, 1)
+        clicker_manual = _pad_clicker(clicker_manual, False)
 
         # ------------------------------------------------------------------ #
         # 6. DeathLink validation                                             #
@@ -762,6 +775,10 @@ class TaskipelagoWorld(World):
             [str(x).strip() for x in (self.options.region_distributed_production.value or [])],
             raw_regions, "region_distributed_production", _clicker_warn,
         )
+        clicker_region_manual = parse_region_flags(
+            [str(x).strip() for x in (self.options.region_manual.value or [])],
+            raw_regions, "region_manual", _clicker_warn,
+        )
         clicker_region_offline_rate = parse_region_rates(
             [str(x).strip() for x in (self.options.region_offline_rate.value or [])],
             raw_regions, "region_offline_rate", n, _clicker_warn,
@@ -781,9 +798,8 @@ class TaskipelagoWorld(World):
         clicker_distribute_global = bool(self.options.clicker_distribute_global)
 
         if clicker_mode:
-            if not any(clicker_production) and not any(
-                bool(v) for v in clicker_click_power
-            ) and not any(v is not None for v in clicker_click_mult):
+            if not any(clicker_production) and not any(clicker_click_power) \
+                    and not any(clicker_click_mult):
                 _clicker_warn(
                     "[Taskipelago] WARNING: clicker_mode is on but no item grants production, "
                     "click power or a click multiplier. The slot is playable, but every task "
@@ -804,6 +820,39 @@ class TaskipelagoWorld(World):
                     f"Taskipelago: task {i + 1} references unknown region '{rname}'."
                 )
         task_region = raw_task_region
+
+        # region_manual marks every task in the region manual, on top of any
+        # per-task task_manual entry.
+        clicker_manual = [
+            bool(clicker_manual[i]) or bool(clicker_region_manual.get(task_region[i], False))
+            for i in range(len(task_region))
+        ]
+        if clicker_mode and all(clicker_manual) and clicker_manual:
+            _clicker_warn(
+                "[Taskipelago] WARNING: clicker_mode is on but every task is manual, "
+                "so the clicker board is empty."
+            )
+        # A grant aimed straight at a manual task is dropped here rather than
+        # forwarded: the client would discard it anyway, and slot_data should
+        # not claim an upgrade that can never apply.
+        for _label, _rows in (
+            ("item_production", clicker_production),
+            ("item_click_power", clicker_click_power),
+            ("item_production_mult", clicker_production_mult),
+            ("item_click_mult", clicker_click_mult),
+            ("item_offline_mult", clicker_offline_mult),
+        ):
+            _dropped: List[int] = []
+            for _k, _specs in enumerate(_rows):
+                _rows[_k], _d = drop_manual_targets(_specs, clicker_manual)
+                _dropped.extend(_d)
+            if _dropped and clicker_mode:
+                _clicker_warn(
+                    f"[Taskipelago] WARNING: {_label} targets manual task(s) "
+                    + ", ".join(str(t) for t in sorted(set(_dropped)))
+                    + "; manual tasks are ordinary tasks and never read clicker "
+                    + "grants, so those entries are ignored."
+                )
 
         region_to_task_indices: Dict[str, List[int]] = {r: [] for r in raw_regions}
         for i, rname in enumerate(task_region):
@@ -1416,6 +1465,7 @@ class TaskipelagoWorld(World):
         self._regions = raw_regions
         self._clicker_mode = clicker_mode
         self._clicker_activations = clicker_activations
+        self._clicker_manual = clicker_manual
         self._clicker_production = clicker_production
         self._clicker_click_power = clicker_click_power
         self._clicker_production_mult = clicker_production_mult
@@ -1647,10 +1697,11 @@ class TaskipelagoWorld(World):
             "task_description": list(self._task_descriptions),
             "clicker_mode": bool(self._clicker_mode),
             "task_activations": list(self._clicker_activations),
+            "task_manual": [bool(v) for v in self._clicker_manual],
             "item_production": [list(v) for v in self._clicker_production],
-            "item_click_power": list(self._clicker_click_power),
-            "item_production_mult": list(self._clicker_production_mult),
-            "item_click_mult": list(self._clicker_click_mult),
+            "item_click_power": [list(v) for v in self._clicker_click_power],
+            "item_production_mult": [list(v) for v in self._clicker_production_mult],
+            "item_click_mult": [list(v) for v in self._clicker_click_mult],
             "item_offline_mult": [list(v) for v in self._clicker_offline_mult],
             "region_distributed_production": dict(self._clicker_distributed),
             "clicker_distribute_global": bool(self._clicker_distribute_global),

@@ -120,6 +120,20 @@ function loadLastConnection() {
 // =============================================================
 // Slot data application
 // =============================================================
+/**
+ * Normalize a per-item clicker grant list to spec lists. A pre-targeting seed
+ * sends a bare number (or null/0 for "nothing") per item; that is the same as a
+ * spec aimed at '*', so the board only ever sees one shape.
+ */
+function toSpecLists(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(entry => {
+    if (Array.isArray(entry)) return entry;
+    if (entry === null || entry === undefined || entry === 0) return [];
+    return [{ kind: 'all', ref: null, rate: entry }];
+  });
+}
+
 function applySlotData(sd) {
   state.tasks               = sd.tasks || [];
   state.items               = sd.items || sd.rewards || [];
@@ -162,10 +176,14 @@ function applySlotData(sd) {
   // Tasclickpelago. Absent keys (an older seed) leave the mode off.
   state.clickerMode         = !!sd.clicker_mode;
   state.taskActivations     = Array.isArray(sd.task_activations) ? sd.task_activations : [];
+  state.taskManual          = Array.isArray(sd.task_manual) ? sd.task_manual : [];
   state.itemProduction      = Array.isArray(sd.item_production) ? sd.item_production : [];
-  state.itemClickPower      = Array.isArray(sd.item_click_power) ? sd.item_click_power : [];
-  state.itemProductionMult  = Array.isArray(sd.item_production_mult) ? sd.item_production_mult : [];
-  state.itemClickMult       = Array.isArray(sd.item_click_mult) ? sd.item_click_mult : [];
+  // Click power and the two multipliers are targeted lists like the rest, but a
+  // seed generated before targeting sends one slot-wide value per item, so each
+  // entry is normalized to a spec list aimed at '*'.
+  state.itemClickPower      = toSpecLists(sd.item_click_power);
+  state.itemProductionMult  = toSpecLists(sd.item_production_mult);
+  state.itemClickMult       = toSpecLists(sd.item_click_mult);
   state.itemOfflineMult     = Array.isArray(sd.item_offline_mult) ? sd.item_offline_mult : [];
   state.regionDistributed   = (sd.region_distributed_production && typeof sd.region_distributed_production === 'object')
     ? sd.region_distributed_production : {};
@@ -285,6 +303,7 @@ function clearPlayState() {
   stopClickerLoop();
   state.clickerMode = false;
   state.taskActivations = [];
+  state.taskManual = [];
   state.itemProduction = [];
   state.itemClickPower = [];
   state.itemProductionMult = [];

@@ -330,3 +330,140 @@ test('CPS binds to the live click value and drives production from it', async ()
   assert.equal(m.rate[0], 4.5);
   assert.equal(m.bindings.CPS, 9);
 });
+
+test('manual tasks take no production and leave the clicker grid', async () => {
+  await boot({
+    task_manual: [false, true, false, false],
+    item_production: [[{ kind: 'all', ref: null, rate: 1 }], [], [], [], []],
+  });
+  give('Sponge');
+  const m = board.clickerModel();
+  assert.equal(board.isManualTask(1), true);
+  assert.deepEqual(m.eligible, [0, 2, 3]);
+  assert.equal(m.rate[1], 0);
+
+  // A directly targeted manual task is skipped too, and its rate is not banked.
+  await boot({
+    task_manual: [false, true, false, false],
+    item_production: [[{ kind: 'task', ref: 1, rate: 5 }], [], [], [], []],
+  });
+  give('Sponge');
+  assert.equal(board.clickerModel().rate[1], 0);
+
+  board.settle(60);
+  assert.equal(board.taskProgress(1), 0);
+  assert.equal(board.clickTask(1), false);
+  assert.equal(board.taskProgress(1), 0);
+
+  // The grid holds only the clicker tasks; the manual one renders as a task row.
+  board.renderClicker();
+  const names = [...document.querySelectorAll('#clicker-grid .clicker-name')].map(e => e.textContent);
+  assert.equal(names.length, 3);
+  assert.ok(!names.some(t => t.includes('Cook')));
+  const manual = [...document.querySelectorAll('#clicker-manual-list .task-name')].map(e => e.textContent);
+  assert.deepEqual(manual, ['2. Cook']);
+  assert.equal(document.getElementById('clicker-manual').classList.contains('hidden'), false);
+});
+
+test('with no manual tasks the manual section stays hidden', async () => {
+  await boot({ item_production: [[{ kind: 'all', ref: null, rate: 1 }], [], [], [], []] });
+  assert.equal(document.getElementById('clicker-manual').classList.contains('hidden'), true);
+  assert.equal(document.querySelectorAll('#clicker-manual-list .task-card').length, 0);
+});
+
+// ---------------------------------------------------------------------------
+// Targeted grants: every kind but "unlock only" carries a target.
+// ---------------------------------------------------------------------------
+
+test('click power and the click multiplier are per target', async () => {
+  await boot({
+    // Foreman: +4 click power on Kitchen (Cook, Bake). Glove: x3 clicks on Wash.
+    item_click_power: [[], [], [{ kind: 'region', ref: 'Kitchen', rate: 4 }], [], []],
+    item_click_mult: [[], [], [], [{ kind: 'task', ref: 0, rate: 3 }], []],
+  });
+  give('Foreman', 'Glove');
+  const m = board.clickerModel();
+  assert.deepEqual(m.taskClickValue, [3, 5, 5, 1]);
+  assert.equal(m.clickValue, 1);          // nothing is aimed at '*'
+
+  // A click is worth the clicked task's own value.
+  board.clickTask(0);
+  assert.equal(board.taskProgress(0), 3);
+  board.clickTask(1);
+  assert.equal(board.taskProgress(1), 5);
+  board.clickTask(3);
+  assert.equal(board.taskProgress(3), 1);
+});
+
+test('a production multiplier only scales the tasks it targets', async () => {
+  await boot({
+    item_production: [[{ kind: 'all', ref: null, rate: 1 }], [], [], [], []],
+    item_production_mult: [[], [{ kind: 'region', ref: 'Kitchen', rate: 2 }], [], [], []],
+  });
+  give('Sponge', 'Oven');
+  const m = board.clickerModel();
+  assert.deepEqual(m.rate, [1, 2, 2, 1]);
+  assert.equal(m.globalMult, 1);
+  assert.deepEqual(m.prodMult, [1, 2, 2, 1]);
+});
+
+test('CPS in a production rate is the target task click value', async () => {
+  await boot({
+    item_production: [[{ kind: 'all', ref: null, rate: { op: '*', l: { num: 1 }, r: { const: 'CPS' } } }], [], [], [], []],
+    item_click_power: [[], [], [{ kind: 'task', ref: 2, rate: 9 }], [], []],
+  });
+  give('Sponge', 'Foreman');
+  const m = board.clickerModel();
+  assert.deepEqual(m.rate, [1, 1, 10, 1]);
+});
+
+test('an offline multiplier aimed at one region only speeds that region up', async () => {
+  await boot({
+    item_production: [[{ kind: 'all', ref: null, rate: 1 }], [], [], [], []],
+    item_offline_mult: [[], [], [], [], [{ kind: 'region', ref: 'Kitchen', rate: 2 }]],
+  });
+  give('Sponge', 'NightShift');
+  const m = board.clickerModel({ offline: true });
+  assert.deepEqual(m.rate, [1, 2, 2, 1]);
+});
+
+test('the header and the cards name every grant and its target', async () => {
+  const { els } = await importModule('play/state.js');
+  await boot({
+    item_production: [[{ kind: 'region', ref: 'Kitchen', rate: 0.5 }], [], [], [], []],
+    item_click_power: [[], [], [{ kind: 'task', ref: 0, rate: 4 }], [], []],
+  });
+  give('Sponge', 'Foreman');
+  board.renderClicker();
+  const header = [...els.clickerHeader.children].map(el => el.textContent);
+  assert.ok(header.some(l => l === 'Production: Sponge +0.5/s → Kitchen'), header.join('\n'));
+  assert.ok(header.some(l => l === 'Click power: Foreman +4/click → 1. Wash'), header.join('\n'));
+  assert.ok(header.some(l => l.startsWith('Click: 5 per click on 1 task')), header.join('\n'));
+
+  const detail = [...document.querySelectorAll('#clicker-grid .clicker-detail')].map(e => e.textContent);
+  assert.equal(detail[0], 'Foreman +4/click');
+  assert.equal(detail[1], 'Sponge +0.5/s');
+  assert.equal(detail[3], '');
+  const clicks = [...document.querySelectorAll('#clicker-grid .clicker-click-value')].map(e => e.textContent);
+  assert.deepEqual(clicks, ['click +5', 'click +1', 'click +1', 'click +1']);
+});
+
+test('a manual task is outside every grant pool, even a region or * one', async () => {
+  await boot({
+    task_manual: [false, true, false, false],     // Cook is an ordinary task
+    item_production: [[{ kind: 'all', ref: null, rate: 1 }], [], [], [], []],
+    // Kitchen holds Cook (manual) and Bake; '*' reaches every clicker task.
+    item_click_power: [[], [{ kind: 'region', ref: 'Kitchen', rate: 4 }], [{ kind: 'all', ref: null, rate: 1 }], [], []],
+    item_production_mult: [[], [], [], [{ kind: 'region', ref: 'Kitchen', rate: 3 }], []],
+  });
+  give('Oven', 'Foreman', 'Glove', 'Sponge');
+  const m = board.clickerModel();
+  assert.deepEqual(m.clickerTasks, [0, 2, 3]);
+  // Cook keeps the base click value of 1 and gets no rate or multiplier.
+  assert.deepEqual(m.taskClickValue, [2, 1, 6, 2]);
+  assert.equal(m.rate[1], 0);
+  assert.equal(m.prodMult[1], 1);
+  assert.deepEqual(m.rate, [1, 0, 3, 1]);
+  // A distributed '*' rate divides by the clicker tasks only.
+  assert.equal(m.eligible.includes(1), false);
+});

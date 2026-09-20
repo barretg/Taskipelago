@@ -298,7 +298,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     name: t.name, prereq: t.prereq, itemPrereq: t.itemPrereq, cost: t.cost,
     priority: !!t.priority, count: t.count, desc: t.desc,
     region: regionSet.has(t.region) ? t.region : '',
-    activations: t.activations,
+    activations: t.activations, manual: !!t.manual,
   }));
 
   model.items = items.map(src => {
@@ -313,14 +313,14 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     const isFiller = typeof src.filler === 'boolean' ? src.filler : isFillerExact(src.name);
     if (isFiller) {
       it.filler = true;
-      onFillerToggle(it, randomFiller);
+      onFillerToggle(it, randomFiller, model);
     } else {
       it.name = src.name;
       if (src.consumable) {
         it.consumable = true;
-        onConsumableToggle(it);
+        onConsumableToggle(it, model);
       } else if (model.progGroups.includes(src.group)) {
-        setItemProgGroup(it, src.group);
+        setItemProgGroup(it, src.group, model);
       }
     }
     return it;

@@ -481,6 +481,19 @@ button:disabled {
   align-content: start;
 }
 
+.clicker-manual {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 4px;
+}
+
+.clicker-manual-title {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 2px 4px 4px;
+}
+
 .clicker-card {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -521,6 +534,27 @@ button:disabled {
   gap: 6px;
   font-size: 11px;
   color: var(--muted);
+}
+
+.clicker-stats > span {
+  white-space: nowrap;
+}
+
+/* The click value sits with the rate: both are per task now. */
+.clicker-click-value {
+  color: var(--accent, #5c8de0);
+}
+
+/* Grants aimed at this task in particular, rather than at every task. */
+.clicker-detail {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.clicker-detail:empty {
+  display: none;
 }
 
 .clicker-hint {
@@ -984,7 +1018,7 @@ button.primary { border-color: var(--accent); }
 
 /* Clicker mode grows both tables by its own columns. */
 .gen-task-table.clicker .gt-row {
-  grid-template-columns: 70px minmax(200px, 3fr) minmax(140px, 2fr) minmax(120px, 2fr) minmax(110px, 2fr) minmax(100px, 1.4fr) 40px 64px minmax(150px, 1.6fr) 76px;
+  grid-template-columns: 70px minmax(200px, 3fr) minmax(140px, 2fr) minmax(120px, 2fr) minmax(110px, 2fr) minmax(100px, 1.4fr) 40px 64px minmax(150px, 1.6fr) 56px 76px;
 }
 
 .gen-item-table.clicker .gt-row {

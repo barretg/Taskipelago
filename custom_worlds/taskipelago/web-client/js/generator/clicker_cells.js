@@ -14,6 +14,8 @@ export const TIPS = {
     + 'Production adds activations per second. Click power adds to the value of one click. The two '
     + 'multiplier channels are separate: a production multiplier never touches clicks and a click '
     + 'multiplier never touches production. Copies of a multiplier stack multiplicatively.\n\n'
+    + 'Every kind but Unlock only applies to its Target, so the same item can be a general upgrade '
+    + '(*) or a boost for one task or region.\n\n'
     + 'Unlock only grants nothing, for an item that exists purely to be named in a task\'s item '
     + 'prereqs.',
   target: 'Who the value applies to, in the usual Taskipelago reference syntax:\n'
@@ -21,12 +23,20 @@ export const TIPS = {
     + '  myregion       ->  every task in that region\n'
     + '  "Task Name"    ->  one task, by quoted name\n'
     + '  3              ->  one task, by 1-based number\n\n'
-    + 'Join several with &&. Only Production and Offline multiplier take a target; the other kinds '
-    + 'apply to the whole slot.',
+    + 'Join several with &&. Every kind but Unlock only takes a target, so click power and both '
+    + 'multipliers can be aimed at one task or one region instead of the whole slot. A task\'s '
+    + 'click value is (1 + the click power aimed at it) x the click multipliers aimed at it.\n\n'
+    + 'A manual task is not a clicker task, so nothing may be aimed at it: exporting refuses a '
+    + 'target that names a manual task, or a region in which every task is manual. A region that '
+    + 'still has clicker tasks is fine; the manual ones inside it are skipped.',
   value: 'A number or an expression over N_TASKS, N_TASKS_UNLOCKED, N_TASKS_LOCKED, '
     + 'N_TASKS_COMPLETED and CPS (the current click value). CPS cannot be used in a click '
-    + 'field, since that is what defines it. The preview shows the value at both ends of the '
+    + 'field, since that is what defines it. In a production rate CPS is the click value of the '
+    + 'task the rate is aimed at. The preview shows the value at both ends of the '
     + 'curve, with CPS at its base value of 1.',
+  manual: 'On: this task is a normal Taskipelago task even in clicker mode. It is never clickable, never receives production, and the client shows it with a Complete button below the clicker cards.\n\n'
+    + 'A task is also manual when its region is marked manual.',
+  regionManual: 'On: every task in this region is a normal (non-clicker) task, as if each were marked Manual in the task table.',
   distributed: 'Off: the rate applies in full to each eligible task in the region.\n\n'
     + 'On: the rate is split evenly among them, so the region\'s total throughput stays constant '
     + 'and each share rises as siblings complete.',
@@ -65,10 +75,27 @@ export function exprInput(obj, key, ctx, field, placeholder = '') {
 }
 
 /** Header cells appended to the task table in clicker mode. */
-export const taskHeadCells = () => [tipHeader('Activations', TIPS.activations)];
+export const taskHeadCells = () => [
+  tipHeader('Activations', TIPS.activations), tipHeader('Manual', TIPS.manual),
+];
 
 /** Body cells appended to a task row in clicker mode. */
-export const taskCells = (task, i, ctx) => [exprInput(task, 'activations', ctx, `tasks.${i}.activations`, '1')];
+export function taskCells(task, i, ctx) {
+  const activations = exprInput(task, 'activations', ctx, `tasks.${i}.activations`, '1');
+  const manual = h('input', {
+    type: 'checkbox', 'aria-label': 'Manual task',
+    dataset: { field: `tasks.${i}.manual` },
+    onchange: e => {
+      task.manual = e.target.checked;
+      // A manual task never accrues, so its activations column is moot.
+      activations.querySelector('input').disabled = e.target.checked;
+      ctx.changed();
+    },
+  });
+  manual.checked = !!task.manual;
+  activations.querySelector('input').disabled = !!task.manual;
+  return [activations, manual];
+}
 
 /** Header cells appended to the item table in clicker mode. */
 export const itemHeadCells = () => [
@@ -87,8 +114,8 @@ export function itemCells(it, i, ctx) {
   });
   const value = exprInput(it, 'clickerValue', ctx, `items.${i}.clickerValue`, '1');
 
-  // A filler row has no item to grant anything, and the untargeted kinds apply
-  // to the whole slot, so the target is not theirs to set.
+  // A filler row has no item to grant anything, and 'Unlock only' grants
+  // nothing, so neither has a target or a value to set.
   const sync = () => {
     const off = !!it.filler || !it.name;
     kind.disabled = off;
@@ -104,7 +131,7 @@ export function itemCells(it, i, ctx) {
   return [kind, target, value];
 }
 
-/** The two region controls, appended to a region row in clicker mode. */
+/** The region controls appended to a region row in clicker mode. */
 export function regionCells(region, ctx) {
   const distributed = h('input', {
     type: 'checkbox', 'aria-label': 'Distributed production',
@@ -116,8 +143,14 @@ export function regionCells(region, ctx) {
     spellcheck: false, placeholder: 'inherit', 'aria-label': 'Offline rate',
     oninput: e => { region.offlineRate = e.target.value; ctx.changed(); },
   });
+  const manual = h('input', {
+    type: 'checkbox', 'aria-label': 'Manual region',
+    onchange: e => { region.manual = e.target.checked; ctx.changed(); },
+  });
+  manual.checked = !!region.manual;
   return [
     h('label', { className: 'check-label' }, distributed, tipHeader('Distributed', TIPS.distributed)),
+    h('label', { className: 'check-label' }, manual, tipHeader('Manual', TIPS.regionManual)),
     h('label', { className: 'inline-label' }, tipHeader('Offline rate:', TIPS.offlineRate), rate),
   ];
 }

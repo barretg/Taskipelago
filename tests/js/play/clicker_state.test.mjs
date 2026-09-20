@@ -87,8 +87,10 @@ test('clicker slot_data lands on state and the loop starts', async () => {
   });
   assert.equal(state.clickerMode, true);
   assert.deepEqual(state.taskActivations, [10, 20, 30]);
-  assert.deepEqual(state.itemClickPower, [0, 2, 0]);
-  assert.deepEqual(state.itemProductionMult, [null, null, 1.5]);
+  // A pre-targeting seed sends one slot-wide value per item; it normalizes to
+  // a spec aimed at '*'.
+  assert.deepEqual(state.itemClickPower, [[], [{ kind: 'all', ref: null, rate: 2 }], []]);
+  assert.deepEqual(state.itemProductionMult, [[], [], [{ kind: 'all', ref: null, rate: 1.5 }]]);
   assert.deepEqual(state.regionDistributed, { Chores: true });
   assert.equal(state.clickerDistributeGlobal, true);
   assert.equal(state.clickerOffline, false);
