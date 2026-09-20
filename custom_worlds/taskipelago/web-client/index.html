@@ -16,6 +16,7 @@
       <button class="tab-btn" data-tab="hints">Hints</button>
       <button class="tab-btn" data-tab="generator">YAML Generator</button>
       <button class="tab-btn" data-tab="bingo-gen">Taskipelabingo</button>
+      <button class="tab-btn" data-tab="clicker-gen">Tasclickpelago</button>
     </nav>
 
     <!-- ===== Connect and Play ===== -->
@@ -75,6 +76,10 @@
             <div id="bingo-section" class="hidden bingo-wrapper">
               <div id="bingo-counter" class="bingo-counter"></div>
               <div id="bingo-grid"></div>
+            </div>
+            <div id="clicker-section" class="hidden clicker-wrapper">
+              <div id="clicker-header" class="clicker-header"></div>
+              <div id="clicker-grid" class="clicker-grid"></div>
             </div>
           </fieldset>
         </div>
@@ -136,6 +141,11 @@
     <!-- ===== Taskipelabingo generator (built by js/bingo_gen/bingo_gen.js) ===== -->
     <section id="tab-bingo-gen" class="tab-pane">
       <div id="bingo-gen-root" class="gen-root"></div>
+    </section>
+
+    <!-- ===== Tasclickpelago generator (built by js/clicker_gen/clicker_gen.js) ===== -->
+    <section id="tab-clicker-gen" class="tab-pane">
+      <div id="clicker-gen-root" class="gen-root"></div>
     </section>
 
   </div><!-- #app -->

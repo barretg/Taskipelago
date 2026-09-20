@@ -25,13 +25,17 @@ from .locations import (
     BASE_REWARD_LOC_ID,
     TaskipelagoLocation,
 )
+from .clicker import (
+    parse_region_flags, parse_region_rates, parse_target_specs, parse_task_activations,
+    parse_value_expr, remap_spec_tasks, live_constants_used,
+)
 from .options import TaskipelagoOptions, MAX_TASK_DESCRIPTION_LEN
 from .prereq_parser import (
     collect_leaves, collect_group_refs, collect_group_count_refs,
     collect_region_refs, collect_region_abs_refs,
     collect_cost_groups_per_branch,
     eval_node, parse_prereq, parse_cost_expr, resolve_ast_refs, Node,
-    has_seq_flag, ast_to_text, RESERVED_WORDS,
+    has_seq_flag, ast_to_text, RESERVED_WORDS, RESERVED_NAMES,
 )
 from .rules import set_rules as _set_rules
 from .randomize import (
@@ -87,6 +91,19 @@ class TaskipelagoWorld(World):
     _group_item_display_names: Dict[str, List[str]]
     _regions: List[str]
     _region_default_pcts: Dict[str, int]
+    _clicker_mode: bool
+    _clicker_activations: List[int]
+    _clicker_production: List[List[dict]]
+    _clicker_click_power: List[Any]
+    _clicker_production_mult: List[Any]
+    _clicker_click_mult: List[Any]
+    _clicker_offline_mult: List[List[dict]]
+    _clicker_distributed: Dict[str, bool]
+    _clicker_distribute_global: bool
+    _clicker_offline_progress: bool
+    _clicker_offline_rate: Any
+    _clicker_region_offline_rate: Dict[str, Any]
+    _clicker_offline_cap_hours: int
     _task_region: List[str]
     _task_descriptions: List[str]
     _task_region_reqs: List[List[dict]]
@@ -112,6 +129,20 @@ class TaskipelagoWorld(World):
         item_count_raw = [str(x).strip() for x in (self.options.item_count.value or [])]
         task_count_raw = [str(x).strip() for x in (self.options.task_count.value or [])]
         task_cost_raw = [str(x).strip() for x in (self.options.task_cost.value or [])]
+
+        # Tasclickpelago: per-row clicker lists, all optional (see clicker.py).
+        clicker_mode = bool(self.options.clicker_mode)
+        task_activations_raw = [str(x).strip() for x in (self.options.task_activations.value or [])]
+        item_production_raw = [str(x).strip() for x in (self.options.item_production.value or [])]
+        item_click_power_raw = [str(x).strip() for x in (self.options.item_click_power.value or [])]
+        item_production_mult_raw = [str(x).strip() for x in (self.options.item_production_mult.value or [])]
+        item_click_mult_raw = [str(x).strip() for x in (self.options.item_click_mult.value or [])]
+        item_offline_mult_raw = [str(x).strip() for x in (self.options.item_offline_mult.value or [])]
+        if clicker_mode and bool(self.options.bingo_mode):
+            raise Exception(
+                "Taskipelago: clicker_mode and bingo_mode cannot both be enabled; "
+                "they both take over the task pane."
+            )
 
         if not tasks_raw:
             raise Exception("Taskipelago: tasks list is empty.")
@@ -174,6 +205,11 @@ class TaskipelagoWorld(World):
                 "Taskipelago: duplicate item names found (use the count field for multiple copies): "
                 + ", ".join(repr(n) for n in sorted(_item_name_dups))
             )
+        for _in in items_raw_input:
+            if _in.strip().lower() in RESERVED_NAMES:
+                raise Exception(
+                    f"Taskipelago: item name '{_in}' is a reserved word."
+                )
 
         n_editor_tasks = len(tasks_raw)
         n_editor_items = len(items_raw_input)
@@ -370,6 +406,52 @@ class TaskipelagoWorld(World):
             raw_reward_prereqs_input[_j] = _resolved
 
         # ------------------------------------------------------------------ #
+        # 5c. Tasclickpelago: activations, production and multipliers         #
+        # ------------------------------------------------------------------ #
+        # Parsed here so task targets resolve against the pre-randomization
+        # task list; 5b renumbers them with the same map as the prereqs.
+        _clicker_region_names = set(_opt_regions)
+
+        clicker_activations = expand_rows(
+            parse_task_activations(task_activations_raw, n_editor_tasks, n),
+            task_counts_editor,
+        )
+
+        def _clicker_specs(raw: List[str], label: str, positive: bool) -> List[List[dict]]:
+            rows = [
+                parse_target_specs(
+                    raw[i] if i < len(raw) else "", label, f"item {i + 1}",
+                    task_names=tasks, region_names=_clicker_region_names, n_tasks=n,
+                    strictly_positive=positive,
+                )
+                for i in range(n_editor_items)
+            ]
+            return expand_rows(rows, item_counts_editor)
+
+        def _clicker_values(raw: List[str], label: str, *, minimum=None,
+                            positive=False, round_2dp=False, blank) -> List[Any]:
+            rows = []
+            for i in range(n_editor_items):
+                text = raw[i] if i < len(raw) else ""
+                if not text:
+                    rows.append(blank)
+                    continue
+                rows.append(parse_value_expr(
+                    text, label, f"item {i + 1}", n,
+                    minimum=minimum, strictly_positive=positive, round_2dp=round_2dp,
+                ))
+            return expand_rows(rows, item_counts_editor)
+
+        clicker_production_full = _clicker_specs(item_production_raw, "item_production", True)
+        clicker_offline_mult_full = _clicker_specs(item_offline_mult_raw, "item_offline_mult", True)
+        clicker_click_power_full = _clicker_values(
+            item_click_power_raw, "item_click_power", minimum=0.0, blank=0)
+        clicker_production_mult_full = _clicker_values(
+            item_production_mult_raw, "item_production_mult", positive=True, round_2dp=True, blank=None)
+        clicker_click_mult_full = _clicker_values(
+            item_click_mult_raw, "item_click_mult", positive=True, round_2dp=True, blank=None)
+
+        # ------------------------------------------------------------------ #
         # 5b. Randomized selection and renumbering                           #
         # ------------------------------------------------------------------ #
         # Expanded (unpadded) item group per YAML item; step 8 uses the selected copy.
@@ -411,7 +493,8 @@ class TaskipelagoWorld(World):
             for _j, _txt in enumerate(raw_reward_prereqs_input):
                 if not _txt:
                     continue
-                _ast = parse_prereq(_txt, _n_item_range, _j, "reward prereq", known_groups=_group_names_set)
+                _ast = parse_prereq(_txt, _n_item_range, _j, "reward prereq", known_groups=_group_names_set,
+                                    n_tasks_const=n)
                 for _leaf in collect_leaves(_ast):
                     _g = item_group_full[_leaf] if _leaf < len(item_group_full) else ""
                     if _g and group_types.get(_g) == "random-choice":
@@ -535,6 +618,13 @@ class TaskipelagoWorld(World):
             else:
                 raw_costs_input = [raw_costs_input[_old] for _old in task_order]
             tasks = [tasks[_old] for _old in task_order]
+            clicker_activations = [clicker_activations[_old] for _old in task_order]
+            clicker_production_full = [
+                remap_spec_tasks(specs, task_map) for specs in clicker_production_full
+            ]
+            clicker_offline_mult_full = [
+                remap_spec_tasks(specs, task_map) for specs in clicker_offline_mult_full
+            ]
             raw_task_region = [raw_task_region[_old] for _old in task_order]
             raw_task_description = [raw_task_description[_old] for _old in task_order]
             raw_task_priority = [raw_task_priority[_old] for _old in task_order]
@@ -551,6 +641,11 @@ class TaskipelagoWorld(World):
             item_consumable = [item_consumable_full[k] for k in item_order]
             item_fillers = [item_fillers_full[k] for k in item_order]
             item_group_selected = [item_group_full[k] for k in item_order]
+            clicker_production_full = [clicker_production_full[k] for k in item_order]
+            clicker_offline_mult_full = [clicker_offline_mult_full[k] for k in item_order]
+            clicker_click_power_full = [clicker_click_power_full[k] for k in item_order]
+            clicker_production_mult_full = [clicker_production_mult_full[k] for k in item_order]
+            clicker_click_mult_full = [clicker_click_mult_full[k] for k in item_order]
             if len(item_order) != n:
                 print(
                     f"[Taskipelago] WARNING: Unbalanced item and task counts can lead to generation "
@@ -561,6 +656,22 @@ class TaskipelagoWorld(World):
             item_consumable = (item_consumable + [False] * n)[:n]
             item_fillers = (item_fillers + [True] * n)[:n]
             rewards = list(items_raw)
+
+        # Pad/trim the clicker per-item lists to the final item count, the same way
+        # item_types and item_consumable are padded. Padding items are filler and
+        # grant nothing.
+        def _pad_clicker(values: list, blank) -> list:
+            values = list(values)
+            if len(values) < n:
+                values += [blank] * (n - len(values))
+            return values[:n]
+
+        clicker_production = [list(v) for v in _pad_clicker(clicker_production_full, [])]
+        clicker_offline_mult = [list(v) for v in _pad_clicker(clicker_offline_mult_full, [])]
+        clicker_click_power = _pad_clicker(clicker_click_power_full, 0)
+        clicker_production_mult = _pad_clicker(clicker_production_mult_full, None)
+        clicker_click_mult = _pad_clicker(clicker_click_mult_full, None)
+        clicker_activations = _pad_clicker(clicker_activations, 1)
 
         # ------------------------------------------------------------------ #
         # 6. DeathLink validation                                             #
@@ -609,7 +720,7 @@ class TaskipelagoWorld(World):
                 raise Exception(
                     f"Taskipelago: region name '{rname}' must not contain digits."
                 )
-            if rname.lower() in RESERVED_WORDS:
+            if rname.lower() in RESERVED_NAMES:
                 raise Exception(
                     f"Taskipelago: region name '{rname}' is a reserved word."
                 )
@@ -640,6 +751,50 @@ class TaskipelagoWorld(World):
             raw_rcolors += [""] * (len(raw_regions) - len(raw_rcolors))
         region_colors = raw_rcolors[:len(raw_regions)]
 
+        # --- Tasclickpelago: region-parallel and slot-level options ---
+        def _clicker_warn(message: str) -> None:
+            print(message, file=_sys.stderr)
+
+        clicker_distributed = parse_region_flags(
+            [str(x).strip() for x in (self.options.region_distributed_production.value or [])],
+            raw_regions, "region_distributed_production", _clicker_warn,
+        )
+        clicker_region_offline_rate = parse_region_rates(
+            [str(x).strip() for x in (self.options.region_offline_rate.value or [])],
+            raw_regions, "region_offline_rate", n, _clicker_warn,
+        )
+        _cor_raw = [str(x).strip() for x in (self.options.clicker_offline_rate.value or []) if str(x).strip()]
+        if len(_cor_raw) > 1:
+            _clicker_warn(
+                "[Taskipelago] WARNING: clicker_offline_rate takes a single entry; "
+                "only the first is used."
+            )
+        clicker_offline_rate = (
+            parse_value_expr(_cor_raw[0], "clicker_offline_rate", "the slot", n, minimum=0.0)
+            if _cor_raw else 1
+        )
+        clicker_offline_progress = bool(self.options.clicker_offline_progress)
+        clicker_offline_cap_hours = int(self.options.clicker_offline_cap_hours)
+        clicker_distribute_global = bool(self.options.clicker_distribute_global)
+
+        if clicker_mode:
+            if not any(clicker_production) and not any(
+                bool(v) for v in clicker_click_power
+            ) and not any(v is not None for v in clicker_click_mult):
+                _clicker_warn(
+                    "[Taskipelago] WARNING: clicker_mode is on but no item grants production, "
+                    "click power or a click multiplier. The slot is playable, but every task "
+                    "has to be clicked out by hand."
+                )
+            if not clicker_offline_progress and (
+                _cor_raw or clicker_region_offline_rate
+                or any(clicker_offline_mult) or clicker_offline_cap_hours != 8
+            ):
+                _clicker_warn(
+                    "[Taskipelago] WARNING: clicker_offline_progress is off, so the offline "
+                    "rate, region overrides, offline multipliers and cap are never read."
+                )
+
         for i, rname in enumerate(raw_task_region):
             if rname and rname not in region_set:
                 raise Exception(
@@ -667,6 +822,7 @@ class TaskipelagoWorld(World):
                 region_prereq_text[rname], 0, 0, "region prereq",
                 known_groups=None, known_regions=region_set,
                 location_label=f"region '{rname}'",
+                n_tasks_const=n,
             )
             region_prereqs_unresolved[rname] = ast_r
 
@@ -730,7 +886,7 @@ class TaskipelagoWorld(World):
                 raise Exception(
                     f"Taskipelago: progressive group name '{gname}' must not contain digits."
                 )
-            if gname.lower() in RESERVED_WORDS:
+            if gname.lower() in RESERVED_NAMES:
                 raise Exception(
                     f"Taskipelago: progressive group name '{gname}' is a reserved word."
                 )
@@ -790,7 +946,7 @@ class TaskipelagoWorld(World):
         parsed_reward_prereqs_unresolved = []
         for i, txt in enumerate(raw_reward_prereqs_input):
             parsed_reward_prereqs_unresolved.append(
-                parse_prereq(txt, n, i, "reward prereq", known_groups=prog_group_set)
+                parse_prereq(txt, n, i, "reward prereq", known_groups=prog_group_set, n_tasks_const=n)
             )
 
         # Typed group refs (random-choice, aesthetic, progressive with a default %) resolve
@@ -1025,6 +1181,7 @@ class TaskipelagoWorld(World):
                     cost_text,
                     consumable_names,
                     item_names_ordered=rewards,
+                    n_tasks=n,
                 )
                 parsed_costs.append(ast)
             except Exception as e:
@@ -1254,6 +1411,19 @@ class TaskipelagoWorld(World):
         self._group_to_reward_indices = group_to_reward_indices
         self._task_progressive_reqs = task_progressive_reqs
         self._regions = raw_regions
+        self._clicker_mode = clicker_mode
+        self._clicker_activations = clicker_activations
+        self._clicker_production = clicker_production
+        self._clicker_click_power = clicker_click_power
+        self._clicker_production_mult = clicker_production_mult
+        self._clicker_click_mult = clicker_click_mult
+        self._clicker_offline_mult = clicker_offline_mult
+        self._clicker_distributed = clicker_distributed
+        self._clicker_distribute_global = clicker_distribute_global
+        self._clicker_offline_progress = clicker_offline_progress
+        self._clicker_offline_rate = clicker_offline_rate
+        self._clicker_region_offline_rate = clicker_region_offline_rate
+        self._clicker_offline_cap_hours = clicker_offline_cap_hours
         self._region_default_pcts = region_default_pcts
         self._region_colors = region_colors
         self._task_region = task_region
@@ -1472,6 +1642,19 @@ class TaskipelagoWorld(World):
             "task_region": list(self._task_region),
             "task_region_reqs": [list(reqs) for reqs in self._task_region_reqs],
             "task_description": list(self._task_descriptions),
+            "clicker_mode": bool(self._clicker_mode),
+            "task_activations": list(self._clicker_activations),
+            "item_production": [list(v) for v in self._clicker_production],
+            "item_click_power": list(self._clicker_click_power),
+            "item_production_mult": list(self._clicker_production_mult),
+            "item_click_mult": list(self._clicker_click_mult),
+            "item_offline_mult": [list(v) for v in self._clicker_offline_mult],
+            "region_distributed_production": dict(self._clicker_distributed),
+            "clicker_distribute_global": bool(self._clicker_distribute_global),
+            "clicker_offline_progress": bool(self._clicker_offline_progress),
+            "clicker_offline_rate": self._clicker_offline_rate,
+            "region_offline_rate": dict(self._clicker_region_offline_rate),
+            "clicker_offline_cap_hours": int(self._clicker_offline_cap_hours),
             "bingo_mode": bool(self.options.bingo_mode),
             "bingo_dimension_x": int(self.options.bingo_dimension_x),
             "bingo_dimension_y": int(self.options.bingo_dimension_y),

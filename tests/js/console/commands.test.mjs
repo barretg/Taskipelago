@@ -48,7 +48,7 @@ test('input works while disconnected; /help uses the AP help format', async () =
 
 test('unknown command lists known commands', async () => {
   await type('/nope');
-  assert.equal(lines().at(-1), 'Could not find command nope. Known commands: help, connect, disconnect, received, missing, checked, items, locations, ready');
+  assert.equal(lines().at(-1), 'Could not find command nope. Known commands: help, connect, disconnect, received, missing, checked, items, locations, ready, click, clicker');
 });
 
 test('chat while disconnected is not sent', async () => {

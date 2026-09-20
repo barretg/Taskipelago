@@ -1,130 +1,680 @@
 {
- "defaults": {"prereq": {"n": 10, "task_index": 4, "label": "task prereq", "groups": ["weapons", "my-group", "weapons+", "weap-", "armor_set", "caf\u00e9", "shared"], "regions": ["chores", "side-quests", "shared"], "location_label": null}, "cost": {"consumables": ["Gold", "Gem", "it's", "Big Coin", "a\tb"], "items": ["Key", "Gold", "Gem", "Big Coin"]}},
+ "defaults": {
+  "prereq": {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null
+  },
+  "cost": {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "n_tasks": 10
+  }
+ },
  "cases": [
-  {"kind": "prereq", "text": ""},
-  {"kind": "prereq", "text": "   "},
-  {"kind": "prereq", "text": "1"},
-  {"kind": "prereq", "text": " 3 "},
-  {"kind": "prereq", "text": "1,2"},
-  {"kind": "prereq", "text": "1 && 2"},
-  {"kind": "prereq", "text": "1||2"},
-  {"kind": "prereq", "text": "1 || 2 && 3"},
-  {"kind": "prereq", "text": "(1 || 2) && 3"},
-  {"kind": "prereq", "text": "((1))"},
-  {"kind": "prereq", "text": "1, (2 || (3 && 4)), 5"},
-  {"kind": "prereq", "text": "1 &&2||3,4"},
-  {"kind": "prereq", "text": "\t1\n&&\r2\u3000"},
-  {"kind": "prereq", "text": "\u001c1\u001f"},
-  {"kind": "prereq", "text": "01"},
-  {"kind": "prereq", "text": "10"},
-  {"kind": "prereq", "text": "11"},
-  {"kind": "prereq", "text": "0"},
-  {"kind": "prereq", "text": "99999999999999999999"},
-  {"kind": "prereq", "text": "1", "n": 0},
-  {"kind": "prereq", "text": "weapons"},
-  {"kind": "prereq", "text": "weapons-2"},
-  {"kind": "prereq", "text": "weapons*3"},
-  {"kind": "prereq", "text": "weapons-2 && chores-50 || armor_set*2"},
-  {"kind": "prereq", "text": "chores"},
-  {"kind": "prereq", "text": "chores-50"},
-  {"kind": "prereq", "text": "chores*2"},
-  {"kind": "prereq", "text": "side-quests-25"},
-  {"kind": "prereq", "text": "shared-1"},
-  {"kind": "prereq", "text": "shared*1"},
-  {"kind": "prereq", "text": "my-group"},
-  {"kind": "prereq", "text": "my-group-3", "f8": true},
-  {"kind": "prereq", "text": "weapons+", "f8": true},
-  {"kind": "prereq", "text": "weapons+*3", "f8": true},
-  {"kind": "prereq", "text": "weapons+-2", "f8": true},
-  {"kind": "prereq", "text": "weap-*2", "f8": true},
-  {"kind": "prereq", "text": "side-quests!*2", "groups": ["side-quests!"], "f8": true},
-  {"kind": "prereq", "text": "x--3", "regions": ["x-"], "f8": true},
-  {"kind": "prereq", "text": "weapons+-2 && weap-*1", "f8": true},
-  {"kind": "prereq", "text": "a-1-2", "f8": true},
-  {"kind": "prereq", "text": "caf\u00e9-2"},
-  {"kind": "prereq", "text": "\u00fcn\u00ef"},
-  {"kind": "prereq", "text": "__"},
-  {"kind": "prereq", "text": "unknown"},
-  {"kind": "prereq", "text": "unknown-3"},
-  {"kind": "prereq", "text": "weapons-"},
-  {"kind": "prereq", "text": "weapons*"},
-  {"kind": "prereq", "text": "chores", "regions": null},
-  {"kind": "prereq", "text": "weapons", "groups": null},
-  {"kind": "prereq", "text": "prev"},
-  {"kind": "prereq", "text": "prev && 2"},
-  {"kind": "prereq", "text": "prev", "task_index": 0},
-  {"kind": "prereq", "text": "prev", "label": "item prereq"},
-  {"kind": "prereq", "text": "sequential"},
-  {"kind": "prereq", "text": "sequential && prev || 1"},
-  {"kind": "prereq", "text": "sequential", "label": "goal tasks", "task_index": 0},
-  {"kind": "prereq", "text": "prev-2"},
-  {"kind": "prereq", "text": "x", "label": "region prereq", "location_label": "region 'chores'"},
-  {"kind": "prereq", "text": "11", "label": "region prereq", "location_label": "region 'chores'"},
-  {"kind": "prereq", "text": "1 2"},
-  {"kind": "prereq", "text": "(1"},
-  {"kind": "prereq", "text": "(1 2)"},
-  {"kind": "prereq", "text": "1)"},
-  {"kind": "prereq", "text": "()"},
-  {"kind": "prereq", "text": "&&"},
-  {"kind": "prereq", "text": "1 &&"},
-  {"kind": "prereq", "text": "&& 1"},
-  {"kind": "prereq", "text": "1 ,, 2"},
-  {"kind": "prereq", "text": "-1"},
-  {"kind": "prereq", "text": "1 * 2"},
-  {"kind": "prereq", "text": "!1"},
-  {"kind": "prereq", "text": "\"Wash\""},
-  {"kind": "prereq", "text": "1&2"},
-  {"kind": "prereq", "text": "1|2"},
-  {"kind": "prereq", "text": "weapons(1)"},
-  {"kind": "prereq", "text": "weapons&&chores||1"},
-  {"kind": "prereq", "text": "a|b"},
-  {"kind": "prereq", "text": "\ud835\udcb3"},
-  {"kind": "cost", "text": ""},
-  {"kind": "cost", "text": "\"Gold\""},
-  {"kind": "cost", "text": "\"Gold\"*3"},
-  {"kind": "cost", "text": "\"Gold\" * 3"},
-  {"kind": "cost", "text": "\"Gold\"*"},
-  {"kind": "cost", "text": "\"Gold\"*0"},
-  {"kind": "cost", "text": "\"Gold\"*2*3"},
-  {"kind": "cost", "text": "2"},
-  {"kind": "cost", "text": "2*4"},
-  {"kind": "cost", "text": "007"},
-  {"kind": "cost", "text": "9"},
-  {"kind": "cost", "text": "2", "items": null},
-  {"kind": "cost", "text": "2", "items": []},
-  {"kind": "cost", "text": "1"},
-  {"kind": "cost", "text": "3*2 && \"Gold\""},
-  {"kind": "cost", "text": "\"Gold\"*2 || \"Gem\"*1"},
-  {"kind": "cost", "text": "(\"Gold\" || \"Gem\") && \"Big Coin\"*2"},
-  {"kind": "cost", "text": "\"Gold\",\"Gem\""},
-  {"kind": "cost", "text": "\"Key\""},
-  {"kind": "cost", "text": "\"Nope\"*2"},
-  {"kind": "cost", "text": "\"\""},
-  {"kind": "cost", "text": "\"Gold"},
-  {"kind": "cost", "text": "\"it's\"*2"},
-  {"kind": "cost", "text": "\"a\tb\""},
-  {"kind": "cost", "text": "\"Gold\" \"Gem\""},
-  {"kind": "cost", "text": "\"Gold\" \"it's\""},
-  {"kind": "cost", "text": "\"Gold\" \"a\tb\""},
-  {"kind": "cost", "text": "\"it's\" )"},
-  {"kind": "cost", "text": "(\"Gold\""},
-  {"kind": "cost", "text": "(\"Gold\" \"Gem\")"},
-  {"kind": "cost", "text": "(\"Gold\" ,)"},
-  {"kind": "cost", "text": "||"},
-  {"kind": "cost", "text": "\"Gold\" ||"},
-  {"kind": "cost", "text": ")"},
-  {"kind": "cost", "text": "Gold"},
-  {"kind": "cost", "text": "\u00a0\"Gold\"\u2003"},
-  {"kind": "prereq", "text": "3*2", "label": "item prereq"},
-  {"kind": "prereq", "text": "3*1 && (1 || 2*4)", "label": "item prereq"},
-  {"kind": "prereq", "text": "3*0", "label": "item prereq"},
-  {"kind": "prereq", "text": "11*2", "label": "item prereq"},
-  {"kind": "prereq", "text": "3*", "label": "item prereq"},
-  {"kind": "prereq", "text": "3 *2", "label": "item prereq"},
-  {"kind": "prereq", "text": "1 2*3", "label": "item prereq"},
-  {"kind": "prereq", "text": "(1 2*3)", "label": "item prereq"},
-  {"kind": "prereq", "text": "weapons*2 && 4*3", "label": "item prereq"},
-  {"kind": "prereq", "text": "3*2"},
-  {"kind": "prereq", "text": "3*2", "label": "goal tasks"}
+  {
+   "kind": "prereq",
+   "text": ""
+  },
+  {
+   "kind": "prereq",
+   "text": "   "
+  },
+  {
+   "kind": "prereq",
+   "text": "1"
+  },
+  {
+   "kind": "prereq",
+   "text": " 3 "
+  },
+  {
+   "kind": "prereq",
+   "text": "1,2"
+  },
+  {
+   "kind": "prereq",
+   "text": "1 && 2"
+  },
+  {
+   "kind": "prereq",
+   "text": "1||2"
+  },
+  {
+   "kind": "prereq",
+   "text": "1 || 2 && 3"
+  },
+  {
+   "kind": "prereq",
+   "text": "(1 || 2) && 3"
+  },
+  {
+   "kind": "prereq",
+   "text": "((1))"
+  },
+  {
+   "kind": "prereq",
+   "text": "1, (2 || (3 && 4)), 5"
+  },
+  {
+   "kind": "prereq",
+   "text": "1 &&2||3,4"
+  },
+  {
+   "kind": "prereq",
+   "text": "\t1\n&&\r2　"
+  },
+  {
+   "kind": "prereq",
+   "text": "\u001c1\u001f"
+  },
+  {
+   "kind": "prereq",
+   "text": "01"
+  },
+  {
+   "kind": "prereq",
+   "text": "10"
+  },
+  {
+   "kind": "prereq",
+   "text": "11"
+  },
+  {
+   "kind": "prereq",
+   "text": "0"
+  },
+  {
+   "kind": "prereq",
+   "text": "99999999999999999999"
+  },
+  {
+   "kind": "prereq",
+   "text": "1",
+   "n": 0
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons"
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons-2"
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons*3"
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons-2 && chores-50 || armor_set*2"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores-50"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores*2"
+  },
+  {
+   "kind": "prereq",
+   "text": "side-quests-25"
+  },
+  {
+   "kind": "prereq",
+   "text": "shared-1"
+  },
+  {
+   "kind": "prereq",
+   "text": "shared*1"
+  },
+  {
+   "kind": "prereq",
+   "text": "my-group"
+  },
+  {
+   "kind": "prereq",
+   "text": "my-group-3",
+   "f8": true
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons+",
+   "f8": true
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons+*3",
+   "f8": true
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons+-2",
+   "f8": true
+  },
+  {
+   "kind": "prereq",
+   "text": "weap-*2",
+   "f8": true
+  },
+  {
+   "kind": "prereq",
+   "text": "side-quests!*2",
+   "groups": [
+    "side-quests!"
+   ],
+   "f8": true
+  },
+  {
+   "kind": "prereq",
+   "text": "x--3",
+   "regions": [
+    "x-"
+   ],
+   "f8": true
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons+-2 && weap-*1",
+   "f8": true
+  },
+  {
+   "kind": "prereq",
+   "text": "a-1-2",
+   "f8": true
+  },
+  {
+   "kind": "prereq",
+   "text": "café-2"
+  },
+  {
+   "kind": "prereq",
+   "text": "ünï"
+  },
+  {
+   "kind": "prereq",
+   "text": "__"
+  },
+  {
+   "kind": "prereq",
+   "text": "unknown"
+  },
+  {
+   "kind": "prereq",
+   "text": "unknown-3"
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons-"
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons*"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores",
+   "regions": null
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons",
+   "groups": null
+  },
+  {
+   "kind": "prereq",
+   "text": "prev"
+  },
+  {
+   "kind": "prereq",
+   "text": "prev && 2"
+  },
+  {
+   "kind": "prereq",
+   "text": "prev",
+   "task_index": 0
+  },
+  {
+   "kind": "prereq",
+   "text": "prev",
+   "label": "item prereq"
+  },
+  {
+   "kind": "prereq",
+   "text": "sequential"
+  },
+  {
+   "kind": "prereq",
+   "text": "sequential && prev || 1"
+  },
+  {
+   "kind": "prereq",
+   "text": "sequential",
+   "label": "goal tasks",
+   "task_index": 0
+  },
+  {
+   "kind": "prereq",
+   "text": "prev-2"
+  },
+  {
+   "kind": "prereq",
+   "text": "x",
+   "label": "region prereq",
+   "location_label": "region 'chores'"
+  },
+  {
+   "kind": "prereq",
+   "text": "11",
+   "label": "region prereq",
+   "location_label": "region 'chores'"
+  },
+  {
+   "kind": "prereq",
+   "text": "1 2"
+  },
+  {
+   "kind": "prereq",
+   "text": "(1"
+  },
+  {
+   "kind": "prereq",
+   "text": "(1 2)"
+  },
+  {
+   "kind": "prereq",
+   "text": "1)"
+  },
+  {
+   "kind": "prereq",
+   "text": "()"
+  },
+  {
+   "kind": "prereq",
+   "text": "&&"
+  },
+  {
+   "kind": "prereq",
+   "text": "1 &&"
+  },
+  {
+   "kind": "prereq",
+   "text": "&& 1"
+  },
+  {
+   "kind": "prereq",
+   "text": "1 ,, 2"
+  },
+  {
+   "kind": "prereq",
+   "text": "-1"
+  },
+  {
+   "kind": "prereq",
+   "text": "1 * 2"
+  },
+  {
+   "kind": "prereq",
+   "text": "!1"
+  },
+  {
+   "kind": "prereq",
+   "text": "\"Wash\""
+  },
+  {
+   "kind": "prereq",
+   "text": "1&2"
+  },
+  {
+   "kind": "prereq",
+   "text": "1|2"
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons(1)"
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons&&chores||1"
+  },
+  {
+   "kind": "prereq",
+   "text": "a|b"
+  },
+  {
+   "kind": "prereq",
+   "text": "𝒳"
+  },
+  {
+   "kind": "cost",
+   "text": ""
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\""
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\"*3"
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\" * 3"
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\"*"
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\"*0"
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\"*2*3"
+  },
+  {
+   "kind": "cost",
+   "text": "2"
+  },
+  {
+   "kind": "cost",
+   "text": "2*4"
+  },
+  {
+   "kind": "cost",
+   "text": "007"
+  },
+  {
+   "kind": "cost",
+   "text": "9"
+  },
+  {
+   "kind": "cost",
+   "text": "2",
+   "items": null
+  },
+  {
+   "kind": "cost",
+   "text": "2",
+   "items": []
+  },
+  {
+   "kind": "cost",
+   "text": "1"
+  },
+  {
+   "kind": "cost",
+   "text": "3*2 && \"Gold\""
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\"*2 || \"Gem\"*1"
+  },
+  {
+   "kind": "cost",
+   "text": "(\"Gold\" || \"Gem\") && \"Big Coin\"*2"
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\",\"Gem\""
+  },
+  {
+   "kind": "cost",
+   "text": "\"Key\""
+  },
+  {
+   "kind": "cost",
+   "text": "\"Nope\"*2"
+  },
+  {
+   "kind": "cost",
+   "text": "\"\""
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold"
+  },
+  {
+   "kind": "cost",
+   "text": "\"it's\"*2"
+  },
+  {
+   "kind": "cost",
+   "text": "\"a\tb\""
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\" \"Gem\""
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\" \"it's\""
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\" \"a\tb\""
+  },
+  {
+   "kind": "cost",
+   "text": "\"it's\" )"
+  },
+  {
+   "kind": "cost",
+   "text": "(\"Gold\""
+  },
+  {
+   "kind": "cost",
+   "text": "(\"Gold\" \"Gem\")"
+  },
+  {
+   "kind": "cost",
+   "text": "(\"Gold\" ,)"
+  },
+  {
+   "kind": "cost",
+   "text": "||"
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\" ||"
+  },
+  {
+   "kind": "cost",
+   "text": ")"
+  },
+  {
+   "kind": "cost",
+   "text": "Gold"
+  },
+  {
+   "kind": "cost",
+   "text": " \"Gold\" "
+  },
+  {
+   "kind": "prereq",
+   "text": "3*2",
+   "label": "item prereq"
+  },
+  {
+   "kind": "prereq",
+   "text": "3*1 && (1 || 2*4)",
+   "label": "item prereq"
+  },
+  {
+   "kind": "prereq",
+   "text": "3*0",
+   "label": "item prereq"
+  },
+  {
+   "kind": "prereq",
+   "text": "11*2",
+   "label": "item prereq"
+  },
+  {
+   "kind": "prereq",
+   "text": "3*",
+   "label": "item prereq"
+  },
+  {
+   "kind": "prereq",
+   "text": "3 *2",
+   "label": "item prereq"
+  },
+  {
+   "kind": "prereq",
+   "text": "1 2*3",
+   "label": "item prereq"
+  },
+  {
+   "kind": "prereq",
+   "text": "(1 2*3)",
+   "label": "item prereq"
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons*2 && 4*3",
+   "label": "item prereq"
+  },
+  {
+   "kind": "prereq",
+   "text": "3*2"
+  },
+  {
+   "kind": "prereq",
+   "text": "3*2",
+   "label": "goal tasks"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores-N_TASKS"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores*N_TASKS"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores-N_TASKS/2"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores-N_TASKS*2"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores-(N_TASKS-3)"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores-N_TASKS_UNLOCKED"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores-N_TASKS_LOCKED"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores-N_TASKS_COMPLETED"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores-N_OTHER"
+  },
+  {
+   "kind": "prereq",
+   "text": "side-quests-N_TASKS"
+  },
+  {
+   "kind": "prereq",
+   "text": "side-quests*N_TASKS"
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons*N_TASKS"
+  },
+  {
+   "kind": "prereq",
+   "text": "weapons-N_TASKS"
+  },
+  {
+   "kind": "prereq",
+   "text": "weap--N_TASKS"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores-1.5"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores-N_TASKS && 1"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores-0*N_TASKS"
+  },
+  {
+   "kind": "prereq",
+   "text": "chores-N_TASKS/0"
+  },
+  {
+   "kind": "prereq",
+   "text": "N_TASKS"
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\"*N_TASKS"
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\"*N_TASKS/2"
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\"*N_TASKS_UNLOCKED"
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\"*N_OTHER"
+  },
+  {
+   "kind": "cost",
+   "text": "2*N_TASKS"
+  },
+  {
+   "kind": "cost",
+   "text": "\"Gold\"*2x"
+  }
  ]
 }

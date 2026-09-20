@@ -2190,6 +2190,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "",
    "result": {
@@ -2210,6 +2211,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Gold\"",
    "result": {
@@ -2234,6 +2236,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Gold\"*3",
    "result": {
@@ -2258,6 +2261,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Gold\" * 3",
    "result": {
@@ -2278,6 +2282,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Gold\"*",
    "result": {
@@ -2298,6 +2303,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Gold\"*0",
    "result": {
@@ -2318,6 +2324,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Gold\"*2*3",
    "result": {
@@ -2338,6 +2345,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "2",
    "result": {
@@ -2362,6 +2370,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "2*4",
    "result": {
@@ -2386,6 +2395,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "007",
    "result": {
@@ -2406,6 +2416,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "9",
    "result": {
@@ -2421,6 +2432,7 @@
     "a\tb"
    ],
    "items": null,
+   "n_tasks": 10,
    "kind": "cost",
    "text": "2",
    "result": {
@@ -2436,6 +2448,7 @@
     "a\tb"
    ],
    "items": [],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "2",
    "result": {
@@ -2456,6 +2469,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "1",
    "result": {
@@ -2476,6 +2490,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "3*2 && \"Gold\"",
    "result": {
@@ -2510,6 +2525,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Gold\"*2 || \"Gem\"*1",
    "result": {
@@ -2544,6 +2560,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "(\"Gold\" || \"Gem\") && \"Big Coin\"*2",
    "result": {
@@ -2588,6 +2605,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Gold\",\"Gem\"",
    "result": {
@@ -2622,6 +2640,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Key\"",
    "result": {
@@ -2642,6 +2661,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Nope\"*2",
    "result": {
@@ -2662,6 +2682,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"\"",
    "result": {
@@ -2682,6 +2703,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Gold",
    "result": {
@@ -2702,6 +2724,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"it's\"*2",
    "result": {
@@ -2726,6 +2749,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"a\tb\"",
    "result": {
@@ -2750,6 +2774,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Gold\" \"Gem\"",
    "result": {
@@ -2770,6 +2795,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Gold\" \"it's\"",
    "result": {
@@ -2790,6 +2816,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Gold\" \"a\tb\"",
    "result": {
@@ -2810,6 +2837,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"it's\" )",
    "result": {
@@ -2830,6 +2858,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "(\"Gold\"",
    "result": {
@@ -2850,6 +2879,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "(\"Gold\" \"Gem\")",
    "result": {
@@ -2870,6 +2900,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "(\"Gold\" ,)",
    "result": {
@@ -2890,6 +2921,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "||",
    "result": {
@@ -2910,6 +2942,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "\"Gold\" ||",
    "result": {
@@ -2930,6 +2963,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": ")",
    "result": {
@@ -2950,6 +2984,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": "Gold",
    "result": {
@@ -2970,6 +3005,7 @@
     "Gem",
     "Big Coin"
    ],
+   "n_tasks": 10,
    "kind": "cost",
    "text": " \"Gold\" ",
    "result": {
@@ -3291,6 +3327,669 @@
    "text": "3*2",
    "result": {
     "error": "Taskipelago: '3*2' copy counts can only be used in item prereqs (used in goal tasks on task 5)."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores-N_TASKS",
+   "result": {
+    "ast": [
+     "region_ref",
+     "chores",
+     10
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores*N_TASKS",
+   "result": {
+    "ast": [
+     "region_abs",
+     "chores",
+     10
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores-N_TASKS/2",
+   "result": {
+    "ast": [
+     "region_ref",
+     "chores",
+     5
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores-N_TASKS*2",
+   "result": {
+    "ast": [
+     "region_ref",
+     "chores",
+     20
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores-(N_TASKS-3)",
+   "result": {
+    "error": "Taskipelago: unknown name 'chores-' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores-N_TASKS_UNLOCKED",
+   "result": {
+    "error": "Taskipelago: 'N_TASKS_UNLOCKED' changes during play and cannot be used in 'chores-N_TASKS_UNLOCKED'; only N_TASKS is allowed in a prereq, goal or cost suffix."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores-N_TASKS_LOCKED",
+   "result": {
+    "error": "Taskipelago: 'N_TASKS_LOCKED' changes during play and cannot be used in 'chores-N_TASKS_LOCKED'; only N_TASKS is allowed in a prereq, goal or cost suffix."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores-N_TASKS_COMPLETED",
+   "result": {
+    "error": "Taskipelago: 'N_TASKS_COMPLETED' changes during play and cannot be used in 'chores-N_TASKS_COMPLETED'; only N_TASKS is allowed in a prereq, goal or cost suffix."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores-N_OTHER",
+   "result": {
+    "error": "Taskipelago: unknown name 'chores-N_OTHER' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "side-quests-N_TASKS",
+   "result": {
+    "ast": [
+     "region_ref",
+     "side-quests",
+     10
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "side-quests*N_TASKS",
+   "result": {
+    "ast": [
+     "region_abs",
+     "side-quests",
+     10
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons*N_TASKS",
+   "result": {
+    "ast": [
+     "group_count",
+     "weapons",
+     10
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weapons-N_TASKS",
+   "result": {
+    "ast": [
+     "group_ref",
+     "weapons",
+     10
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "weap--N_TASKS",
+   "result": {
+    "ast": [
+     "group_ref",
+     "weap-",
+     10
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores-1.5",
+   "result": {
+    "error": "Taskipelago: unknown name 'chores-1.5' in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores-N_TASKS && 1",
+   "result": {
+    "ast": [
+     "and",
+     [
+      [
+       "region_ref",
+       "chores",
+       10
+      ],
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores-0*N_TASKS",
+   "result": {
+    "ast": [
+     "region_ref",
+     "chores",
+     1
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "chores-N_TASKS/0",
+   "result": {
+    "error": "Taskipelago: division by zero in task prereq on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "text": "N_TASKS",
+   "result": {
+    "error": "Taskipelago: unknown name 'N_TASKS' in task prereq on task 5."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "n_tasks": 10,
+   "kind": "cost",
+   "text": "\"Gold\"*N_TASKS",
+   "result": {
+    "ast": [
+     "cost_group",
+     "Gold",
+     10
+    ]
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "n_tasks": 10,
+   "kind": "cost",
+   "text": "\"Gold\"*N_TASKS/2",
+   "result": {
+    "ast": [
+     "cost_group",
+     "Gold",
+     5
+    ]
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "n_tasks": 10,
+   "kind": "cost",
+   "text": "\"Gold\"*N_TASKS_UNLOCKED",
+   "result": {
+    "error": "Taskipelago: 'N_TASKS_UNLOCKED' changes during play and cannot be used in a cost expression; only N_TASKS is allowed there."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "n_tasks": 10,
+   "kind": "cost",
+   "text": "\"Gold\"*N_OTHER",
+   "result": {
+    "error": "Taskipelago: unexpected character '*' in cost expression."
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "n_tasks": 10,
+   "kind": "cost",
+   "text": "2*N_TASKS",
+   "result": {
+    "ast": [
+     "cost_group",
+     "Gold",
+     10
+    ]
+   }
+  },
+  {
+   "consumables": [
+    "Gold",
+    "Gem",
+    "it's",
+    "Big Coin",
+    "a\tb"
+   ],
+   "items": [
+    "Key",
+    "Gold",
+    "Gem",
+    "Big Coin"
+   ],
+   "n_tasks": 10,
+   "kind": "cost",
+   "text": "\"Gold\"*2x",
+   "result": {
+    "error": "Taskipelago: unexpected character 'x' in cost expression."
    }
   }
  ]

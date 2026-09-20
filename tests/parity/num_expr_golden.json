@@ -1,0 +1,1099 @@
+{
+ "bindings": [
+  {
+   "N_TASKS": 10,
+   "N_TASKS_UNLOCKED": 0,
+   "N_TASKS_LOCKED": 10,
+   "N_TASKS_COMPLETED": 0
+  },
+  {
+   "N_TASKS": 10,
+   "N_TASKS_UNLOCKED": 10,
+   "N_TASKS_LOCKED": 0,
+   "N_TASKS_COMPLETED": 10
+  },
+  {
+   "N_TASKS": 7,
+   "N_TASKS_UNLOCKED": 3,
+   "N_TASKS_LOCKED": 4,
+   "N_TASKS_COMPLETED": 2
+  }
+ ],
+ "cases": [
+  {
+   "text": "1",
+   "result": {
+    "ast": {
+     "num": 1
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 1.0,
+      "i": 1
+     },
+     {
+      "v": 1.0,
+      "i": 1
+     },
+     {
+      "v": 1.0,
+      "i": 1
+     }
+    ]
+   }
+  },
+  {
+   "text": "0",
+   "result": {
+    "ast": {
+     "num": 0
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 0.0,
+      "i": 1
+     },
+     {
+      "v": 0.0,
+      "i": 1
+     },
+     {
+      "v": 0.0,
+      "i": 1
+     }
+    ]
+   }
+  },
+  {
+   "text": "1.5",
+   "result": {
+    "ast": {
+     "num": 1.5
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 1.5,
+      "i": 2
+     },
+     {
+      "v": 1.5,
+      "i": 2
+     },
+     {
+      "v": 1.5,
+      "i": 2
+     }
+    ]
+   }
+  },
+  {
+   "text": ".5",
+   "result": {
+    "ast": {
+     "num": 0.5
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 0.5,
+      "i": 1
+     },
+     {
+      "v": 0.5,
+      "i": 1
+     },
+     {
+      "v": 0.5,
+      "i": 1
+     }
+    ]
+   }
+  },
+  {
+   "text": "2.",
+   "result": {
+    "ast": {
+     "num": 2
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 2.0,
+      "i": 2
+     },
+     {
+      "v": 2.0,
+      "i": 2
+     },
+     {
+      "v": 2.0,
+      "i": 2
+     }
+    ]
+   }
+  },
+  {
+   "text": "  3  ",
+   "result": {
+    "ast": {
+     "num": 3
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 3.0,
+      "i": 3
+     },
+     {
+      "v": 3.0,
+      "i": 3
+     },
+     {
+      "v": 3.0,
+      "i": 3
+     }
+    ]
+   }
+  },
+  {
+   "text": "1 + 2",
+   "result": {
+    "ast": {
+     "op": "+",
+     "l": {
+      "num": 1
+     },
+     "r": {
+      "num": 2
+     }
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 3.0,
+      "i": 3
+     },
+     {
+      "v": 3.0,
+      "i": 3
+     },
+     {
+      "v": 3.0,
+      "i": 3
+     }
+    ]
+   }
+  },
+  {
+   "text": "1 - 2",
+   "result": {
+    "ast": {
+     "op": "-",
+     "l": {
+      "num": 1
+     },
+     "r": {
+      "num": 2
+     }
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": -1.0,
+      "i": 1
+     },
+     {
+      "v": -1.0,
+      "i": 1
+     },
+     {
+      "v": -1.0,
+      "i": 1
+     }
+    ]
+   }
+  },
+  {
+   "text": "2 * 3",
+   "result": {
+    "ast": {
+     "op": "*",
+     "l": {
+      "num": 2
+     },
+     "r": {
+      "num": 3
+     }
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 6.0,
+      "i": 6
+     },
+     {
+      "v": 6.0,
+      "i": 6
+     },
+     {
+      "v": 6.0,
+      "i": 6
+     }
+    ]
+   }
+  },
+  {
+   "text": "7 / 2",
+   "result": {
+    "ast": {
+     "op": "/",
+     "l": {
+      "num": 7
+     },
+     "r": {
+      "num": 2
+     }
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 3.5,
+      "i": 4
+     },
+     {
+      "v": 3.5,
+      "i": 4
+     },
+     {
+      "v": 3.5,
+      "i": 4
+     }
+    ]
+   }
+  },
+  {
+   "text": "1 + 2 * 3",
+   "result": {
+    "ast": {
+     "op": "+",
+     "l": {
+      "num": 1
+     },
+     "r": {
+      "op": "*",
+      "l": {
+       "num": 2
+      },
+      "r": {
+       "num": 3
+      }
+     }
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 7.0,
+      "i": 7
+     },
+     {
+      "v": 7.0,
+      "i": 7
+     },
+     {
+      "v": 7.0,
+      "i": 7
+     }
+    ]
+   }
+  },
+  {
+   "text": "(1 + 2) * 3",
+   "result": {
+    "ast": {
+     "op": "*",
+     "l": {
+      "op": "+",
+      "l": {
+       "num": 1
+      },
+      "r": {
+       "num": 2
+      }
+     },
+     "r": {
+      "num": 3
+     }
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 9.0,
+      "i": 9
+     },
+     {
+      "v": 9.0,
+      "i": 9
+     },
+     {
+      "v": 9.0,
+      "i": 9
+     }
+    ]
+   }
+  },
+  {
+   "text": "-1",
+   "result": {
+    "ast": {
+     "op": "-",
+     "l": {
+      "num": 0
+     },
+     "r": {
+      "num": 1
+     }
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": -1.0,
+      "i": 1
+     },
+     {
+      "v": -1.0,
+      "i": 1
+     },
+     {
+      "v": -1.0,
+      "i": 1
+     }
+    ]
+   }
+  },
+  {
+   "text": "+1",
+   "result": {
+    "ast": {
+     "num": 1
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 1.0,
+      "i": 1
+     },
+     {
+      "v": 1.0,
+      "i": 1
+     },
+     {
+      "v": 1.0,
+      "i": 1
+     }
+    ]
+   }
+  },
+  {
+   "text": "- -1",
+   "result": {
+    "ast": {
+     "op": "-",
+     "l": {
+      "num": 0
+     },
+     "r": {
+      "op": "-",
+      "l": {
+       "num": 0
+      },
+      "r": {
+       "num": 1
+      }
+     }
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 1.0,
+      "i": 1
+     },
+     {
+      "v": 1.0,
+      "i": 1
+     },
+     {
+      "v": 1.0,
+      "i": 1
+     }
+    ]
+   }
+  },
+  {
+   "text": "-(2 + 3)",
+   "result": {
+    "ast": {
+     "op": "-",
+     "l": {
+      "num": 0
+     },
+     "r": {
+      "op": "+",
+      "l": {
+       "num": 2
+      },
+      "r": {
+       "num": 3
+      }
+     }
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": -5.0,
+      "i": 1
+     },
+     {
+      "v": -5.0,
+      "i": 1
+     },
+     {
+      "v": -5.0,
+      "i": 1
+     }
+    ]
+   }
+  },
+  {
+   "text": "10 - 4 - 3",
+   "result": {
+    "ast": {
+     "op": "-",
+     "l": {
+      "op": "-",
+      "l": {
+       "num": 10
+      },
+      "r": {
+       "num": 4
+      }
+     },
+     "r": {
+      "num": 3
+     }
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 3.0,
+      "i": 3
+     },
+     {
+      "v": 3.0,
+      "i": 3
+     },
+     {
+      "v": 3.0,
+      "i": 3
+     }
+    ]
+   }
+  },
+  {
+   "text": "100 / 5 / 2",
+   "result": {
+    "ast": {
+     "op": "/",
+     "l": {
+      "op": "/",
+      "l": {
+       "num": 100
+      },
+      "r": {
+       "num": 5
+      }
+     },
+     "r": {
+      "num": 2
+     }
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 10.0,
+      "i": 10
+     },
+     {
+      "v": 10.0,
+      "i": 10
+     },
+     {
+      "v": 10.0,
+      "i": 10
+     }
+    ]
+   }
+  },
+  {
+   "text": "2 * 3 + 4 * 5",
+   "result": {
+    "ast": {
+     "op": "+",
+     "l": {
+      "op": "*",
+      "l": {
+       "num": 2
+      },
+      "r": {
+       "num": 3
+      }
+     },
+     "r": {
+      "op": "*",
+      "l": {
+       "num": 4
+      },
+      "r": {
+       "num": 5
+      }
+     }
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "v": 26.0,
+      "i": 26
+     },
+     {
+      "v": 26.0,
+      "i": 26
+     },
+     {
+      "v": 26.0,
+      "i": 26
+     }
+    ]
+   }
+  },
+  {
+   "text": "N_TASKS",
+   "result": {
+    "ast": {
+     "const": "N_TASKS"
+    },
+    "constants": [
+     "N_TASKS"
+    ],
+    "static": true,
+    "values": [
+     {
+      "v": 10.0,
+      "i": 10
+     },
+     {
+      "v": 10.0,
+      "i": 10
+     },
+     {
+      "v": 7.0,
+      "i": 7
+     }
+    ]
+   }
+  },
+  {
+   "text": "N_TASKS_UNLOCKED",
+   "result": {
+    "ast": {
+     "const": "N_TASKS_UNLOCKED"
+    },
+    "constants": [
+     "N_TASKS_UNLOCKED"
+    ],
+    "static": false,
+    "values": [
+     {
+      "v": 0.0,
+      "i": 1
+     },
+     {
+      "v": 10.0,
+      "i": 10
+     },
+     {
+      "v": 3.0,
+      "i": 3
+     }
+    ]
+   }
+  },
+  {
+   "text": "N_TASKS_LOCKED",
+   "result": {
+    "ast": {
+     "const": "N_TASKS_LOCKED"
+    },
+    "constants": [
+     "N_TASKS_LOCKED"
+    ],
+    "static": false,
+    "values": [
+     {
+      "v": 10.0,
+      "i": 10
+     },
+     {
+      "v": 0.0,
+      "i": 1
+     },
+     {
+      "v": 4.0,
+      "i": 4
+     }
+    ]
+   }
+  },
+  {
+   "text": "N_TASKS_COMPLETED",
+   "result": {
+    "ast": {
+     "const": "N_TASKS_COMPLETED"
+    },
+    "constants": [
+     "N_TASKS_COMPLETED"
+    ],
+    "static": false,
+    "values": [
+     {
+      "v": 0.0,
+      "i": 1
+     },
+     {
+      "v": 10.0,
+      "i": 10
+     },
+     {
+      "v": 2.0,
+      "i": 2
+     }
+    ]
+   }
+  },
+  {
+   "text": "0.1 * N_TASKS_UNLOCKED",
+   "result": {
+    "ast": {
+     "op": "*",
+     "l": {
+      "num": 0.1
+     },
+     "r": {
+      "const": "N_TASKS_UNLOCKED"
+     }
+    },
+    "constants": [
+     "N_TASKS_UNLOCKED"
+    ],
+    "static": false,
+    "values": [
+     {
+      "v": 0.0,
+      "i": 1
+     },
+     {
+      "v": 1.0,
+      "i": 1
+     },
+     {
+      "v": 0.3,
+      "i": 1
+     }
+    ]
+   }
+  },
+  {
+   "text": "100 * (1 + N_TASKS_LOCKED)",
+   "result": {
+    "ast": {
+     "op": "*",
+     "l": {
+      "num": 100
+     },
+     "r": {
+      "op": "+",
+      "l": {
+       "num": 1
+      },
+      "r": {
+       "const": "N_TASKS_LOCKED"
+      }
+     }
+    },
+    "constants": [
+     "N_TASKS_LOCKED"
+    ],
+    "static": false,
+    "values": [
+     {
+      "v": 1100.0,
+      "i": 1100
+     },
+     {
+      "v": 100.0,
+      "i": 100
+     },
+     {
+      "v": 500.0,
+      "i": 500
+     }
+    ]
+   }
+  },
+  {
+   "text": "1 + 0.02 * N_TASKS",
+   "result": {
+    "ast": {
+     "op": "+",
+     "l": {
+      "num": 1
+     },
+     "r": {
+      "op": "*",
+      "l": {
+       "num": 0.02
+      },
+      "r": {
+       "const": "N_TASKS"
+      }
+     }
+    },
+    "constants": [
+     "N_TASKS"
+    ],
+    "static": true,
+    "values": [
+     {
+      "v": 1.2,
+      "i": 2
+     },
+     {
+      "v": 1.2,
+      "i": 2
+     },
+     {
+      "v": 1.14,
+      "i": 2
+     }
+    ]
+   }
+  },
+  {
+   "text": "0.5 * (N_TASKS_UNLOCKED - N_TASKS_COMPLETED)",
+   "result": {
+    "ast": {
+     "op": "*",
+     "l": {
+      "num": 0.5
+     },
+     "r": {
+      "op": "-",
+      "l": {
+       "const": "N_TASKS_UNLOCKED"
+      },
+      "r": {
+       "const": "N_TASKS_COMPLETED"
+      }
+     }
+    },
+    "constants": [
+     "N_TASKS_COMPLETED",
+     "N_TASKS_UNLOCKED"
+    ],
+    "static": false,
+    "values": [
+     {
+      "v": 0.0,
+      "i": 1
+     },
+     {
+      "v": 0.0,
+      "i": 1
+     },
+     {
+      "v": 0.5,
+      "i": 1
+     }
+    ]
+   }
+  },
+  {
+   "text": "1 + 0.05 * N_TASKS_UNLOCKED",
+   "result": {
+    "ast": {
+     "op": "+",
+     "l": {
+      "num": 1
+     },
+     "r": {
+      "op": "*",
+      "l": {
+       "num": 0.05
+      },
+      "r": {
+       "const": "N_TASKS_UNLOCKED"
+      }
+     }
+    },
+    "constants": [
+     "N_TASKS_UNLOCKED"
+    ],
+    "static": false,
+    "values": [
+     {
+      "v": 1.0,
+      "i": 1
+     },
+     {
+      "v": 1.5,
+      "i": 2
+     },
+     {
+      "v": 1.15,
+      "i": 2
+     }
+    ]
+   }
+  },
+  {
+   "text": "N_TASKS / N_TASKS",
+   "result": {
+    "ast": {
+     "op": "/",
+     "l": {
+      "const": "N_TASKS"
+     },
+     "r": {
+      "const": "N_TASKS"
+     }
+    },
+    "constants": [
+     "N_TASKS"
+    ],
+    "static": true,
+    "values": [
+     {
+      "v": 1.0,
+      "i": 1
+     },
+     {
+      "v": 1.0,
+      "i": 1
+     },
+     {
+      "v": 1.0,
+      "i": 1
+     }
+    ]
+   }
+  },
+  {
+   "text": "N_TASKS_UNLOCKED / N_TASKS_UNLOCKED",
+   "result": {
+    "ast": {
+     "op": "/",
+     "l": {
+      "const": "N_TASKS_UNLOCKED"
+     },
+     "r": {
+      "const": "N_TASKS_UNLOCKED"
+     }
+    },
+    "constants": [
+     "N_TASKS_UNLOCKED"
+    ],
+    "static": false,
+    "values": [
+     {
+      "error": "Taskipelago: division by zero in numeric expression."
+     },
+     {
+      "v": 1.0,
+      "i": 1
+     },
+     {
+      "v": 1.0,
+      "i": 1
+     }
+    ]
+   }
+  },
+  {
+   "text": "1 / 0",
+   "result": {
+    "ast": {
+     "op": "/",
+     "l": {
+      "num": 1
+     },
+     "r": {
+      "num": 0
+     }
+    },
+    "constants": [],
+    "static": true,
+    "values": [
+     {
+      "error": "Taskipelago: division by zero in numeric expression."
+     },
+     {
+      "error": "Taskipelago: division by zero in numeric expression."
+     },
+     {
+      "error": "Taskipelago: division by zero in numeric expression."
+     }
+    ]
+   }
+  },
+  {
+   "text": "N_TASKS",
+   "allow_live": false,
+   "result": {
+    "ast": {
+     "const": "N_TASKS"
+    },
+    "constants": [
+     "N_TASKS"
+    ],
+    "static": true,
+    "values": [
+     {
+      "v": 10.0,
+      "i": 10
+     },
+     {
+      "v": 10.0,
+      "i": 10
+     },
+     {
+      "v": 7.0,
+      "i": 7
+     }
+    ]
+   }
+  },
+  {
+   "text": "N_TASKS_UNLOCKED",
+   "allow_live": false,
+   "result": {
+    "error": "Taskipelago: 'N_TASKS_UNLOCKED' changes during play and cannot be used in numeric expression; only N_TASKS is allowed there."
+   }
+  },
+  {
+   "text": "N_TASKS_LOCKED",
+   "allow_live": false,
+   "result": {
+    "error": "Taskipelago: 'N_TASKS_LOCKED' changes during play and cannot be used in numeric expression; only N_TASKS is allowed there."
+   }
+  },
+  {
+   "text": "N_TASKS_COMPLETED",
+   "allow_live": false,
+   "result": {
+    "error": "Taskipelago: 'N_TASKS_COMPLETED' changes during play and cannot be used in numeric expression; only N_TASKS is allowed there."
+   }
+  },
+  {
+   "text": "",
+   "result": {
+    "error": "Taskipelago: empty numeric expression."
+   }
+  },
+  {
+   "text": "   ",
+   "result": {
+    "error": "Taskipelago: empty numeric expression."
+   }
+  },
+  {
+   "text": "1 +",
+   "result": {
+    "error": "Taskipelago: unexpected end of numeric expression."
+   }
+  },
+  {
+   "text": "* 2",
+   "result": {
+    "error": "Taskipelago: unexpected token '*' in numeric expression."
+   }
+  },
+  {
+   "text": "(1",
+   "result": {
+    "error": "Taskipelago: missing ')' in numeric expression."
+   }
+  },
+  {
+   "text": "1)",
+   "result": {
+    "error": "Taskipelago: unexpected token ')' in numeric expression."
+   }
+  },
+  {
+   "text": "1 2",
+   "result": {
+    "error": "Taskipelago: unexpected token '2' in numeric expression."
+   }
+  },
+  {
+   "text": "FOO",
+   "result": {
+    "error": "Taskipelago: unknown name 'FOO' in numeric expression (valid constants: N_TASKS, N_TASKS_UNLOCKED, N_TASKS_LOCKED, N_TASKS_COMPLETED)."
+   }
+  },
+  {
+   "text": "n_tasks",
+   "result": {
+    "error": "Taskipelago: unknown name 'n_tasks' in numeric expression (valid constants: N_TASKS, N_TASKS_UNLOCKED, N_TASKS_LOCKED, N_TASKS_COMPLETED)."
+   }
+  },
+  {
+   "text": "N_TASKS $",
+   "result": {
+    "error": "Taskipelago: unexpected character '$' in numeric expression."
+   }
+  },
+  {
+   "text": "1 % 2",
+   "result": {
+    "error": "Taskipelago: unexpected character '%' in numeric expression."
+   }
+  },
+  {
+   "text": "N_TASKS(2)",
+   "result": {
+    "error": "Taskipelago: unexpected token '(' in numeric expression."
+   }
+  }
+ ]
+}

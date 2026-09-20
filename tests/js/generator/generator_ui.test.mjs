@@ -68,9 +68,9 @@ async function answer(label) {
   await wait(5);
 }
 
-test('generator and bingo tabs are in the tab bar', () => {
+test('generator, bingo and clicker tabs are in the tab bar', () => {
   const tabs = [...doc.querySelectorAll('#main-tabs .tab-btn')].map(b => b.textContent);
-  assert.deepEqual(tabs, ['Connect and Play', 'Text Console', 'Hints', 'YAML Generator', 'Taskipelabingo']);
+  assert.deepEqual(tabs, ['Connect and Play', 'Text Console', 'Hints', 'YAML Generator', 'Taskipelabingo', 'Tasclickpelago']);
   button(doc.getElementById('main-tabs'), 'YAML Generator').click();
   assert.ok($('tab-generator').classList.contains('active'));
   assert.equal(doc.title, 'Taskipelago');

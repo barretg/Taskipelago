@@ -50,7 +50,7 @@ def run_case(parser, case: dict) -> dict:
                 location_label=case.get("location_label"),
             )
         else:
-            ast = parser.parse_cost_expr(case["text"], set(case["consumables"]), case.get("items"))
+            ast = parser.parse_cost_expr(case["text"], set(case["consumables"]), case.get("items"), case.get("n_tasks", 0))
         return {"ast": json.loads(json.dumps(ast))}
     except Exception as e:  # the message text is part of the contract
         return {"error": str(e)}

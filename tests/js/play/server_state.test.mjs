@@ -11,6 +11,7 @@ const KEYS = {
   notify: 'taskipelago_notify::Me::S',
   purchases: 'taskipelago_purchases::Me::S',
   deathlink: 'taskipelago_deathlink::Me::S',
+  clicker: 'taskipelago_clicker::Me::S',
 };
 
 const SLOT_DATA = {
@@ -44,7 +45,7 @@ test('connect subscribes to every per-seed key in one batch', async () => {
       if (m.cmd === 'Get' && m.keys.includes(KEYS.manual)) { // a real server answers only the requested keys
         setTimeout(() => ws.recv([{ cmd: 'Retrieved', keys: {
           [KEYS.manual]: null, [KEYS.notify]: 1, [KEYS.purchases]: { 1: { Gold: 1 }, bad: { Gold: 1 } },
-          [KEYS.deathlink]: null,
+          [KEYS.deathlink]: null, [KEYS.clicker]: null,
         } }]), 100);
       }
     },

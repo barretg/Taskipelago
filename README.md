@@ -24,6 +24,16 @@
 
 * Taskipelabingo mode allows you to provide a list of tasks to be selected at random and shuffled into a bingo board. For more information, see the Taskipelabingo tab in the client
 
+### Tasclickpelago
+
+* Tasclickpelago turns your task list into an idle/clicker game: every task needs a number of activations instead of a single Complete press, and the items you receive grant production per second, click power and multipliers
+
+* Clicking a task adds its click value; production accrues on its own, including while you are away if offline progress is on. A locked task never accrues anything, from any source, and nothing is banked for it
+
+* Rates, activation counts and multipliers can be plain numbers or small expressions over `N_TASKS`, `N_TASKS_UNLOCKED`, `N_TASKS_LOCKED` and `N_TASKS_COMPLETED`, so a game can scale as it grows
+
+* Build one from the Tasclickpelago tab in the client. `clicker_mode` and `bingo_mode` cannot both be enabled
+
 ## Setup:
 
 * Download taskipelago.apworld from the releases page

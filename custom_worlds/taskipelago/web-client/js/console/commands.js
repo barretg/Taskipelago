@@ -1,8 +1,9 @@
 // Local slash commands, ported from Archipelago CommonClient.ClientCommandProcessor
 // (UNIFY 5.2). Help, error and result text match Archipelago's CommandProcessor.
 // Not ported: /exit and /license (no meaning in a page), /item_groups and
-// /location_groups (groups are not in the DataPackage). Added: /checked.
-import { ap } from '../play/state.js';
+// /location_groups (groups are not in the DataPackage). Added: /checked, and
+// /click and /clicker for Tasclickpelago slots.
+import { ap, state } from '../play/state.js';
 import { ClientStatus } from '../archipelago.js';
 import { dpEntries, ownGame } from '../play/datapackage.js';
 
@@ -21,6 +22,9 @@ const COMMANDS = [
   ['items', [], 'List all item names for the currently running game.'],
   ['locations', [], 'List all location names for the currently running game.'],
   ['ready', [], 'Send ready status to server.'],
+  ['click', ['task'],
+    'Clicker mode: click a task once, by number or by name.\nWith no argument, lists the tasks you can click.'],
+  ['clicker', [], 'Clicker mode: print the current rates, multipliers and task-count constants.'],
 ];
 
 export function helpText() {
@@ -120,6 +124,28 @@ function listNames(ctx, kind) {
   return true;
 }
 
+/** Resolve a /click argument: a 1-based task number or a task name. */
+function findTask(arg) {
+  const s = String(arg ?? '').trim();
+  if (!s) return -1;
+  if (/^\d+$/.test(s)) {
+    const n = Number(s) - 1;
+    return n >= 0 && n < state.tasks.length ? n : -1;
+  }
+  const exact = state.tasks.indexOf(s);
+  if (exact >= 0) return exact;
+  const lower = s.toLowerCase();
+  return state.tasks.findIndex(t => String(t).toLowerCase() === lower);
+}
+
+function clickerGuard(ctx) {
+  if (!state.clickerMode) {
+    ctx.output('This slot is not in clicker mode.');
+    return false;
+  }
+  return true;
+}
+
 const HANDLERS = {
   help: ctx => { ctx.output(helpText()); return true; },
   connect: (ctx, address = '') => {
@@ -149,6 +175,48 @@ const HANDLERS = {
   checked: (ctx, filterText = '') => listLocations(ctx, filterText, true),
   items: ctx => listNames(ctx, 'items'),
   locations: ctx => listNames(ctx, 'locations'),
+  click: async (ctx, task = '') => {
+    if (!clickerGuard(ctx)) return false;
+    const board = await import('../play/clicker_board.js');
+    const model = board.clickerModel();
+    if (!String(task).trim()) {
+      ctx.output(model.eligible.length ? 'Clickable tasks:' : 'No task is clickable right now.');
+      for (const i of model.eligible) {
+        ctx.output(`  ${i + 1}. ${state.tasks[i]} - ${board.taskProgress(i)} / ${board.requiredActivations(i)}`);
+      }
+      return true;
+    }
+    const idx = findTask(task);
+    if (idx < 0) {
+      ctx.output(`No task named ${task}.`);
+      return false;
+    }
+    if (!model.eligible.includes(idx)) {
+      ctx.output(`${idx + 1}. ${state.tasks[idx]} is locked or already complete.`);
+      return false;
+    }
+    const done = board.clickTask(idx);
+    ctx.output(`${idx + 1}. ${state.tasks[idx]}: ${board.taskProgress(idx)} / ${board.requiredActivations(idx)}`
+      + (done ? ' - complete!' : ''));
+    return true;
+  },
+  clicker: async ctx => {
+    if (!clickerGuard(ctx)) return false;
+    const board = await import('../play/clicker_board.js');
+    const m = board.clickerModel();
+    let total = 0;
+    for (const i of m.eligible) total += m.rate[i];
+    ctx.output(`Production: ${total}/s across ${m.eligible.length} eligible task(s), global multiplier x${m.globalMult}`);
+    ctx.output(`Click value: ${m.clickValue}`);
+    ctx.output(`N_TASKS ${m.nTasks}, N_TASKS_UNLOCKED ${m.nUnlocked}, N_TASKS_LOCKED ${m.nLocked}, N_TASKS_COMPLETED ${m.nCompleted}`);
+    ctx.output(state.clickerOffline
+      ? `Offline production on, capped at ${state.clickerOfflineCapHours}h`
+      : 'Offline production off');
+    for (const i of m.eligible) {
+      ctx.output(`  ${i + 1}. ${state.tasks[i]} - ${board.taskProgress(i)} / ${board.requiredActivations(i)} (+${m.rate[i]}/s)`);
+    }
+    return true;
+  },
   ready: ctx => {
     ap.ready = !ap.ready;
     ctx.output(ap.ready ? 'Readied up.' : 'Unreadied.');

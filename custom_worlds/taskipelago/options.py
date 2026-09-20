@@ -430,6 +430,178 @@ class Bingoal(Range):
     default = 3
 
 
+# ---------------------------------------------------------------------------
+# Tasclickpelago (clicker mode)
+# ---------------------------------------------------------------------------
+# Every option below is optional and defaults to today's behavior. The apworld
+# runs no clicker simulation and draws no extra randomness: it validates these
+# lists and forwards them in slot_data, and the client does all the accrual.
+#
+# Numeric fields accept a small arithmetic expression (integers, decimals,
+# + - * /, parentheses) over four constants:
+#     N_TASKS             total tasks in the slot (fixed for the seed)
+#     N_TASKS_UNLOCKED    tasks currently unlocked, including completed ones
+#     N_TASKS_LOCKED      N_TASKS - N_TASKS_UNLOCKED
+#     N_TASKS_COMPLETED   tasks completed so far
+# The last three change during play and are therefore legal only in the clicker
+# fields, never in prereq, goal or cost expressions.
+
+
+class ClickerMode(Toggle):
+    """
+    If enabled, this slot is treated as an idle/clicker game by the client
+    (Tasclickpelago). Each task needs a number of activations instead of one
+    "Complete" press; activations come from clicking and from production
+    granted by items received from the multiworld.
+    Cannot be combined with bingo_mode.
+    """
+    display_name = "Clicker Mode"
+    default = 0
+
+
+class TaskActivations(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with tasks. Number of activations required to complete
+    each task in clicker mode. Blank, missing or '1' means a single click.
+    May be an arithmetic expression over N_TASKS only (the requirement has to be
+    stable for the whole seed); the result is rounded up with a minimum of 1.
+    Example: '100', '10 * N_TASKS'.
+    """
+    display_name = "Task Activations"
+    default: List[str] = []
+
+
+class ItemProduction(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with items. Production granted by each item, in
+    activations per second, as '<target>-<rate>' pairs joined with '&&'.
+    Targets:
+        "Bake Bread"-1.5    a single task, by quoted name
+        3-1.5               a single task, by 1-based task index
+        Kitchen-0.5         every task in a region, by bare name
+        *-0.1               every clicker task
+    Every received copy of the item adds its rate, so a progressive group stacks
+    naturally. Rates are positive numeric expressions and may use all four
+    task-count constants. Leave blank for an item that grants no production.
+    Example: '"Bake Bread"-1 && Kitchen-0.25'.
+    """
+    display_name = "Item Production"
+    default: List[str] = []
+
+
+class ItemClickPower(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with items. Activations added to the value of one click
+    per received copy of the item. A non-negative numeric expression; blank is 0.
+    Click value is (1 + sum of click power) * product of item_click_mult.
+    """
+    display_name = "Item Click Power"
+    default: List[str] = []
+
+
+class ItemProductionMult(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with items. Each received copy multiplies ALL production
+    (never click power); copies stack multiplicatively. A positive numeric
+    expression, rounded to 2 decimal places when it is a plain number. Values
+    below 1 are legal (a "curse" item); 0 and negatives are an error.
+    Blank means the item is not a production multiplier.
+    """
+    display_name = "Item Production Multiplier"
+    default: List[str] = []
+
+
+class ItemClickMult(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with items. Each received copy multiplies click power
+    only (never production); copies stack multiplicatively. Same rules as
+    item_production_mult.
+    """
+    display_name = "Item Click Multiplier"
+    default: List[str] = []
+
+
+class ItemOfflineMult(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with items. Multiplies the offline (away from keyboard)
+    rate for the targeted tasks. Uses the same '<target>-<value>' grammar as
+    item_production, including single tasks, bare region names and *. Each copy
+    multiplies, so copies stack. Blank means no offline multiplier.
+    """
+    display_name = "Item Offline Multiplier"
+    default: List[str] = []
+
+
+class RegionDistributedProduction(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with regions. 'true' splits a region-targeted production
+    rate evenly among that region's eligible (unlocked, incomplete) tasks, keeping
+    the region's total throughput constant. 'false' (the default) applies the rate
+    in full to each eligible task.
+    """
+    display_name = "Region Distributed Production"
+    default: List[str] = []
+
+
+class ClickerDistributeGlobal(Toggle):
+    """
+    The same choice as region_distributed_production, for production aimed at '*'
+    (every clicker task), which belongs to no region.
+    """
+    display_name = "Clicker Distribute Global Production"
+    default = 0
+
+
+class ClickerOfflineProgress(Toggle):
+    """
+    If disabled, no production accrues while the client is closed: no catch-up, no
+    timestamp accrual, and the client hides the offline row. This is the hard off
+    switch; the other offline options are then unused.
+    """
+    display_name = "Clicker Offline Progress"
+    default = 1
+
+
+class ClickerOfflineRate(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    A single entry: the fraction of live production that accrues while away.
+    '1' (the default) is parity with being at the keyboard, '0.25' is a quarter
+    rate, '0' is live-only, and values above 1 are legal. May be a numeric
+    expression using all four task-count constants.
+    """
+    display_name = "Clicker Offline Rate"
+    default: List[str] = []
+
+
+class RegionOfflineRate(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with regions. Overrides clicker_offline_rate for that
+    region; blank inherits the global rate.
+    """
+    display_name = "Region Offline Rate"
+    default: List[str] = []
+
+
+class ClickerOfflineCapHours(Range):
+    """
+    Maximum number of elapsed hours a single offline catch-up may claim. 0 disables
+    catch-up while leaving the rest of the offline configuration in place.
+    """
+    display_name = "Clicker Offline Cap (hours)"
+    range_start = 0
+    range_end = 168
+    default = 8
+
+
 class TaskRewardPreviews(Choice):
     """
     Controls whether the client shows a preview of a task's reward (item name and recipient
@@ -489,5 +661,18 @@ class TaskipelagoOptions(PerGameCommonOptions):
     bingo_dimension_x: BingoDimensionX
     bingo_dimension_y: BingoDimensionY
     bingoal: Bingoal
+    clicker_mode: ClickerMode
+    task_activations: TaskActivations
+    item_production: ItemProduction
+    item_click_power: ItemClickPower
+    item_production_mult: ItemProductionMult
+    item_click_mult: ItemClickMult
+    item_offline_mult: ItemOfflineMult
+    region_distributed_production: RegionDistributedProduction
+    clicker_distribute_global: ClickerDistributeGlobal
+    clicker_offline_progress: ClickerOfflineProgress
+    clicker_offline_rate: ClickerOfflineRate
+    region_offline_rate: RegionOfflineRate
+    clicker_offline_cap_hours: ClickerOfflineCapHours
     task_reward_previews: TaskRewardPreviews
     style_colors: StyleColors

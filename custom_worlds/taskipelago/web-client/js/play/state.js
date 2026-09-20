@@ -50,10 +50,28 @@ export const state = {
   bingoDimY: 5,
   bingoal: 3,
 
+  // Tasclickpelago (clicker mode). Absent slot_data keys leave clickerMode off,
+  // so an older seed behaves exactly as before.
+  clickerMode: false,
+  taskActivations: [],         // ints, parallel to tasks
+  itemProduction: [],          // parallel to items: resolved target specs
+  itemClickPower: [],          // parallel to items: number or numeric-expression AST
+  itemProductionMult: [],      // parallel to items: number | AST | null
+  itemClickMult: [],           // parallel to items: number | AST | null
+  itemOfflineMult: [],         // parallel to items: resolved target specs
+  regionDistributed: {},       // region name -> bool
+  clickerDistributeGlobal: false,
+  clickerOffline: true,
+  clickerOfflineRate: 1,       // number | AST
+  regionOfflineRate: {},       // region name -> number | AST
+  clickerOfflineCapHours: 8,
+
   // Runtime
   checkedLocations: new Set(), // combined server + optimistic
   pendingLocations: new Set(), // optimistic (not yet confirmed by server)
   taskPurchases: {},           // taskIdx -> {name: amount}
+  clickerProgress: {},         // taskIdx -> float activations accrued
+  clickerLastTick: 0,          // ms epoch of the last accrual write
   manualConsumptions: {},      // name -> count of manually consumed units
   hintRequestedIndices: new Set(), // task indices already hinted this session
   notifications: [],           // [{kind, title, body, createdAt}]
@@ -97,6 +115,10 @@ export const els = {
   bingoSection:  $('bingo-section'),
   bingoCounter:  $('bingo-counter'),
   bingoGrid:     $('bingo-grid'),
+
+  clickerSection: $('clicker-section'),
+  clickerHeader:  $('clicker-header'),
+  clickerGrid:    $('clicker-grid'),
 
   notifList:     $('notif-list'),
   clearNotifsBtn:$('clear-notifs-btn'),

@@ -12,7 +12,7 @@ function run(c) {
   try {
     const ast = c.kind === 'prereq'
       ? parsePrereq(c.text, c.n, c.task_index, c.label, c.groups, c.regions, c.location_label)
-      : parseCostExpr(c.text, c.consumables, c.items);
+      : parseCostExpr(c.text, c.consumables, c.items, c.n_tasks ?? 0);
     return { ast };
   } catch (e) {
     return { error: e.message };

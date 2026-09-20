@@ -95,6 +95,13 @@ _DEFAULTS = {
     "group_default_pcts": [], "regions": [], "region_default_pcts": [], "region_colors": [],
     "region_prereqs": [], "region_random_pick": [], "region_random_order": [], "task_region": [], "bingo_mode": False,
     "bingo_dimension_x": 5, "bingo_dimension_y": 5, "bingoal": 1, "task_reward_previews": 0,
+    "style_colors": [],
+    # Tasclickpelago
+    "clicker_mode": False, "task_activations": [], "item_production": [],
+    "item_click_power": [], "item_production_mult": [], "item_click_mult": [],
+    "item_offline_mult": [], "region_distributed_production": [],
+    "clicker_distribute_global": False, "clicker_offline_progress": True,
+    "clicker_offline_rate": [], "region_offline_rate": [], "clicker_offline_cap_hours": 8,
 }
 
 

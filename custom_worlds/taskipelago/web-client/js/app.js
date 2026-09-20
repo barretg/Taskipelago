@@ -13,6 +13,7 @@ import { renderAll } from './play/render.js';
 import { initTooltips } from './shared/tooltip.js';
 import { initGenerator } from './generator/generator.js';
 import { initBingoGen } from './bingo_gen/bingo_gen.js';
+import { initClickerGen } from './clicker_gen/clicker_gen.js';
 
 function initTabs() {
   const mainTabs = document.querySelectorAll('#main-tabs .tab-btn');
@@ -51,6 +52,7 @@ async function boot() {
   initTooltips();
   initGenerator();
   initBingoGen();
+  initClickerGen();
   renderAll();
 }
 
