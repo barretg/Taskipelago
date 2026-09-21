@@ -1,4 +1,4 @@
-"""Subregions: region_parent validation and the implicit parent dependency."""
+"""Subregions: region_parent validation, inherited parent gates and parent task rollup."""
 from __future__ import annotations
 
 import contextlib
@@ -28,39 +28,39 @@ def world(**extra):
     return _quiet(**{**BASE, **extra})
 
 
-class ImplicitParentDependencyTest(unittest.TestCase):
-    def test_subregion_tasks_require_the_parent(self):
+class InheritedParentRequirementsTest(unittest.TestCase):
+    def test_subregion_does_not_require_parent_completion(self):
         w = world()
-        # Tasks 3 and 4 are in Kitchen, whose parent is Hall (default 100%).
-        for i in (2, 3):
-            self.assertEqual(w._task_region_reqs[i], [{"region": "Hall", "pct": 100}])
-        # The parent's own tasks gain nothing.
-        for i in (0, 1):
-            self.assertEqual(w._task_region_reqs[i], [])
+        self.assertEqual(w._task_region_reqs, [[], [], [], []])
 
-    def test_parent_default_pct_is_used(self):
-        w = world(region_default_pcts=["50", "100"])
-        self.assertEqual(w._task_region_reqs[2], [{"region": "Hall", "pct": 50}])
-
-    def test_implicit_dependency_ands_with_an_explicit_one(self):
+    def test_subregion_inherits_the_parent_gate(self):
         w = _quiet(**{
             **BASE,
             "regions": ["Hall", "Kitchen", "Yard"],
             "task_region": ["Hall", "Yard", "Kitchen", "Kitchen"],
             "region_parent": ["", "Hall", ""],
-            "region_prereqs": ["", "Yard*1", ""],
+            "region_prereqs": ["Yard*1", "", ""],
+        })
+        for i in (0, 2, 3):
+            self.assertEqual(w._task_region_reqs[i], [{"region": "Yard", "abs_count": 1}])
+
+    def test_inherited_gate_ands_with_an_explicit_one(self):
+        w = _quiet(**{
+            **BASE,
+            "tasks": BASE["tasks"] + ["Rake"],
+            "items": BASE["items"] + ["Rake"],
+            "item_types": ["progression"] * 5,
+            "regions": ["Hall", "Kitchen", "Yard", "Shed"],
+            "task_region": ["Hall", "Yard", "Kitchen", "Kitchen", "Shed"],
+            "region_parent": ["", "Hall", "", ""],
+            "region_prereqs": ["Yard*1", "Shed*1", "", ""],
         })
         self.assertEqual(
             w._task_region_reqs[2],
-            [{"region": "Hall", "pct": 100}, {"region": "Yard", "abs_count": 1}],
+            [{"region": "Yard", "abs_count": 1}, {"region": "Shed", "abs_count": 1}],
         )
 
-    def test_top_level_regions_are_untouched(self):
-        w = _quiet(**{**BASE, "region_parent": []})
-        self.assertEqual(w._task_region_reqs, [[], [], [], []])
-
     def test_task_less_parent_passes_its_own_gate_down(self):
-        """A grouping-only parent has nothing to complete, so its gate is inherited."""
         w = _quiet(**{
             **BASE,
             "regions": ["Hall", "Kitchen", "Yard"],
@@ -70,25 +70,34 @@ class ImplicitParentDependencyTest(unittest.TestCase):
         })
         self.assertEqual(w._task_region_reqs[2], [{"region": "Yard", "abs_count": 2}])
 
-    def test_task_less_parent_without_a_gate_adds_nothing(self):
+    def test_parent_counts_subregion_tasks(self):
+        w = world()
+        self.assertEqual(w._region_to_task_indices["Hall"], [0, 1, 2, 3])
+        self.assertEqual(w._region_to_task_indices["Kitchen"], [2, 3])
+        self.assertEqual(len(w._region_token_names["Hall"]), 4)
+
+    def test_task_less_parent_can_be_referenced(self):
         w = _quiet(**{
             **BASE,
-            "regions": ["Hall", "Kitchen"],
             "task_region": ["", "", "Kitchen", "Kitchen"],
-            "region_parent": ["", "Hall"],
+            "goal_tasks": ["Hall"],
         })
-        self.assertEqual(w._task_region_reqs[2], [])
+        self.assertEqual(w._region_to_task_indices["Hall"], [2, 3])
 
-    def test_a_randomized_subregion_still_requires_its_parent(self):
+    def test_a_randomized_subregion_counts_toward_its_parent(self):
         w = _quiet(**{**BASE, "region_random_pick": ["", "1"]})
         kitchen = [i for i, r in enumerate(w._task_region) if r == "Kitchen"]
-        self.assertTrue(kitchen)
-        for i in kitchen:
-            self.assertEqual(w._task_region_reqs[i], [{"region": "Hall", "pct": 100}])
+        self.assertEqual(w._region_to_task_indices["Hall"], sorted([0, 1] + kitchen))
+
+    def test_subregion_task_may_reference_parent_when_satisfiable(self):
+        w = world(task_prereqs=["", "", "Hall*2", ""])
+        self.assertEqual(w._task_region_reqs[2], [{"region": "Hall", "abs_count": 2}])
 
     def test_slot_data_carries_the_parent_map(self):
         w = world()
-        self.assertEqual(w.fill_slot_data()["region_parent"], {"Kitchen": "Hall"})
+        sd = w.fill_slot_data()
+        self.assertEqual(sd["region_parent"], {"Kitchen": "Hall"})
+        self.assertTrue(sd["region_rollup"])
 
 
 class ParentValidationTest(unittest.TestCase):
@@ -114,6 +123,14 @@ class ParentValidationTest(unittest.TestCase):
     def test_randomized_region_cannot_be_a_parent(self):
         msg = self._err(region_random_pick=["1", ""])
         self.assertIn("cannot be a parent region", msg)
+
+    def test_subregion_task_needing_its_own_tasks_via_parent(self):
+        msg = self._err(task_prereqs=["", "", "Hall", ""])
+        self.assertIn("would have to unlock itself", msg)
+
+    def test_subregion_gate_needing_its_own_tasks_via_parent(self):
+        msg = self._err(region_prereqs=["", "Hall*3"])
+        self.assertIn("would have to unlock itself", msg)
 
     def test_parent_depending_on_its_own_subregion_is_a_cycle(self):
         msg = self._err(region_prereqs=["Kitchen*1", ""])

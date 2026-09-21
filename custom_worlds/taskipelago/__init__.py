@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math as _math
 import re as _re
 from typing import Any, Dict, List, Tuple
 
@@ -997,6 +998,32 @@ class TaskipelagoWorld(World):
         for i, rname in enumerate(task_region):
             if rname:
                 region_to_task_indices[rname].append(i)
+        # A parent region counts its own tasks plus every task in its subregions,
+        # for prereqs, goals and AP logic alike. Nesting is one level deep.
+        for _rname, _pname in region_parent.items():
+            if _pname:
+                region_to_task_indices[_pname].extend(region_to_task_indices[_rname])
+        for _idxs in region_to_task_indices.values():
+            _idxs.sort()
+
+        def _required_count(rname: str, pct: int | None, abs_n: int | None) -> int:
+            size = len(region_to_task_indices.get(rname, []))
+            return abs_n if abs_n is not None else _math.ceil(size * pct / 100)
+
+        def _assert_parent_ref_satisfiable(own: str, rname: str, pct: int | None,
+                                           abs_n: int | None, label: str) -> None:
+            """A subregion's tasks count toward its parent, so a reference from inside
+            the subregion to its parent must be satisfiable by the parent's other tasks."""
+            if not own or region_parent.get(own) != rname:
+                return
+            outside = len(region_to_task_indices.get(rname, [])) - len(region_to_task_indices.get(own, []))
+            need = _required_count(rname, pct, abs_n)
+            if need > outside:
+                raise Exception(
+                    f"Taskipelago: {label} in subregion '{own}' needs {need} task(s) of its parent "
+                    f"'{rname}', but '{rname}' only has {outside} task(s) outside '{own}'. "
+                    f"A subregion's tasks count toward its parent, so it would have to unlock itself."
+                )
 
         # ------------------------------------------------------------------ #
         # 8. Parse progressive groups                                         #
@@ -1215,15 +1242,15 @@ class TaskipelagoWorld(World):
         }
         region_prereq_text: Dict[str, str] = dict(raw_prereq_by_region)
 
-        # A subregion always depends on its parent implicitly: the parent's bare
-        # region reference (its default percentage) is ANDed onto whatever the
-        # subregion's own 'Depends on' expression says. A parent that holds no
-        # tasks of its own has nothing to complete, so the subregion inherits the
-        # parent's gate instead; nesting is one level, so parent text is never
-        # itself rewritten here. Cycles (a parent depending on its own subregion)
-        # are caught by _assert_no_region_cycles below.
+        # A subregion inherits its parent's requirements: the parent's own
+        # 'Depends on' expression is ANDed onto whatever the subregion's says.
+        # It never depends on the parent's completion, since its tasks count
+        # toward the parent's total. Nesting is one level, so parent text is
+        # never itself rewritten here.
         for _rname, _pname in region_parent.items():
-            _implicit = _pname if region_to_task_indices.get(_pname) else raw_prereq_by_region.get(_pname, "")
+            if not _pname:
+                continue
+            _implicit = raw_prereq_by_region.get(_pname, "")
             if not _implicit:
                 continue
             _own = region_prereq_text.get(_rname, "")
@@ -1302,9 +1329,17 @@ class TaskipelagoWorld(World):
             pct_refs = collect_region_refs(ast_r)
             abs_refs = collect_region_abs_refs(ast_r)
             reqs: List[dict] = []
+            def _self_dep_error(rname=rname) -> Exception:
+                _p = region_parent.get(rname, "")
+                if _p and raw_prereq_by_region.get(_p):
+                    return Exception(
+                        f"Taskipelago: region '{_p}' depends on its own subregion '{rname}', "
+                        f"which inherits that dependency. This is a dependency cycle."
+                    )
+                return Exception(f"Taskipelago: region '{rname}' cannot depend on itself.")
             for dep_name, pct_val in pct_refs:
                 if dep_name == rname:
-                    raise Exception(f"Taskipelago: region '{rname}' cannot depend on itself.")
+                    raise _self_dep_error()
                 pct = pct_val if pct_val is not None else region_default_pcts.get(dep_name, 100)
                 if pct < 0 or pct > 100:
                     raise Exception(
@@ -1316,10 +1351,11 @@ class TaskipelagoWorld(World):
                         f"Taskipelago: region '{rname}' depends on region '{dep_name}' "
                         f"which has no tasks assigned."
                     )
+                _assert_parent_ref_satisfiable(rname, dep_name, pct, None, "the 'Depends on' expression")
                 reqs.append({"region": dep_name, "pct": pct})
             for dep_name, abs_n in abs_refs:
                 if dep_name == rname:
-                    raise Exception(f"Taskipelago: region '{rname}' cannot depend on itself.")
+                    raise _self_dep_error()
                 dep_size = len(region_to_task_indices.get(dep_name, []))
                 if dep_size == 0:
                     raise Exception(
@@ -1331,6 +1367,7 @@ class TaskipelagoWorld(World):
                         f"Taskipelago: region '{rname}' uses '{dep_name}*{abs_n}' but region "
                         f"'{dep_name}' only has {dep_size} task(s)."
                     )
+                _assert_parent_ref_satisfiable(rname, dep_name, None, abs_n, "the 'Depends on' expression")
                 reqs.append({"region": dep_name, "abs_count": abs_n})
             region_prereq_reqs[rname] = reqs
 
@@ -1387,6 +1424,7 @@ class TaskipelagoWorld(World):
                     raise Exception(
                         f"Taskipelago: task {i + 1} references region '{rname}' which has no tasks assigned."
                     )
+                _assert_parent_ref_satisfiable(task_region[i], rname, pct, None, f"task {i + 1}")
                 reqs.append({"region": rname, "pct": pct})
             for rname, abs_n in abs_refs:
                 if task_region[i] == rname:
@@ -1403,6 +1441,7 @@ class TaskipelagoWorld(World):
                         f"Taskipelago: task {i + 1} uses '{rname}*{abs_n}' but region "
                         f"'{rname}' only has {region_size} task(s)."
                     )
+                _assert_parent_ref_satisfiable(task_region[i], rname, None, abs_n, f"task {i + 1}")
                 reqs.append({"region": rname, "abs_count": abs_n})
             task_region_reqs.append(reqs)
 
@@ -1928,6 +1967,9 @@ class TaskipelagoWorld(World):
             "region_default_pcts": dict(self._region_default_pcts),
             "region_colors": list(self._region_colors),
             "region_parent": dict(self._region_parent),
+            # Region refs to a parent count its subregions' tasks too; older seeds
+            # lack the key and keep counting only a region's own tasks.
+            "region_rollup": True,
             # Only regions that use task(...) / item(...); older clients ignore it.
             "region_prereq_exprs": dict(self._region_prereq_exprs),
             "task_region": list(self._task_region),
