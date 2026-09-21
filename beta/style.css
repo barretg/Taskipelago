@@ -1123,6 +1123,8 @@ button.primary { border-color: var(--accent); }
   font-size: 13px;
 }
 .region-head { font-size: 12px; }
+.region-head .col-num { width: 70px; }
+.region-row > .row-num-cell { width: 70px; }
 .region-head .col-color { width: 40px; }
 .region-head .col-name { width: 160px; }
 .region-head .col-pct { width: 64px; }

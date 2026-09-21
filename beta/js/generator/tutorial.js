@@ -117,13 +117,15 @@ const V11_STEPS = [
     + 'will fail to export.',
   ]],
   ['Item Count and Item Settings', [
-    'Reordering Tasks and Items',
-    'Use the ^ and v buttons next to a row number to move a task or item up or down.\n\n'
+    'Reordering Rows',
+    'Use the ^ and v buttons next to a row number to move a task, item or region up or down.\n\n'
     + 'With "Reordering updates references" checked (in the bar at the top of the generator), '
     + 'numbered references follow the moved row: task numbers in Task Prereqs and Goal Tasks, and '
     + 'item numbers in Item Prereqs and Cost. Quoted names never need updating. Uncheck it to move '
     + 'rows without touching any expression.\n\n'
-    + "'prev' always means the task directly above, so moving a task changes what 'prev' refers to.",
+    + "'prev' always means the task directly above, so moving a task changes what 'prev' refers to.\n\n"
+    + 'Regions are only ever referenced by name, so moving a region row just changes the order '
+    + 'they are listed in.',
   ]],
   ['Item Count and Item Settings', [
     'Find and Replace',

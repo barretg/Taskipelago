@@ -10,6 +10,7 @@ import {
   regionCanHaveParent, regionChildren, regionParentOptions, removeRegion, renameRegion,
 } from './model.js';
 import { regionCells } from './clicker_cells.js';
+import { rowNumberCell } from './reorder.js';
 import { commitNameChange, confirmNameRemoval } from './rename_refs.js';
 import { regionRandom } from './randomize_check.js';
 
@@ -123,7 +124,7 @@ function randomizeCells(region, ctx) {
   ];
 }
 
-function regionRow(region, i, ctx) {
+function regionRow(region, i, ctx, container) {
   const name = h('input', { type: 'text', value: region.name, className: 'region-name', spellcheck: false });
   let committing = false; // blur fires again when the prompt takes focus
   const commitName = async () => {
@@ -154,6 +155,7 @@ function regionRow(region, i, ctx) {
   pct.addEventListener('blur', commitPct);
 
   return h('div', { className: 'region-row' },
+    rowNumberCell(ctx, 'regions', i, container),
     h('button', {
       type: 'button', className: 'color-swatch', style: { background: region.color || '#808080' },
       'aria-label': `Change color of ${region.name}`,
@@ -191,12 +193,13 @@ export function renderRegions(container, ctx) {
   }
   container.replaceChildren(
     h('div', { className: 'region-row region-head muted-text' },
+      h('span', { className: 'col-num' }, '#'),
       h('span', { className: 'col-color' }, 'Color'), h('span', { className: 'col-name' }, 'Name'),
       h('span', { className: 'col-pct' }, 'Default %'), h('span', { className: 'col-prereq' }, 'Depends on', tipMarker(TIPS.rg_prereq)),
       h('span', { className: 'col-parent' }, 'Parent', tipMarker(TIPS.rg_parent)),
       h('span', { className: 'col-random' }, 'Randomize'), h('span', { className: 'col-pick' }, 'Keep'),
       h('span', { className: 'col-order' }, 'Shuffle order')),
-    ...model.regions.map((r, i) => regionRow(r, i, ctx)),
+    ...model.regions.map((r, i) => regionRow(r, i, ctx, container)),
   );
 }
 
