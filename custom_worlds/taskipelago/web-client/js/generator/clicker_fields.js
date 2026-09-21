@@ -74,25 +74,113 @@ export function targetToken(target, taskNames) {
   return s;
 }
 
+/** Positions of `sep` outside quotes and parentheses (parity: clicker.py _top_level). */
+function topLevel(text, sep) {
+  const out = [];
+  let depth = 0;
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') quoted = !quoted;
+    else if (!quoted) {
+      if (ch === '(') depth++;
+      else if (ch === ')') depth = Math.max(0, depth - 1);
+      else if (depth === 0 && text.startsWith(sep, i)) {
+        out.push(i);
+        i += sep.length - 1;
+      }
+    }
+  }
+  return out;
+}
+
+function splitTop(text, sep) {
+  const parts = [];
+  let start = 0;
+  for (const i of topLevel(text, sep)) {
+    parts.push(text.slice(start, i));
+    start = i + sep.length;
+  }
+  parts.push(text.slice(start));
+  return parts;
+}
+
+/** Drop parentheses that wrap the whole of `text`. */
+function stripParens(text) {
+  let t = text.trim();
+  while (t.startsWith('(')) {
+    let depth = 0;
+    let quoted = false;
+    let close = -1;
+    for (let i = 0; i < t.length; i++) {
+      const ch = t[i];
+      if (ch === '"') quoted = !quoted;
+      else if (!quoted && (ch === '(' || ch === ')')) {
+        depth += ch === '(' ? 1 : -1;
+        if (depth === 0) { close = i; break; }
+      }
+    }
+    if (close !== t.length - 1) break;
+    t = t.slice(1, -1).trim();
+  }
+  return t;
+}
+
+/**
+ * Flatten a target list ('Kitchen && "Bake Bread"', '( A && B )') into its
+ * atoms, honouring quotes and parentheses (parity: clicker.py split_target_list).
+ */
+export function splitTargetList(text) {
+  const t = stripParens(String(text ?? ''));
+  const parts = splitTop(t, '&&');
+  if (parts.length === 1) return t ? [t] : [];
+  return parts.flatMap(splitTargetList);
+}
+
 /**
  * Split "<target>-<value>" back into its two halves for the table.
  *
- * `regionNames` disambiguates the untargeted spelling: without it, the value
+ * A bare name may itself contain '-' ('Up-Stairs-2'), so each top-level '-' is
+ * tried and the first whose left side names a known region (or a quoted task,
+ * index or '*') wins; otherwise the first '-' is used.
+ *
+ * `regionNames` also disambiguates the untargeted spelling: without it, the value
  * `N_TASKS - 1` reads as a target called 'N_TASKS'. A bare name that is not a
  * region, in a string that is itself a valid expression, is a value aimed at
- * '*' (parity: clicker.py parse_target_specs bare_ok).
+ * '*' (parity: clicker.py parse_target_specs bare_ok). `bareOk` turns that off
+ * for kinds that always carry a target.
  */
-export function splitSpec(text, regionNames = null) {
+export function splitSpec(text, regionNames = null, bareOk = true) {
   const s = pyStrip(text);
   if (!s) return { target: '*', value: '' };
-  const m = /^\s*("[^"]*"|\d+|\*|[^-]+?)\s*-\s*(.+)$/s.exec(s);
-  if (!m) return { target: '*', value: s };
-  const raw = pyStrip(m[1]);
-  if (regionNames && !raw.startsWith('"') && raw !== '*' && !/^\d+$/.test(raw)
-      && !regionNames.includes(raw) && isNumExpr(s)) {
-    return { target: '*', value: s };
+  const parts = splitTop(s, '&&').map(p => pyStrip(p)).filter(Boolean);
+  if (parts.length > 1) {
+    // One row holds one value: several parts that share it rejoin as a list.
+    const halves = parts.map(p => splitOne(p, regionNames, bareOk));
+    if (halves.every(h => h.split && h.value === halves[0].value)) {
+      return { target: halves.flatMap(h => h.atoms).join(' && '), value: halves[0].value };
+    }
   }
-  return { target: raw.startsWith('"') ? raw.slice(1, -1) : raw, value: pyStrip(m[2]) };
+  const one = splitOne(s, regionNames, bareOk);
+  if (!one.split) return { target: '*', value: s };
+  const target = one.atoms.length === 1 && one.atoms[0].startsWith('"')
+    ? one.atoms[0].slice(1, -1) : one.atoms.join(' && ');
+  return { target, value: one.value };
+}
+
+function splitOne(s, regionNames, bareOk) {
+  const known = atoms => atoms.length > 0 && atoms.every(a =>
+    a.startsWith('"') || a === '*' || /^\d+$/.test(a) || (regionNames && regionNames.includes(a)));
+  const cands = [];
+  for (const i of topLevel(s, '-')) {
+    const target = pyStrip(s.slice(0, i));
+    const value = pyStrip(s.slice(i + 1));
+    if (target && value) cands.push({ atoms: splitTargetList(target), value });
+  }
+  if (!cands.length) return { split: false };
+  const pick = cands.find(c => known(c.atoms)) || cands[0];
+  if (regionNames && bareOk && !known(pick.atoms) && isNumExpr(s)) return { split: false };
+  return { split: true, ...pick };
 }
 
 function isNumExpr(text) {
@@ -111,7 +199,7 @@ function isNumExpr(text) {
  * would silently grant nothing. Returns an error string or null.
  */
 export function checkTarget(target, taskNames, regionNames, manual = null) {
-  for (const part of String(target ?? '').split('&&')) {
+  for (const part of splitTargetList(target)) {
     const t = pyStrip(part);
     if (!t || t === '*' || /^\d+$/.test(t)) continue;
     const name = /^"([^"]*)"$/.test(t) ? t.slice(1, -1) : t;
@@ -257,9 +345,12 @@ export function clickerExportKeys(model, {
     if (s.kind !== kind || !pyStrip(s.value)) return '';
     const value = pyStrip(s.value);
     if (!TARGETED_KINDS.has(kind)) return value;
-    const token = targetToken(s.target, taskNames);
+    const atoms = splitTargetList(s.target);
+    const tokens = (atoms.length ? atoms : ['*']).map(a => targetToken(a, taskNames));
     // A slot-wide grant keeps its old bare spelling.
-    return BARE_STAR_KINDS.has(kind) && token === '*' ? value : `${token}-${value}`;
+    if (BARE_STAR_KINDS.has(kind) && tokens.length === 1 && tokens[0] === '*') return value;
+    // Several targets share the value as a parenthesized group.
+    return tokens.length > 1 ? `(${tokens.join(' && ')})-${value}` : `${tokens[0]}-${value}`;
   };
   const out = {
     clicker_mode: true,
@@ -317,7 +408,7 @@ export function clickerItemFields(block) {
       if (!raw) continue;
       if (!TARGETED_KINDS.has(kind)) return { clickerKind: kind, clickerTarget: '*', clickerValue: raw };
       // The three formerly slot-wide kinds may carry a bare value.
-      const { target, value } = splitSpec(raw, BARE_STAR_KINDS.has(kind) ? regionNames : null);
+      const { target, value } = splitSpec(raw, regionNames, BARE_STAR_KINDS.has(kind));
       return { clickerKind: kind, clickerTarget: target, clickerValue: value };
     }
     return { clickerKind: 'none', clickerTarget: '*', clickerValue: '' };

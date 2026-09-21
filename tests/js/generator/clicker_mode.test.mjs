@@ -8,7 +8,7 @@ const { loadYaml, dumpYaml } = await importModule('shared/yaml11.js');
 const { defaultModel, normalizeModel } = await importModule('generator/model.js');
 const { importDoc } = await importModule('generator/yaml_import.js');
 const { buildExport } = await importModule('generator/yaml_export.js');
-const { splitSpec, targetToken, checkTarget, previewValue } = await importModule('generator/clicker_fields.js');
+const { splitSpec, splitTargetList, targetToken, checkTarget, previewValue } = await importModule('generator/clicker_fields.js');
 
 const randomFiller = () => 'RANDOM FILLER';
 const confirm = async () => true;
@@ -53,6 +53,19 @@ test('splitSpec and targetToken round-trip each reference form', () => {
   assert.equal(targetToken('', names), '*');
 });
 
+test('splitSpec keeps dashed names and rejoins shared values', () => {
+  assert.deepEqual(splitSpec('Up-Stairs-2', ['Up-Stairs']), { target: 'Up-Stairs', value: '2' });
+  assert.deepEqual(splitSpec('"A-B"-2'), { target: 'A-B', value: '2' });
+  assert.deepEqual(splitSpec('Kitchen-2 && "Sweep"-2', ['Kitchen']), { target: 'Kitchen && "Sweep"', value: '2' });
+  assert.deepEqual(splitSpec('(Kitchen && "Sweep")-2', ['Kitchen']), { target: 'Kitchen && "Sweep"', value: '2' });
+});
+
+test('splitTargetList honours parens and quotes', () => {
+  assert.deepEqual(splitTargetList('( name && nametwo )'), ['name', 'nametwo']);
+  assert.deepEqual(splitTargetList('"a && b" && (c)'), ['"a && b"', 'c']);
+  assert.deepEqual(splitTargetList('name-restofname'), ['name-restofname']);
+});
+
 test('checkTarget accepts tasks, regions, indices and *', () => {
   const tasks = ['Bake Bread'];
   const regions = ['Kitchen'];
@@ -61,6 +74,7 @@ test('checkTarget accepts tasks, regions, indices and *', () => {
   assert.equal(checkTarget('"Bake Bread"', tasks, regions), null);
   assert.equal(checkTarget('2', tasks, regions), null);
   assert.equal(checkTarget('Kitchen && "Bake Bread"', tasks, regions), null);
+  assert.equal(checkTarget('( Kitchen && "Bake Bread" )', tasks, regions), null);
   assert.match(checkTarget('Basement', tasks, regions), /not a task or a region/);
 });
 

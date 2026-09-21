@@ -12,7 +12,6 @@ an already-parsed AST (or a folded number) and never re-parses authored text.
 """
 from __future__ import annotations
 
-import re as _re
 from typing import Any, Dict, List, Tuple
 
 from .prereq_parser import (
@@ -27,9 +26,97 @@ KIND_ALL = "all"
 
 # A target, followed by '-' and the value expression. The target syntax matches
 # the rest of Taskipelago: a quoted "Task Name", a bare Region name, a 1-based
-# task index, or '*' for every task.
-_TARGET_RE = _re.compile(
-    r'^\s*(?:"([^"]*)"|(\d+)|(\*)|([^-]+?))\s*-\s*(.+)$', _re.DOTALL)
+# task index, or '*' for every task. Several targets may share one value as a
+# parenthesized group: (Kitchen && "Bake Bread")-2.
+
+
+def _top_level(text: str, sep: str) -> List[int]:
+    """Positions of `sep` outside quotes and parentheses."""
+    out, depth, quoted, i = [], 0, False, 0
+    while i < len(text):
+        ch = text[i]
+        if ch == '"':
+            quoted = not quoted
+        elif not quoted:
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth = max(0, depth - 1)
+            elif depth == 0 and text.startswith(sep, i):
+                out.append(i)
+                i += len(sep)
+                continue
+        i += 1
+    return out
+
+
+def _split_top(text: str, sep: str) -> List[str]:
+    parts, start = [], 0
+    for i in _top_level(text, sep):
+        parts.append(text[start:i])
+        start = i + len(sep)
+    parts.append(text[start:])
+    return parts
+
+
+def _strip_parens(text: str) -> str:
+    """Drop parentheses that wrap the whole of `text`."""
+    text = text.strip()
+    while text.startswith("("):
+        depth, quoted, close = 0, False, -1
+        for i, ch in enumerate(text):
+            if ch == '"':
+                quoted = not quoted
+            elif not quoted and ch in "()":
+                depth += 1 if ch == "(" else -1
+                if depth == 0:
+                    close = i
+                    break
+        if close != len(text) - 1:
+            break
+        text = text[1:-1].strip()
+    return text
+
+
+def split_target_list(text: str) -> List[str]:
+    """
+    Flatten a target list ('Kitchen && "Bake Bread"', '(A && B)') into its
+    atoms, honouring quotes and parentheses.
+    """
+    text = _strip_parens(text)
+    parts = _split_top(text, "&&")
+    if len(parts) == 1:
+        return [text] if text else []
+    out: List[str] = []
+    for part in parts:
+        out.extend(split_target_list(part))
+    return out
+
+
+def _target_value(part: str, region_names: "set[str]") -> "Tuple[List[str], str] | None":
+    """
+    Split one '<target>-<value>' part. A bare name may itself contain '-'
+    ('Up-Stairs-2'), so each top-level '-' is tried in turn and the first whose
+    left side names a known target wins; otherwise the first '-' is used.
+    """
+    cands = []
+    for i in _top_level(part, "-"):
+        target, value = part[:i].strip(), part[i + 1:].strip()
+        if target and value:
+            cands.append((target, value))
+    if not cands:
+        return None
+
+    def known(target: str) -> bool:
+        atoms = split_target_list(target)
+        return bool(atoms) and all(
+            a.startswith('"') or a == "*" or a.isdigit() or a in region_names for a in atoms)
+
+    for target, value in cands:
+        if known(target):
+            return split_target_list(target), value
+    target, value = cands[0]
+    return split_target_list(target), value
 
 
 # ---------------------------------------------------------------------------
@@ -188,12 +275,21 @@ def parse_target_specs(text: str, label: str, loc: str, *, task_names: List[str]
             return False
 
     specs: List[dict] = []
-    for part in text.split("&&"):
+    for part in _split_top(text, "&&"):
         part = part.strip()
         if not part:
             continue
-        m = _TARGET_RE.match(part)
-        if not m:
+        # A grouped part '(A && B)-2' that is not itself a value.
+        if part.startswith("(") and not _top_level(part, "-") and not (bare_ok and _is_value(part)):
+            inner = _strip_parens(part)
+            if inner != part:
+                specs.extend(parse_target_specs(
+                    inner, label, loc, task_names=task_names, region_names=region_names,
+                    n_tasks=n_tasks, strictly_positive=strictly_positive, minimum=minimum,
+                    allow_cps=allow_cps, round_2dp=round_2dp, bare_ok=bare_ok))
+                continue
+        split = _target_value(part, region_names)
+        if split is None:
             # No '<target>-' at all. An untargeted field says so by omission;
             # a targeted one has simply been written wrong.
             if bare_ok:
@@ -204,37 +300,38 @@ def parse_target_specs(text: str, label: str, loc: str, *, task_names: List[str]
                 f"Expected '<target>-<value>', for example '\"Bake Bread\"-1.5', "
                 f"'Kitchen-0.5' or '*-0.1'."
             )
-        quoted, index, star, bare, value_text = m.groups()
-        if star:
-            specs.append({"kind": KIND_ALL, "ref": None, "rate": _value(value_text)})
-        elif bare is not None:
-            bare = bare.strip()
-            if bare not in region_names:
-                # 'N_TASKS - 1' is a value, not a region called 'N_TASKS'.
-                if bare_ok and _is_value(part):
-                    specs.append({"kind": KIND_ALL, "ref": None, "rate": _value(part)})
-                    continue
-                raise Exception(
-                    f"Taskipelago: {label} on {loc} targets unknown region '{bare}'. "
-                    f"Quote the name to target a task instead."
-                )
-            specs.append({"kind": KIND_REGION, "ref": bare, "rate": _value(value_text)})
-        elif quoted is not None:
-            try:
-                idx = task_names.index(quoted)
-            except ValueError:
-                raise Exception(
-                    f"Taskipelago: {label} on {loc} targets unknown task '{quoted}'."
-                )
-            specs.append({"kind": KIND_TASK, "ref": idx, "rate": _value(value_text)})
-        else:
-            idx_1 = int(index)
-            if idx_1 < 1 or idx_1 > len(task_names):
-                raise Exception(
-                    f"Taskipelago: {label} on {loc} targets task index {idx_1}, "
-                    f"which is out of range (1..{len(task_names)})."
-                )
-            specs.append({"kind": KIND_TASK, "ref": idx_1 - 1, "rate": _value(value_text)})
+        targets, value_text = split
+        for target in targets:
+            if target == "*":
+                specs.append({"kind": KIND_ALL, "ref": None, "rate": _value(value_text)})
+            elif target.startswith('"') and target.endswith('"') and len(target) >= 2:
+                quoted = target[1:-1]
+                try:
+                    idx = task_names.index(quoted)
+                except ValueError:
+                    raise Exception(
+                        f"Taskipelago: {label} on {loc} targets unknown task '{quoted}'."
+                    )
+                specs.append({"kind": KIND_TASK, "ref": idx, "rate": _value(value_text)})
+            elif target.isdigit():
+                idx_1 = int(target)
+                if idx_1 < 1 or idx_1 > len(task_names):
+                    raise Exception(
+                        f"Taskipelago: {label} on {loc} targets task index {idx_1}, "
+                        f"which is out of range (1..{len(task_names)})."
+                    )
+                specs.append({"kind": KIND_TASK, "ref": idx_1 - 1, "rate": _value(value_text)})
+            else:
+                if target not in region_names:
+                    # 'N_TASKS - 1' is a value, not a region called 'N_TASKS'.
+                    if bare_ok and len(targets) == 1 and _is_value(part):
+                        specs.append({"kind": KIND_ALL, "ref": None, "rate": _value(part)})
+                        continue
+                    raise Exception(
+                        f"Taskipelago: {label} on {loc} targets unknown region '{target}'. "
+                        f"Quote the name to target a task instead."
+                    )
+                specs.append({"kind": KIND_REGION, "ref": target, "rate": _value(value_text)})
     return specs
 
 

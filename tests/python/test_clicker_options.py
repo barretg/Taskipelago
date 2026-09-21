@@ -148,6 +148,19 @@ class ItemProductionTest(unittest.TestCase):
             {"kind": "region", "ref": "Kitchen", "rate": 0.25},
         ])
 
+    def test_dashed_region_target(self):
+        w = _quiet(**{**BASE, "clicker_mode": True, "regions": ["Up-Stairs"],
+                      "task_region": ["Up-Stairs", "Up-Stairs", ""],
+                      "item_production": ["Up-Stairs-2", "", ""]})[0]
+        self.assertEqual(w._clicker_production[0], [{"kind": "region", "ref": "Up-Stairs", "rate": 2}])
+
+    def test_grouped_targets_share_a_value(self):
+        w = world(item_production=['( Kitchen && "Sweep" )-2', "", ""])
+        self.assertEqual(w._clicker_production[0], [
+            {"kind": "region", "ref": "Kitchen", "rate": 2},
+            {"kind": "task", "ref": 2, "rate": 2},
+        ])
+
     def test_live_rate_ships_as_an_ast(self):
         w = world(item_production=["*-0.1 * (1 + N_TASKS_UNLOCKED)"])
         self.assertEqual(w._clicker_production[0][0]["rate"], {

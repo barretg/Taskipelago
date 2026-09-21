@@ -4,6 +4,8 @@ what are you gonna do about it?
 take that Jira.
 
 ### High Prio:
+* fix parse error for items named like "XXX-YYY" where YYY is not a constant we've defined- this item name should be valid
+* fix other parse error: target groups not grouped together for production targets
 
 ### Medium Prio:
 
