@@ -254,11 +254,11 @@ function build(root) {
     h('span', { className: 'spacer' }),
     h('label', {
       className: 'check-label',
-      title: 'When on, moving a task or item with the up/down carets also updates index references to it.',
+      title: 'When on, moving a task or item with the up/down carets, or removing one, also updates index references to it and to the rows after it.',
     }, h('input', {
       type: 'checkbox', checked: reorderUpdatesRefs(), id: 'gen-reorder-refs',
       onchange: e => setReorderUpdatesRefs(e.target.checked),
-    }), 'Reordering updates references'),
+    }), 'Moving/removing rows updates references'),
     h('button', { type: 'button', onclick: () => openFindReplace(ctx) }, 'Find/Replace'),
     h('button', { type: 'button', onclick: () => openCommunityYamls(applyDoc) }, 'Community YAMLs'),
     h('button', { type: 'button', onclick: openTutorial }, 'Tutorial'));

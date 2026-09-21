@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { importModule } from '../helpers/env.mjs';
 
-const { defaultModel, newTask, newItem, moveRow } = await importModule('generator/model.js');
+const { defaultModel, newTask, newItem, moveRow, removeRow, countRowRefs } = await importModule('generator/model.js');
 
 function tasksModel() {
   const m = defaultModel();
@@ -54,4 +54,29 @@ test('moving a region row only reorders it; name references are untouched', () =
   assert.equal(m.tasks[0].prereq, 'beta*2');
   assert.equal(m.tasks[0].region, 'gamma');
   assert.equal(moveRow(m, 'regions', 2, 3, true), false);
+});
+
+test('removing a task shifts later references down and zeroes references to it', () => {
+  const m = tasksModel();
+  m.regions = [{ name: 'chores', pct: 100, color: '#111', prereq: 'task(4) && item(4)', parent: '' }];
+  assert.equal(countRowRefs(m, 'tasks', 2), 3);
+  assert.equal(removeRow(m, 'tasks', 1, true), true);
+  assert.deepEqual(m.tasks.map(t => [t.name, t.prereq]), [
+    ['Task A', ''], ['Task C', '1 && 2'], ['Task D', '"Task C" || (1 || 1)'], ['Task E', 'chores-75 && prev && 0'],
+  ]);
+  assert.equal(m.goalTasks, '2 || 23');
+  assert.equal(m.regions[0].prereq, 'task(3) && item(4)');
+  assert.equal(removeRow(m, 'tasks', 4, true), false);
+});
+
+test('removing an item remaps item prereqs and costs; toggle off only removes', () => {
+  const m = defaultModel();
+  m.items = ['Key', 'Gem', 'Map'].map(name => ({ ...newItem(), name }));
+  m.tasks = [{ ...newTask(), name: 'A', prereq: '1', itemPrereq: '3 || 1', cost: '3*2, 1' }];
+  assert.equal(countRowRefs(m, 'items', 0), 2);
+  removeRow(m, 'items', 0, true);
+  assert.deepEqual(m.items.map(it => it.name), ['Gem', 'Map']);
+  assert.deepEqual([m.tasks[0].prereq, m.tasks[0].itemPrereq, m.tasks[0].cost], ['1', '2 || 0', '2*2, 0']);
+  removeRow(m, 'items', 0, false);
+  assert.equal(m.tasks[0].itemPrereq, '2 || 0');
 });

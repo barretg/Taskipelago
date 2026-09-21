@@ -519,19 +519,62 @@ export function moveRow(model, kind, i, j, updateRefs = true) {
   const indexMap = rows.map((_, k) => [k + 1]);
   indexMap[i] = [j + 1];
   indexMap[j] = [i + 1];
+  remapRowRefs(model, kind, indexMap);
+  return true;
+}
+
+/**
+ * Rewrite every task ('tasks') or item ('items') index reference through a
+ * one-to-one indexMap (as in remapPrereqIndices). Returns how many fields changed.
+ */
+function remapRowRefs(model, kind, indexMap) {
+  let changed = 0;
+  const set = (obj, key, text) => {
+    if (text !== obj[key]) { obj[key] = text; changed++; }
+  };
   const prereq = text => remapPrereqIndices(text, indexMap, false);
   if (kind === 'tasks') {
-    for (const t of model.tasks) t.prereq = prereq(t.prereq);
-    model.goalTasks = prereq(model.goalTasks);
+    for (const t of model.tasks) set(t, 'prereq', prereq(t.prereq));
+    set(model, 'goalTasks', prereq(model.goalTasks));
     // Only the task(...) scope of a region "Depends on" holds task indices.
-    for (const r of model.regions) r.prereq = mapScopedText(r.prereq, prereq, null);
+    for (const r of model.regions) set(r, 'prereq', mapScopedText(r.prereq, prereq, null));
   } else {
     for (const t of model.tasks) {
-      t.itemPrereq = prereq(t.itemPrereq);
-      t.cost = remapCostIndices(t.cost, indexMap);
+      set(t, 'itemPrereq', prereq(t.itemPrereq));
+      set(t, 'cost', remapCostIndices(t.cost, indexMap));
     }
-    for (const r of model.regions) r.prereq = mapScopedText(r.prereq, null, prereq);
+    for (const r of model.regions) set(r, 'prereq', mapScopedText(r.prereq, null, prereq));
   }
+  return changed;
+}
+
+/** Number of expressions that reference task / item row i (0-based) by index. */
+export function countRowRefs(model, kind, i) {
+  const rows = model[kind];
+  if (i < 0 || i >= rows.length) return 0;
+  const indexMap = rows.map((_, k) => [k + 1]);
+  indexMap[i] = [0];
+  // Count on a scratch copy of the referencing fields so the model is untouched.
+  const scratch = {
+    tasks: model.tasks.map(t => ({ prereq: t.prereq, itemPrereq: t.itemPrereq, cost: t.cost })),
+    regions: model.regions.map(r => ({ prereq: r.prereq })),
+    goalTasks: model.goalTasks,
+  };
+  return remapRowRefs(scratch, kind, indexMap);
+}
+
+/**
+ * Remove task / item row i. With updateRefs, references to later rows shift
+ * down one and references to the removed row become index 0, which fails
+ * export ("out of range") instead of silently pointing at the next row.
+ */
+export function removeRow(model, kind, i, updateRefs = true) {
+  const rows = model[kind];
+  if (i < 0 || i >= rows.length) return false;
+  const indexMap = rows.map((_, k) => [k < i ? k + 1 : k]);
+  indexMap[i] = [0];
+  rows.splice(i, 1);
+  if (updateRefs) remapRowRefs(model, kind, indexMap);
   return true;
 }
 
