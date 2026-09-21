@@ -42,3 +42,16 @@ test('with the toggle off only the rows move; out of range moves are refused', (
   assert.equal(moveRow(m, 'tasks', 0, -1, true), false);
   assert.equal(moveRow(m, 'tasks', 4, 5, true), false);
 });
+
+test('moving a region row only reorders it; name references are untouched', () => {
+  const m = defaultModel();
+  m.regions = ['alpha', 'beta', 'gamma'].map(name => ({ name, pct: 100, color: '#111', prereq: '', parent: '' }));
+  m.regions[2].prereq = 'alpha-50';
+  m.tasks = [{ ...newTask(), name: 'A', region: 'gamma', prereq: 'beta*2' }];
+  assert.equal(moveRow(m, 'regions', 0, 1, true), true);
+  assert.deepEqual(m.regions.map(r => r.name), ['beta', 'alpha', 'gamma']);
+  assert.equal(m.regions[2].prereq, 'alpha-50');
+  assert.equal(m.tasks[0].prereq, 'beta*2');
+  assert.equal(m.tasks[0].region, 'gamma');
+  assert.equal(moveRow(m, 'regions', 2, 3, true), false);
+});

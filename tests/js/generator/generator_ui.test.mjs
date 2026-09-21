@@ -408,8 +408,8 @@ test('tutorial shows the legacy steps plus the hosted/launcher and v1.1 steps', 
   after('Region Dependencies', 'Randomized Regions and Dependencies');
   after('Item Groups (Progressive, Random-Choice, Aesthetic)', 'Group Types, Keep and Default %');
   after('Group Types, Keep and Default %', 'Group Colors and Renaming');
-  after('Item Count and Item Settings', 'Reordering Tasks and Items');
-  after('Reordering Tasks and Items', 'Find and Replace');
+  after('Item Count and Item Settings', 'Reordering Rows');
+  after('Reordering Rows', 'Find and Replace');
   after('DeathLink (Optional Challenge)', 'DeathLink Task Cards and Lock');
   after('Slot Colors', 'Clicker Mode (Tasclickpelago)');
   after('Clicker Mode (Tasclickpelago)', 'Clicker Values and Constants');

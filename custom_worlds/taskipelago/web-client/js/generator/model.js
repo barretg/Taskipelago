@@ -497,18 +497,21 @@ export function rewriteNameRefs(model, kind, oldName, newName) {
 }
 
 /**
- * v1.1 F10: swap editor rows i and j of model.tasks or model.items (row state
+ * v1.1 F10: swap editor rows i and j of model.tasks, model.items or
+ * model.regions (row state
  * such as filler, consumable and saved values moves with the row). With
  * updateRefs, index references follow: task prereqs and goal tasks for tasks,
  * item prereqs and costs for items. `prev` is relative and never remapped.
  * Indices here are editor rows; rows with an empty name are skipped at export
  * (legacy_client/client.py:2993-2994), which reordering does not change.
+ * Regions are referenced by name, so moving one only changes display order.
  */
 export function moveRow(model, kind, i, j, updateRefs = true) {
   const rows = model[kind];
   if (i === j || i < 0 || j < 0 || i >= rows.length || j >= rows.length) return false;
   [rows[i], rows[j]] = [rows[j], rows[i]];
-  if (!updateRefs) return true;
+  // Regions are referenced by name, so their order holds no index references.
+  if (!updateRefs || kind === 'regions') return true;
   const indexMap = rows.map((_, k) => [k + 1]);
   indexMap[i] = [j + 1];
   indexMap[j] = [i + 1];
