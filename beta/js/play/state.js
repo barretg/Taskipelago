@@ -43,6 +43,7 @@ export const state = {
   regions: [],
   regionColors: [],
   regionParent: {},            // subregion name -> parent region name
+  regionRollup: false,         // region refs to a parent also count its subregions' tasks
   taskRegion: [],
   taskRegionReqs: [],
   // Region name -> resolved "Depends on" expression, only for regions that use

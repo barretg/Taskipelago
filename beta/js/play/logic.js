@@ -96,10 +96,19 @@ export function progressiveReqSatisfied(group, required) {
   return count >= required;
 }
 
-export function regionReqSatisfied(rname, pct, checked) {
-  const region_indices = state.taskRegion
-    .map((r, i) => r === rname ? i : -1)
+/**
+ * Task indices a region reference counts. With regionRollup (newer seeds) a
+ * parent region also counts every task in its subregions.
+ */
+export function regionTaskIndices(rname) {
+  const parent = state.regionRollup ? (state.regionParent || {}) : {};
+  return state.taskRegion
+    .map((r, i) => (r === rname || (r && parent[r] === rname)) ? i : -1)
     .filter(i => i >= 0);
+}
+
+export function regionReqSatisfied(rname, pct, checked) {
+  const region_indices = regionTaskIndices(rname);
   if (!region_indices.length) return true;
   const required = Math.ceil(region_indices.length * pct / 100);
   const done = region_indices.filter(i =>
@@ -109,9 +118,7 @@ export function regionReqSatisfied(rname, pct, checked) {
 }
 
 export function regionReqSatisfiedAbs(rname, requiredCount, checked) {
-  const region_indices = state.taskRegion
-    .map((r, i) => r === rname ? i : -1)
-    .filter(i => i >= 0);
+  const region_indices = regionTaskIndices(rname);
   const done = region_indices.filter(i =>
     checked.has(state.baseCompleteId + i)
   ).length;
