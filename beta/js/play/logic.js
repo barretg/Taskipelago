@@ -224,6 +224,32 @@ export function taskCostIsPaid(idx) {
   return idx in state.taskPurchases;
 }
 
+/**
+ * Whether cost branch `k` of task `i` is in logic: every cumulative threshold
+ * AP placed for it is met by currency received (not balance). Buying only
+ * in-logic keeps every later in-logic purchase affordable. Older seeds ship
+ * no thresholds and stay ungated.
+ */
+export function costBranchInLogic(i, k, recv = consumableReceivedCounts()) {
+  const reqs = state.taskCostReqs[i];
+  if (!reqs || !reqs[k]) return true;
+  return reqs[k].every(r => (recv[r.consumable] || 0) >= r.threshold);
+}
+
+/** '' when some cost branch of task `i` is in logic, else why it is not. */
+export function costLogicReason(i) {
+  const reqs = state.taskCostReqs[i];
+  if (!reqs || !reqs.length) return '';
+  const recv = consumableReceivedCounts();
+  let best = null;
+  for (const branch of reqs) {
+    const miss = branch.filter(r => (recv[r.consumable] || 0) < r.threshold);
+    if (!miss.length) return '';
+    if (!best || miss.length < best.length) best = miss;
+  }
+  return `Needs ${best.map(r => `${r.threshold} ${r.consumable}`).join(', ')} received (out of logic)`;
+}
+
 export function recalcPurchasesFromCompleted() {
   const checked = allChecked();
   if (state.baseCompleteId === null) return;
@@ -305,8 +331,15 @@ export function attemptPurchase(taskIdx) {
   if (!branches.length) return;
   const bal = consumableBalance();
 
+  const logicReason = costLogicReason(taskIdx);
+  if (logicReason) {
+    showModal('Out of Logic', logicReason, ['OK'], () => {});
+    return;
+  }
+
+  const recv = consumableReceivedCounts();
   const canAfford = branch => branch.every(([name, amt]) => (bal[name] || 0) >= amt);
-  const affordable = branches.filter(canAfford);
+  const affordable = branches.filter((b, k) => canAfford(b) && costBranchInLogic(taskIdx, k, recv));
 
   if (!affordable.length) {
     showModal(
@@ -350,8 +383,10 @@ export function attemptMakeChange(taskIdx) {
   }
 
   const currentDict = JSON.stringify(current);
-  const alternatives = branches.filter(b => {
+  const recv = consumableReceivedCounts();
+  const alternatives = branches.filter((b, k) => {
     if (JSON.stringify(Object.fromEntries(b)) === currentDict) return false;
+    if (!costBranchInLogic(taskIdx, k, recv)) return false;
     return b.every(([name, amt]) => (refundBal[name] || 0) >= amt);
   });
 

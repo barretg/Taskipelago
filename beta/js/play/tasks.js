@@ -3,7 +3,7 @@ import { $ } from '../shared/dom.js';
 import {
   allChecked, prereqsSatisfied, itemPrereqsSatisfied, progressiveReqSatisfied,
   regionPrereqSatisfied, regionReqSatisfied, regionReqSatisfiedAbs, taskCostIsPaid,
-  completeTask, attemptPurchase, attemptMakeChange,
+  completeTask, attemptPurchase, attemptMakeChange, costLogicReason,
 } from './logic.js';
 import { renderBingo } from './bingo_board.js';
 import { isManualTask, renderClicker } from './clicker_board.js';
@@ -274,7 +274,9 @@ export function taskAvailability(i, checked = allChecked(), effectiveLock = stat
   }
   if (regionHints.length && !regionOk) reasons.push(`Locked behind region(s): ${regionHints.join(', ')}`);
   if (!regionExprOk) reasons.push(`Locked behind region '${regionName}': ${regionExprText}`);
-  if (costOnlyLocked && effectiveLock) reasons.push('Requires purchase');
+  // Out-of-logic purchases stay locked so spending cannot strand an in-logic one.
+  const costLogicText = costOnlyLocked && effectiveLock ? costLogicReason(i) : '';
+  if (costOnlyLocked && effectiveLock) reasons.push(costLogicText || 'Requires purchase');
 
   return {
     completed,
@@ -282,7 +284,31 @@ export function taskAvailability(i, checked = allChecked(), effectiveLock = stat
     reasons,
     taskPrereqOk, taskPrereqText, itemPrereqOk, itemPrereqText, progHints,
     regionOk, regionHints, branches, hasCost, costPaid, otherPrereqsOk, costOnlyLocked,
+    costLogicText,
   };
+}
+
+/**
+ * Task `i`'s reward preview text, or '' when previews are off, the task is not
+ * `eligible` (completable, or purchasable in logic), or the purchasable-only
+ * setting excludes it. Hint Previews sends a real hint the first time.
+ */
+export function rewardPreview(i, eligible) {
+  if (!eligible || state.taskRewardPreviews === 0) return '';
+  if (state.previewsPurchasableOnly && !(state.taskCostAmounts[i] || []).length) return '';
+  if (state.taskRewardPreviews === 2 && !state.hintRequestedIndices.has(i)) {
+    state.hintRequestedIndices.add(i);
+    ap.sendLocationScouts([state.baseRewardId + i], 1);
+  }
+  const rName = state.sentItemNames[i] || '';
+  return rName ? `${rName} → ${state.sentPlayerNames[i] || 'Unknown'}` : '';
+}
+
+function previewEl(text) {
+  const el = document.createElement('span');
+  el.className = 'task-reward-preview';
+  el.textContent = text;
+  return el;
 }
 
 export function renderTasks() {
@@ -381,7 +407,7 @@ function renderTaskCards(container, effectiveLock, dlLocked, include = null) {
     const taskName = state.tasks[i];
     const { completed,
       taskPrereqOk, taskPrereqText, itemPrereqOk, itemPrereqText, progHints,
-      regionOk, regionHints, branches, costPaid, otherPrereqsOk, costOnlyLocked,
+      regionOk, regionHints, branches, costPaid, otherPrereqsOk, costOnlyLocked, costLogicText,
     } = taskAvailability(i, checked, effectiveLock);
 
     const wouldHide = !otherPrereqsOk && state.hideUnreachable && effectiveLock;
@@ -422,8 +448,12 @@ function renderTaskCards(container, effectiveLock, dlLocked, include = null) {
         actions.appendChild(mcBtn);
       }
     } else if (costOnlyLocked && effectiveLock) {
+      const preview = rewardPreview(i, !costLogicText);
+      if (preview) top.appendChild(previewEl(preview));
+
       const pBtn = document.createElement('button');
       pBtn.textContent = '$$ Purchase $$';
+      pBtn.disabled = !!costLogicText;
       pBtn.onclick = () => attemptPurchase(i);
       actions.appendChild(pBtn);
 
@@ -436,20 +466,8 @@ function renderTaskCards(container, effectiveLock, dlLocked, include = null) {
     } else {
       const canComplete = !(effectiveLock && (!otherPrereqsOk || !costPaid));
 
-      if (canComplete && state.taskRewardPreviews !== 0) {
-        const rName = state.sentItemNames[i] || '';
-        const rPlayer = state.sentPlayerNames[i] || 'Unknown';
-        if (rName) {
-          const previewEl = document.createElement('span');
-          previewEl.className = 'task-reward-preview';
-          previewEl.textContent = `${rName} → ${rPlayer}`;
-          top.appendChild(previewEl);
-        }
-        if (state.taskRewardPreviews === 2 && !state.hintRequestedIndices.has(i)) {
-          state.hintRequestedIndices.add(i);
-          ap.sendLocationScouts([state.baseRewardId + i], 1);
-        }
-      }
+      const preview = rewardPreview(i, canComplete);
+      if (preview) top.appendChild(previewEl(preview));
 
       const cBtn = document.createElement('button');
       cBtn.textContent = 'Complete';
@@ -493,6 +511,7 @@ function renderTaskCards(container, effectiveLock, dlLocked, include = null) {
     }
     if (!completed && costOnlyLocked && effectiveLock && branches.length) {
       card.appendChild(makeHint(`Requires purchase: ${formatCostBranches(branches)}`));
+      if (costLogicText) card.appendChild(makeHint(costLogicText));
     }
 
     frag.appendChild(card);

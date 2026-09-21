@@ -25,6 +25,8 @@ export const DEATHLINK_LOCK_TIP = 'When on, a pending DeathLink task card locks 
   + 'DeathLink task cards always appear when DeathLink is enabled; this only adds the lock.';
 export const REWARD_TYPE_VALUES = ['junk', 'useful', 'progression', 'trap'];
 export const DEFAULT_REWARD_TYPE = 'useful';
+export const PREVIEWS_PURCHASABLE_TIP = 'When on, reward previews (scout or hint) only apply to tasks '
+  + 'that have a cost, shown once the purchase is in logic.';
 export const TASK_REWARD_PREVIEW_LABELS = ['No Previews', 'Scout Previews', 'Hint Previews'];
 
 // Clicker mode (Tasclickpelago). These fields ride along on the normal model and
@@ -94,6 +96,7 @@ export function defaultModel() {
     clickerOffline: true,
     clickerOfflineRate: '1',
     clickerOfflineCapHours: 8,
+    previewsPurchasableOnly: false, // appended so older drafts keep their key order
   };
 }
 
@@ -131,6 +134,7 @@ export function normalizeModel(raw) {
   const colors = model.progGroupColors;
   model.progGroupColors = colors && typeof colors === 'object' && !Array.isArray(colors) ? colors : {};
   model.deathLinkLockTasks = !!model.deathLinkLockTasks;
+  model.previewsPurchasableOnly = !!model.previewsPurchasableOnly;
   const plainObj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
   model.regionRandom = plainObj(model.regionRandom);
   model.groupSettings = plainObj(model.groupSettings);

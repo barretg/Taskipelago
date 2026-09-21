@@ -32,6 +32,7 @@ export const state = {
   sentItemNames: [],
   sentPlayerNames: [],
   taskRewardPreviews: 0,
+  previewsPurchasableOnly: false, // slot_data task_reward_previews_purchasable_only
   progressiveGroups: [],
   progressiveGroupColors: [],  // v1.1 F6, parallel to progressiveGroups
   groupTypes: [],              // parallel to progressiveGroups; missing = progressive
@@ -39,6 +40,7 @@ export const state = {
   rewardProgressiveGroup: [],
   taskProgressiveReqs: [],
   taskCostAmounts: [],
+  taskCostReqs: [],            // cumulative AP cost thresholds; [] for older seeds
   itemConsumable: [],
   regions: [],
   regionColors: [],

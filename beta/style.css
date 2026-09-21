@@ -420,6 +420,7 @@ button:disabled {
   flex-shrink: 0;
   align-self: center;
 }
+.clicker-card .task-reward-preview { white-space: normal; align-self: auto; }
 
 /* =============================================================
    Bingo board
