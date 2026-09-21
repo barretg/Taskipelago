@@ -5,7 +5,7 @@ import { pyStrip } from '../shared/pyish.js';
 import { tipHeader } from '../shared/tooltip.js';
 import { MAX_TASK_DESCRIPTION_LEN, newTask } from './model.js';
 import { TIPS } from './legacy_text.js';
-import { rowNumberCell } from './reorder.js';
+import { removeRowWithRefs, rowNumberCell } from './reorder.js';
 import { taskCells, taskHeadCells } from './clicker_cells.js';
 
 /** Code-point length and truncation for the description editor. */
@@ -106,7 +106,7 @@ export function renderTaskTable(container, ctx) {
       ...(clicker ? taskCells(task, i, ctx).map(c => cell(c)) : []),
       cell(h('button', {
         type: 'button', className: 'remove-btn',
-        onclick: () => { model.tasks.splice(i, 1); ctx.changed({ tasks: true, counter: true }); },
+        onclick: () => removeRowWithRefs(ctx, 'tasks', i),
       }, 'Remove'))));
   });
 }

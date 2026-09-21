@@ -3,7 +3,7 @@
 import { h } from '../shared/dom.js';
 import { tipHeader } from '../shared/tooltip.js';
 import { TIPS } from './legacy_text.js';
-import { rowNumberCell } from './reorder.js';
+import { removeRowWithRefs, rowNumberCell } from './reorder.js';
 import { itemCells, itemHeadCells } from './clicker_cells.js';
 import {
   REWARD_TYPE_VALUES, newItem, onConsumableToggle, onFillerToggle, setItemProgGroup,
@@ -70,7 +70,7 @@ function itemRow(it, i, ctx, container) {
     ...(model.clickerMode ? itemCells(it, i, ctx).map(c => cell(c)) : []),
     cell(h('button', {
       type: 'button', className: 'remove-btn',
-      onclick: () => { model.items.splice(i, 1); ctx.changed({ items: true, counter: true }); },
+      onclick: () => removeRowWithRefs(ctx, 'items', i),
     }, 'Remove')));
 }
 

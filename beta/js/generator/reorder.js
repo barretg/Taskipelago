@@ -1,8 +1,10 @@
-// v1.1 F10: up/down carets on task, item and region rows. The swap and reference
-// update live in model.js moveRow; the toggle is taskipelago_ui.reorderUpdatesRefs.
+// v1.1 F10: up/down carets on task, item and region rows, and the Remove button
+// on task and item rows. The row change and reference update live in model.js
+// moveRow / removeRow; the toggle is taskipelago_ui.reorderUpdatesRefs.
 import { h, scrollIntoViewAndFocus } from '../shared/dom.js';
+import { confirmDialog } from '../shared/dialog.js';
 import { getUiPref, setUiPref } from '../shared/ui_prefs.js';
-import { moveRow } from './model.js';
+import { countRowRefs, moveRow, removeRow } from './model.js';
 
 const PREF = 'reorderUpdatesRefs';
 export const reorderUpdatesRefs = () => getUiPref(PREF, true) !== false;
@@ -43,4 +45,19 @@ export function rowNumberCell(ctx, kind, i, container) {
   return h('div', { className: 'row-num-cell' },
     caret('up', -1, i === 0), caret('down', 1, i === count - 1),
     h('span', { className: 'row-num' }, String(i + 1)));
+}
+
+/**
+ * Remove task / item row i. With the toggle on, later index references shift
+ * down; if expressions reference the row itself, confirm first (they become 0).
+ */
+export async function removeRowWithRefs(ctx, kind, i) {
+  const refs = reorderUpdatesRefs();
+  const what = ROW_WHAT[kind];
+  const n = refs ? countRowRefs(ctx.model, kind, i) : 0;
+  if (n > 0 && !await confirmDialog(`Remove ${what}`,
+    `${n} ${n === 1 ? 'expression references' : 'expressions reference'} ${what} ${i + 1}. `
+    + `Those references become ${what} 0 and will fail to export until fixed. Remove anyway?`)) return;
+  if (!removeRow(ctx.model, kind, i, refs)) return;
+  ctx.changed({ tasks: true, items: kind === 'items', goal: kind === 'tasks', counter: true });
 }
