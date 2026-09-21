@@ -156,6 +156,7 @@ function applySlotData(sd) {
   state.sentItemNames       = sd.sent_item_names || [];
   state.sentPlayerNames     = sd.sent_player_names || [];
   state.taskRewardPreviews  = parseInt(sd.task_reward_previews || 0);
+  state.previewsPurchasableOnly = !!sd.task_reward_previews_purchasable_only;
   state.progressiveGroups   = sd.progressive_groups || [];
   state.progressiveGroupColors = Array.isArray(sd.progressive_group_colors) ? sd.progressive_group_colors : [];
   state.groupTypes          = Array.isArray(sd.group_types) ? sd.group_types : [];
@@ -163,6 +164,7 @@ function applySlotData(sd) {
   state.rewardProgressiveGroup = sd.item_progressive_group || sd.reward_progressive_group || [];
   state.taskProgressiveReqs = sd.task_progressive_reqs || [];
   state.taskCostAmounts     = sd.task_cost_amounts || [];
+  state.taskCostReqs        = sd.task_cost_reqs || [];
   state.itemConsumable      = sd.item_consumable || [];
   state.regions             = sd.regions || [];
   state.regionColors        = sd.region_colors || [];
@@ -289,6 +291,7 @@ function clearPlayState() {
   state.sentItemNames = [];
   state.sentPlayerNames = [];
   state.taskRewardPreviews = 0;
+  state.previewsPurchasableOnly = false;
   state.progressiveGroups = [];
   state.progressiveGroupColors = [];
   state.groupTypes = [];
@@ -296,6 +299,7 @@ function clearPlayState() {
   state.rewardProgressiveGroup = [];
   state.taskProgressiveReqs = [];
   state.taskCostAmounts = [];
+  state.taskCostReqs = [];
   state.itemConsumable = [];
   state.regions = [];
   state.regionColors = [];

@@ -437,6 +437,8 @@ def apply_v11_import(doc, result: dict) -> dict:
     m["clickerOffline"] = True
     m["clickerOfflineRate"] = "1"
     m["clickerOfflineCapHours"] = 8
+    # Purchasable-only previews are post-legacy; the corpus never sets them.
+    m["previewsPurchasableOnly"] = False
     # The import balance warning uses the final per-seed counts when randomized.
     if region_random or any(s["type"] == "random-choice" and s["pick"] for s in group_settings.values()):
         def keep(text, count):

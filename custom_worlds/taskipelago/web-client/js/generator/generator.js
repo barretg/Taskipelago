@@ -10,7 +10,7 @@ import { getUiPref, setUiPref } from '../shared/ui_prefs.js';
 import { dumpYaml, loadYaml } from '../shared/yaml11.js';
 import { TIPS } from './legacy_text.js';
 import {
-  DEATHLINK_LOCK_TIP, MAX_PLAYER_NAME_LEN, TASK_REWARD_PREVIEW_LABELS, defaultModel, limitPlayerName, normalizeModel, slotCounts,
+  DEATHLINK_LOCK_TIP, PREVIEWS_PURCHASABLE_TIP, MAX_PLAYER_NAME_LEN, TASK_REWARD_PREVIEW_LABELS, defaultModel, limitPlayerName, normalizeModel, slotCounts,
 } from './model.js';
 import { finalCounts, usesRandomization } from './randomize_check.js';
 import { buildExport } from './yaml_export.js';
@@ -111,6 +111,7 @@ function loadModel(model) {
   els.lockPrereqs.checked = !!m.lockPrereqs;
   els.hideUnreachable.checked = !!m.hideUnreachable;
   els.rewardPreviews.value = String(m.taskRewardPreviews);
+  els.previewsPurchasableOnly.checked = !!m.previewsPurchasableOnly;
   els.goalTasks.value = m.goalTasks;
   els.progression.value = m.progressionBalancing;
   els.accessibility.value = m.accessibility;
@@ -280,6 +281,7 @@ function build(root) {
   els.hideUnreachable = h('input', { type: 'checkbox', onchange: setting('hideUnreachable') });
   els.rewardPreviews = h('select', { onchange: setting('taskRewardPreviews', Number) },
     TASK_REWARD_PREVIEW_LABELS.map((label, i) => h('option', { value: String(i) }, label)));
+  els.previewsPurchasableOnly = h('input', { type: 'checkbox', onchange: setting('previewsPurchasableOnly') });
   els.goalTasks = h('input', {
     type: 'text', spellcheck: false, className: 'goal-input', dataset: { field: 'goalTasks' }, oninput: setting('goalTasks'),
   });
@@ -289,6 +291,8 @@ function build(root) {
       h('label', { className: 'check-label' }, els.lockPrereqs, 'In logic only (lock task completion behind prereqs)'),
       h('label', { className: 'check-label' }, els.hideUnreachable, 'Hide Unreachable Tasks'),
       h('label', { className: 'inline-label' }, tipHeader('Reward Previews:', TIPS.reward_preview), els.rewardPreviews),
+      h('label', { className: 'check-label' }, els.previewsPurchasableOnly,
+        tipHeader('Only preview purchasable', PREVIEWS_PURCHASABLE_TIP)),
       h('label', { className: 'inline-label' }, tipHeader('Goal task(s):', TIPS.goal_tasks), els.goalTasks,
         h('span', { className: 'muted-text' }, '(blank = all)'))),
     h('div', { className: 'gen-table-scroll' }, els.tasks),

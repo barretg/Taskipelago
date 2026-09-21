@@ -124,6 +124,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
   }, 0, VALUE_OR_TYPE);
   if (![0, 1, 2].includes(trp)) trp = 0;
   model.taskRewardPreviews = trp;
+  model.previewsPurchasableOnly = toggleOption(pyGet(block, 'task_reward_previews_purchasable_only', false));
 
   model.goalTasks = pyListOr(block, 'goal_tasks').map(pyStr).join(', ');
 

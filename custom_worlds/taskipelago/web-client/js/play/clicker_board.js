@@ -6,7 +6,7 @@
 // storage so two open clients cannot roll each other back.
 import { ap, state, els } from './state.js';
 import { allChecked, completeTask, attemptPurchase, attemptMakeChange } from './logic.js';
-import { taskAvailability, formatCostBranches } from './tasks.js';
+import { taskAvailability, formatCostBranches, rewardPreview } from './tasks.js';
 import { isDeathLinkLocked } from './deathlink_queue.js';
 import { evalNumExpr, numExprBindings } from '../shared/num_expr.js';
 import {
@@ -527,6 +527,7 @@ function visibleTasks(m) {
       reasons: a.reasons,
       branches,
       purchasable: !!a.costOnlyLocked && effectiveLock && branches.length > 0,
+      costInLogic: !a.costLogicText,
       canMakeChange: branches.length > 1 && (i in state.taskPurchases),
     });
   }
@@ -538,7 +539,7 @@ export function renderClicker() {
   const m = clickerModel();
   const rows = visibleTasks(m);
 
-  const sig = rows.map(r => `${r.i}:${r.locked ? 'L' : ''}${r.completed ? 'C' : ''}${r.ready ? 'R' : ''}${r.hiddenName ? 'H' : ''}${r.purchasable ? '$' : ''}${r.canMakeChange ? 'M' : ''}`).join(',');
+  const sig = rows.map(r => `${r.i}:${r.locked ? 'L' : ''}${r.completed ? 'C' : ''}${r.ready ? 'R' : ''}${r.hiddenName ? 'H' : ''}${r.purchasable ? (r.costInLogic ? '$' : '!') : ''}${r.canMakeChange ? 'M' : ''}`).join(',');
   if (sig !== lastSignature) {
     lastSignature = sig;
     buildGrid(rows, m);
@@ -564,6 +565,15 @@ function buildGrid(rows, m) {
         ? `✔ ${i + 1}. ${state.tasks[i]}`
         : `${i + 1}. ${state.tasks[i]}`;
     card.appendChild(name);
+
+    const preview = row.completed ? ''
+      : rewardPreview(i, !row.locked || (row.purchasable && row.costInLogic));
+    if (preview) {
+      const pv = document.createElement('div');
+      pv.className = 'task-reward-preview';
+      pv.textContent = preview;
+      card.appendChild(pv);
+    }
 
     if (row.completed) {
       if (row.canMakeChange) card.appendChild(cardActions(row));
@@ -639,6 +649,7 @@ function cardActions(row) {
     const buy = document.createElement('button');
     buy.className = 'clicker-buy-btn';
     buy.textContent = '$$ Purchase $$';
+    if (!row.costInLogic) buy.dataset.logicLocked = '1';
     buy.onclick = () => attemptPurchase(row.i);
     actions.appendChild(buy);
   }
@@ -680,7 +691,7 @@ function updateGrid(rows, m) {
   // Purchase / Make Change buttons live outside `nodes` (a completed card has
   // no node at all), so gate them here alongside the click buttons.
   if (els.clickerGrid) {
-    for (const b of els.clickerGrid.querySelectorAll('button')) b.disabled = dlLocked;
+    for (const b of els.clickerGrid.querySelectorAll('button')) b.disabled = dlLocked || b.dataset.logicLocked === '1';
   }
 }
 

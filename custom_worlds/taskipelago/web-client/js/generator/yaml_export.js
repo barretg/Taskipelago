@@ -421,6 +421,8 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
         regionRows: regionNames.map(n => regionByName.get(n)),
       }),
       ...(styleColors.length ? { style_colors: styleColors } : {}),
+      // Only when on, so existing exports stay byte-identical.
+      ...(model.previewsPurchasableOnly ? { task_reward_previews_purchasable_only: true } : {}),
     },
   };
   return { data };

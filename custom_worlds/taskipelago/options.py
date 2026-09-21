@@ -716,6 +716,14 @@ class TaskRewardPreviews(Choice):
     default = 0
 
 
+class TaskRewardPreviewsPurchasableOnly(Toggle):
+    """
+    When on, Task Reward Previews (scout or hint) only apply to tasks that have a cost.
+    A purchasable task shows its preview once its purchase is in logic.
+    """
+    display_name = "Task Reward Previews Purchasable Only"
+
+
 @dataclass
 class TaskipelagoOptions(PerGameCommonOptions):
     tasks: Tasks
@@ -773,4 +781,5 @@ class TaskipelagoOptions(PerGameCommonOptions):
     region_offline_rate: RegionOfflineRate
     clicker_offline_cap_hours: ClickerOfflineCapHours
     task_reward_previews: TaskRewardPreviews
+    task_reward_previews_purchasable_only: TaskRewardPreviewsPurchasableOnly
     style_colors: StyleColors

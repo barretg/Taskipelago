@@ -152,7 +152,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -274,7 +275,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -401,7 +403,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -532,7 +535,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -654,7 +658,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -776,7 +781,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -898,7 +904,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -1024,7 +1031,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -1180,7 +1188,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -1336,7 +1345,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -1492,7 +1502,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -1648,7 +1659,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -1815,7 +1827,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -1961,7 +1974,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": [
      [
@@ -2029,7 +2043,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": [
      [
@@ -2239,7 +2254,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -2640,7 +2656,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -2775,7 +2792,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": []
    }
@@ -2987,7 +3005,8 @@
      "clickerDistributeGlobal": false,
      "clickerOffline": true,
      "clickerOfflineRate": "1",
-     "clickerOfflineCapHours": 8
+     "clickerOfflineCapHours": 8,
+     "previewsPurchasableOnly": false
     },
     "messages": [
      [
@@ -6416,7 +6435,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -6664,7 +6684,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -6887,7 +6908,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -7118,7 +7140,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -7342,7 +7365,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -7560,7 +7584,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -7780,7 +7805,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -8004,7 +8030,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -8260,7 +8287,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -8542,7 +8570,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -8824,7 +8853,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -9106,7 +9136,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -9399,7 +9430,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -9677,7 +9709,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": null,
@@ -9750,7 +9783,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": null,
@@ -9960,7 +9994,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": null,
@@ -10358,7 +10393,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -10764,7 +10800,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {
@@ -11078,7 +11115,8 @@
     "clickerDistributeGlobal": false,
     "clickerOffline": true,
     "clickerOfflineRate": "1",
-    "clickerOfflineCapHours": 8
+    "clickerOfflineCapHours": 8,
+    "previewsPurchasableOnly": false
    },
    "result": {
     "data": {

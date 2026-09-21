@@ -95,6 +95,7 @@ _DEFAULTS = {
     "group_default_pcts": [], "regions": [], "region_default_pcts": [], "region_colors": [],
     "region_parent": [], "region_prereqs": [], "region_random_pick": [], "region_random_order": [], "task_region": [], "bingo_mode": False,
     "bingo_dimension_x": 5, "bingo_dimension_y": 5, "bingoal": 1, "task_reward_previews": 0,
+    "task_reward_previews_purchasable_only": False,
     "style_colors": [],
     # Tasclickpelago
     "clicker_mode": False, "task_activations": [], "item_production": [], "task_manual": [], "task_auto_complete": [], "region_manual": [],

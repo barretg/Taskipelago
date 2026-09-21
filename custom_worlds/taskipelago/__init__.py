@@ -1995,6 +1995,7 @@ class TaskipelagoWorld(World):
             "bingo_dimension_y": int(self.options.bingo_dimension_y),
             "bingoal": int(self.options.bingoal),
             "task_reward_previews": int(self.options.task_reward_previews),
+            "task_reward_previews_purchasable_only": bool(self.options.task_reward_previews_purchasable_only),
             # v1.1 F7: "key:#rrggbb" client colors, applied only while connected.
             "style_colors": [
                 str(x).strip()
