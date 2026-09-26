@@ -286,15 +286,28 @@ class TaskipelagoWorld(World):
         raw_goal_yaml = ", ".join(
             str(x).strip() for x in list(self.options.goal_tasks.value or []) if str(x).strip()
         )
+        # An item(...) scope holds an ordinary item prereq, translated the way item
+        # prereqs are; its quoted item names resolve in step 5.
         if raw_goal_yaml:
-            raw_goal_yaml, _goal_name_errs = _resolve_quoted_names(
-                _resolve_quoted_copy_names(raw_goal_yaml, tasks_raw), tasks_raw
-            )
+            _goal_name_errs: List[str] = []
+
+            def _goal_task_names(_t: str) -> str:
+                _res, _errs = _resolve_quoted_names(_resolve_quoted_copy_names(_t, tasks_raw), tasks_raw)
+                _goal_name_errs.extend(_errs)
+                return _res
+
+            raw_goal_yaml = map_scoped_text(raw_goal_yaml, task_fn=_goal_task_names, home="task")
             if _goal_name_errs:
                 raise Exception(
                     "Taskipelago: goal_tasks references unknown task name(s): " + "; ".join(_goal_name_errs)
                 )
-            raw_goal_yaml = _translate_prereq_indices(raw_goal_yaml, editor_to_yaml_task, and_multi=True)
+            raw_goal_yaml = map_scoped_text(
+                raw_goal_yaml,
+                task_fn=lambda _t: _translate_prereq_indices(_t, editor_to_yaml_task, and_multi=True),
+                item_fn=lambda _t: _translate_prereq_indices(
+                    _resolve_quoted_copy_names(_t, items_raw_editor), editor_to_yaml_item, and_multi=False),
+                home="task",
+            )
 
         if n_yaml_tasks > MAX_TASKS:
             raise Exception(
@@ -389,15 +402,24 @@ class TaskipelagoWorld(World):
         # Used to resolve the "sequential" keyword at generation time.
         task_seq_prev_idx: List[int | None] = []
 
+        # Editor -> YAML index translation, per domain. A task(...) / item(...)
+        # scope inside any prereq field translates as that domain.
+        def _tr_task(_t: str) -> str:
+            return _translate_prereq_indices(_t, editor_to_yaml_task, and_multi=True)
+
+        def _tr_item(_t: str) -> str:
+            return _translate_prereq_indices(
+                _resolve_quoted_copy_names(_t, items_raw_editor), editor_to_yaml_item, and_multi=False
+            )
+
         for i in range(n_editor_tasks):
             count = task_counts_editor[i]
             # Translate prereq indices from editor space to YAML space
-            translated_tp = _translate_prereq_indices(
-                raw_task_prereqs_editor[i], editor_to_yaml_task, and_multi=True
+            translated_tp = map_scoped_text(
+                raw_task_prereqs_editor[i], task_fn=_tr_task, item_fn=_tr_item, home="task"
             )
-            translated_ip = _translate_prereq_indices(
-                _resolve_quoted_copy_names(raw_item_prereqs_editor[i], items_raw_editor),
-                editor_to_yaml_item, and_multi=False
+            translated_ip = map_scoped_text(
+                raw_item_prereqs_editor[i], task_fn=_tr_task, item_fn=_tr_item, home="item"
             )
             yaml_idxs = editor_to_yaml_task[i]
             for c in range(count):
@@ -417,39 +439,58 @@ class TaskipelagoWorld(World):
         if len(_region_prereqs_editor) < len(_opt_regions):
             _region_prereqs_editor += [""] * (len(_opt_regions) - len(_region_prereqs_editor))
         region_prereqs_input: Dict[str, str] = {
-            _rname: map_scoped_text(
-                _region_prereqs_editor[_ri],
-                task_fn=lambda _t: _translate_prereq_indices(
-                    _t, editor_to_yaml_task, and_multi=True),
-                item_fn=lambda _t: _translate_prereq_indices(
-                    _resolve_quoted_copy_names(_t, items_raw_editor),
-                    editor_to_yaml_item, and_multi=False),
-            )
+            _rname: map_scoped_text(_region_prereqs_editor[_ri], task_fn=_tr_task, item_fn=_tr_item)
             for _ri, _rname in enumerate(_opt_regions)
         }
 
         # ------------------------------------------------------------------ #
         # 5. Resolve quoted names in task/item prereqs                       #
         # ------------------------------------------------------------------ #
+        # Quoted names resolve against the list of their own scope: task names
+        # outside / inside task(...), item names inside item(...) (and outside, in
+        # item prereqs).
+        _item_name_list = items_full if randomize_on else items_raw
+        _scope_name_errs: List[str] = []
+
+        def _names_in(_names: list):
+            def _fn(_t: str) -> str:
+                _res, _errs = _resolve_quoted_names(_t, _names)
+                _scope_name_errs.extend(_errs)
+                return _res
+            return _fn
+
         # Quoted task name references in task prereqs
         for _j, _txt in enumerate(raw_prereqs_input):
-            _resolved, _errs = _resolve_quoted_names(_txt, tasks)
-            if _errs:
+            _scope_name_errs.clear()
+            _resolved = map_scoped_text(_txt, task_fn=_names_in(tasks),
+                                        item_fn=_names_in(_item_name_list), home="task")
+            if _scope_name_errs:
                 raise Exception(
-                    f"Taskipelago: task prereq for task {_j + 1} references unknown task name(s): "
-                    + "; ".join(_errs)
+                    f"Taskipelago: task prereq for task {_j + 1} references unknown task or item name(s): "
+                    + "; ".join(_scope_name_errs)
                 )
             raw_prereqs_input[_j] = _resolved
 
         # Quoted item name references in item prereqs
         for _j, _txt in enumerate(raw_reward_prereqs_input):
-            _resolved, _errs = _resolve_quoted_names(_txt, items_full if randomize_on else items_raw)
-            if _errs:
+            _scope_name_errs.clear()
+            _resolved = map_scoped_text(_txt, task_fn=_names_in(tasks),
+                                        item_fn=_names_in(_item_name_list), home="item")
+            if _scope_name_errs:
                 raise Exception(
-                    f"Taskipelago: item prereq for task {_j + 1} references unknown item name(s): "
-                    + "; ".join(_errs)
+                    f"Taskipelago: item prereq for task {_j + 1} references unknown item or task name(s): "
+                    + "; ".join(_scope_name_errs)
                 )
             raw_reward_prereqs_input[_j] = _resolved
+
+        # Quoted item names inside the goal's item(...) scopes
+        if raw_goal_yaml:
+            _scope_name_errs.clear()
+            raw_goal_yaml = map_scoped_text(raw_goal_yaml, item_fn=_names_in(_item_name_list), home="task")
+            if _scope_name_errs:
+                raise Exception(
+                    "Taskipelago: goal_tasks references unknown item name(s): " + "; ".join(_scope_name_errs)
+                )
 
         # Quoted task / item names inside a region's task(...) / item(...) wrappers
         _region_name_errors: List[str] = []
@@ -545,31 +586,53 @@ class TaskipelagoWorld(World):
                 r = raw_task_region[j]
                 return r if r in region_picks else ""
 
+            _n_item_range = max(n, len(items_full))
+            # task(...) / item(...) scopes inside task prereqs, item prereqs and the goal.
+            _field_scopes_pre = _prereq_scopes(n, _n_item_range, _region_names_set, _group_names_set)
+
+            def _check_scoped_items(_ast, _home: str, _who: str) -> None:
+                if _home == "item":
+                    return  # item prereqs check every item leaf below
+                for _leaf in collect_leaves(_ast, "item", _home):
+                    _g = item_group_full[_leaf] if _leaf < len(item_group_full) else ""
+                    if _g and group_types.get(_g) == "random-choice":
+                        raise Exception(
+                            f"Taskipelago: {_who} references item {_leaf + 1} inside "
+                            f"random-choice group '{_g}'. Reference the group instead."
+                        )
+
             # Forbidden refs, checked against the original YAML indices.
             for _j, _txt in enumerate(raw_prereqs_input):
                 if not _txt:
                     continue
-                _ast = parse_prereq(_txt, n, _j, "task prereq", known_regions=_region_names_set)
+                _ast = parse_prereq(_txt, n, _j, "task prereq", known_regions=_region_names_set,
+                                    scoped_domains=_field_scopes_pre)
                 if _ast is None:
                     continue
+                _check_scoped_items(_ast, "task", f"task {_j + 1} task prereq")
                 if has_seq_flag(_ast) and _rand_region(_j):
                     raise Exception(
                         f"Taskipelago: task {_j + 1} uses 'sequential' inside randomized region "
                         f"'{_rand_region(_j)}'."
                     )
-                for _leaf in collect_leaves(_ast):
+                for _leaf in collect_leaves(_ast, "task"):
                     if _rand_region(_leaf):
                         raise Exception(
                             f"Taskipelago: task {_j + 1} references task {_leaf + 1} inside randomized "
                             f"region '{_rand_region(_leaf)}'. Reference the region as a whole instead."
                         )
-            _n_item_range = max(n, len(items_full))
             for _j, _txt in enumerate(raw_reward_prereqs_input):
                 if not _txt:
                     continue
                 _ast = parse_prereq(_txt, _n_item_range, _j, "reward prereq", known_groups=_group_names_set,
-                                    n_tasks_const=n)
-                for _leaf in collect_leaves(_ast):
+                                    n_tasks_const=n, scoped_domains=_field_scopes_pre)
+                for _leaf in collect_leaves(_ast, "task", "item"):
+                    if _rand_region(_leaf):
+                        raise Exception(
+                            f"Taskipelago: task {_j + 1} item prereq references task {_leaf + 1} inside "
+                            f"randomized region '{_rand_region(_leaf)}'. Reference the region as a whole instead."
+                        )
+                for _leaf in collect_leaves(_ast, "item"):
                     _g = item_group_full[_leaf] if _leaf < len(item_group_full) else ""
                     if _g and group_types.get(_g) == "random-choice":
                         raise Exception(
@@ -625,12 +688,21 @@ class TaskipelagoWorld(World):
             _raw_goal = raw_goal_yaml
             _goal_ast0 = None
             if _raw_goal:
-                _goal_res, _goal_errs = _resolve_quoted_names(_raw_goal, tasks)
+                _goal_errs: List[str] = []
+
+                def _goal_names(_t: str) -> str:
+                    _res, _errs = _resolve_quoted_names(_t, tasks)
+                    _goal_errs.extend(_errs)
+                    return _res
+
+                _goal_res = map_scoped_text(_raw_goal, task_fn=_goal_names, home="task")
                 if _goal_errs:
                     raise Exception(
                         "Taskipelago: goal_tasks references unknown task name(s): " + "; ".join(_goal_errs)
                     )
-                _goal_ast0 = parse_prereq(_goal_res, n, 0, "goal_tasks", known_regions=_region_names_set)
+                _goal_ast0 = parse_prereq(_goal_res, n, 0, "goal_tasks", known_regions=_region_names_set,
+                                          location_label="goal_tasks", scoped_domains=_field_scopes_pre)
+                _check_scoped_items(_goal_ast0, "task", "goal_tasks")
 
             pinned: set = set()
             if _goal_ast0 is not None and region_picks:
@@ -705,13 +777,24 @@ class TaskipelagoWorld(World):
                     raise Exception(
                         f"Taskipelago: 'prev' used on task {_old + 1} but there is no previous task."
                     )
-                _new_prereqs.append(remap_int_tokens(_txt, task_map, prev_old=_old - 1 if _old > 0 else None))
+                _new_prereqs.append(map_scoped_text(
+                    _txt,
+                    task_fn=lambda _t, _o=_old: remap_int_tokens(_t, task_map, prev_old=_o - 1 if _o > 0 else None),
+                    item_fn=lambda _t: remap_int_tokens(_t, item_map),
+                    home="task",
+                ))
                 _sp = task_seq_prev_idx[_old]
                 _new_seq_prev.append(task_map[_sp] if _sp is not None and _sp in task_map else None)
             raw_prereqs_input = _new_prereqs
             task_seq_prev_idx = _new_seq_prev
             raw_reward_prereqs_input = [
-                remap_int_tokens(raw_reward_prereqs_input[_old], item_map) for _old in task_order
+                map_scoped_text(
+                    raw_reward_prereqs_input[_old],
+                    task_fn=lambda _t: remap_int_tokens(_t, task_map),
+                    item_fn=lambda _t: remap_int_tokens(_t, item_map),
+                    home="item",
+                )
+                for _old in task_order
             ]
             # Region "Depends on": only the task(...) / item(...) contents hold indices.
             for _rname in list(region_prereqs_input):
@@ -754,7 +837,7 @@ class TaskipelagoWorld(World):
             raw_task_priority = [raw_task_priority[_old] for _old in task_order]
 
             if _goal_ast0 is not None:
-                goal_text_override = ast_to_text(remap_goal_ast(_goal_ast0, task_map))
+                goal_text_override = ast_to_text(remap_goal_ast(_goal_ast0, task_map, item_map))
 
             n_yaml_tasks = len(task_order)
             n = n_yaml_tasks
@@ -1025,6 +1108,43 @@ class TaskipelagoWorld(World):
                     f"A subregion's tasks count toward its parent, so it would have to unlock itself."
                 )
 
+        def _scoped_region_pcts(ast, task_i: int | None, label: str) -> Dict[str, int]:
+            """Validate the region refs a task(...) scope carries in an item prereq
+            or goal_tasks and return their resolved percentages."""
+            pcts: Dict[str, int] = {}
+            own = task_region[task_i] if task_i is not None else ""
+            for rname, pct_val in collect_region_refs(ast):
+                if own and own == rname:
+                    raise Exception(f"Taskipelago: {label} cannot depend on its own region '{rname}'.")
+                pct = pct_val if pct_val is not None else region_default_pcts.get(rname, 100)
+                if pct < 0 or pct > 100:
+                    raise Exception(
+                        f"Taskipelago: {label} region prereq '{rname}' percentage {pct} must be 0-100."
+                    )
+                if not region_to_task_indices.get(rname):
+                    raise Exception(
+                        f"Taskipelago: {label} references region '{rname}' which has no tasks assigned."
+                    )
+                if own:
+                    _assert_parent_ref_satisfiable(own, rname, pct, None, label)
+                pcts[rname] = pct
+            for rname, abs_n in collect_region_abs_refs(ast):
+                if own and own == rname:
+                    raise Exception(f"Taskipelago: {label} cannot depend on its own region '{rname}'.")
+                size = len(region_to_task_indices.get(rname, []))
+                if size == 0:
+                    raise Exception(
+                        f"Taskipelago: {label} references region '{rname}' which has no tasks assigned."
+                    )
+                if abs_n < 1 or abs_n > size:
+                    raise Exception(
+                        f"Taskipelago: {label} uses '{rname}*{abs_n}' but region "
+                        f"'{rname}' only has {size} task(s)."
+                    )
+                if own:
+                    _assert_parent_ref_satisfiable(own, rname, None, abs_n, label)
+            return pcts
+
         # ------------------------------------------------------------------ #
         # 8. Parse progressive groups                                         #
         # ------------------------------------------------------------------ #
@@ -1094,10 +1214,12 @@ class TaskipelagoWorld(World):
         # ------------------------------------------------------------------ #
         # 9. Parse item prereqs (reward prereqs)                             #
         # ------------------------------------------------------------------ #
+        field_scopes = _prereq_scopes(n, n, region_set, prog_group_set)
         parsed_reward_prereqs_unresolved = []
         for i, txt in enumerate(raw_reward_prereqs_input):
             parsed_reward_prereqs_unresolved.append(
-                parse_prereq(txt, n, i, "reward prereq", known_groups=prog_group_set, n_tasks_const=n)
+                parse_prereq(txt, n, i, "reward prereq", known_groups=prog_group_set, n_tasks_const=n,
+                             scoped_domains=field_scopes)
             )
 
         # Typed group refs (random-choice, aesthetic, progressive with a default %) resolve
@@ -1107,7 +1229,7 @@ class TaskipelagoWorld(World):
             v is not None for v in group_default_pcts.values()
         ):
             for i, ast in enumerate(parsed_reward_prereqs_unresolved):
-                for leaf in collect_leaves(ast):
+                for leaf in collect_leaves(ast, "item", "item"):
                     g = reward_to_group[leaf] if leaf < len(reward_to_group) else ""
                     if g and group_types.get(g) == "random-choice":
                         raise Exception(
@@ -1228,7 +1350,14 @@ class TaskipelagoWorld(World):
         for i, ast in enumerate(parsed_reward_prereqs_unresolved):
             # group_ref nodes need resolution; group_count nodes pass through
             group_thresh = {gname: count for gname, count in task_progressive_reqs[i]}
-            parsed_reward_prereqs.append(resolve_ast_refs(ast, group_thresh, {}))
+            # Region refs can only appear inside a task(...) scope here. They are
+            # evaluated in place (never through task_region_reqs), so the resolved
+            # expression is what ships to the client.
+            scoped_region_pct = _scoped_region_pcts(ast, i, f"task {i + 1} item prereq")
+            resolved = resolve_ast_refs(ast, group_thresh, scoped_region_pct)
+            if has_scoped(ast):
+                raw_reward_prereqs_input[i] = ast_to_text(resolved)
+            parsed_reward_prereqs.append(resolved)
 
         # ------------------------------------------------------------------ #
         # 9b. Parse region-to-region prereqs                                  #
@@ -1394,14 +1523,53 @@ class TaskipelagoWorld(World):
         # ------------------------------------------------------------------ #
         # 10. Parse task prereqs                                              #
         # ------------------------------------------------------------------ #
+        def _check_item_scope(ast, task_i: int, label: str):
+            """Validate the item(...) scopes of a task prereq or goal_tasks and resolve
+            their typed group refs. Returns (ast, changed). Like a region's item(...)
+            scope, a group is referenced in count mode only: an ordering position
+            belongs to one task's item prereq."""
+            for leaf in collect_leaves(ast, "item", "task"):
+                g = reward_to_group[leaf] if leaf < len(reward_to_group) else ""
+                if g and group_types.get(g) == "random-choice":
+                    raise Exception(
+                        f"Taskipelago: {label} references item {leaf + 1} inside "
+                        f"random-choice group '{g}'. Reference the group instead."
+                    )
+            ast, changed = _resolve_typed_group_refs(
+                ast, task_i, group_types, group_default_pcts, group_to_reward_indices
+            )
+            for gname, _pos in collect_group_refs(ast):
+                raise Exception(
+                    f"Taskipelago: {label} uses item group '{gname}' in ordering mode inside "
+                    f"item(...). Use count mode ('{gname}*N') there, or move the reference "
+                    f"into the item prereq."
+                )
+            for gname, cnt in collect_group_count_refs(ast):
+                group_size = len(group_to_reward_indices.get(gname, []))
+                if group_size == 0:
+                    raise Exception(
+                        f"Taskipelago: {label} references item group '{gname}' "
+                        f"which has no items assigned to it."
+                    )
+                if cnt < 1 or cnt > group_size:
+                    raise Exception(
+                        f"Taskipelago: {label} uses '{gname}*{cnt}' but group "
+                        f"'{gname}' only has {group_size} item(s)."
+                    )
+            return ast, changed
+
         parsed_prereqs_unresolved = []
         for i, txt in enumerate(raw_prereqs_input):
-            ast = parse_prereq(txt, n, i, "task prereq", known_regions=region_set)
+            ast = parse_prereq(txt, n, i, "task prereq", known_regions=region_set,
+                               scoped_domains=field_scopes)
+            scoped_changed = False
+            if ast is not None and has_scoped(ast):
+                ast, scoped_changed = _check_item_scope(ast, i, f"task {i + 1} task prereq")
             if ast is not None and has_seq_flag(ast) and task_seq_prev_idx[i] is not None:
                 ast = ("and", [ast, task_seq_prev_idx[i]])
             # The client-side runtime evaluators don't understand 'prev'/'sequential',
             # so rewrite their generation-time resolution back into plain text.
-            if ast is not None and (has_seq_flag(ast) or _re.search(r'\bprev\b', txt)):
+            if ast is not None and (scoped_changed or has_seq_flag(ast) or _re.search(r'\bprev\b', txt)):
                 raw_prereqs_input[i] = ast_to_text(ast)
             parsed_prereqs_unresolved.append(ast)
 
@@ -1476,7 +1644,7 @@ class TaskipelagoWorld(World):
                 # gate every task in the region; appended after the reward prereqs
                 # were resolved, so a task's own thresholds are untouched.
                 task_progressive_reqs[i].extend(region_scoped_group_reqs.get(rname_i, []))
-        _assert_no_cycles(parsed_prereqs, n)
+        _assert_no_cycles(parsed_prereqs, n, parsed_reward_prereqs)
 
         # ------------------------------------------------------------------ #
         # 11. Parse and validate cost expressions                             #
@@ -1546,7 +1714,7 @@ class TaskipelagoWorld(World):
         # ensuring AP places enough currency even if the player never uses Make Change.
         # AP rule shape: at least one branch's thresholds all satisfied (OR of ANDs).
 
-        topo_depth = _compute_topo_depths(parsed_prereqs, n)
+        topo_depth = _compute_topo_depths(parsed_prereqs, n, parsed_reward_prereqs)
 
         # per_currency_cb[cname][task_idx] = cumulative collected *before* this task
         per_currency_cb: Dict[str, Dict[int, int]] = {}
@@ -1640,14 +1808,28 @@ class TaskipelagoWorld(World):
         if goal_text_override is not None:
             raw_goal = goal_text_override
 
-        _goal_resolved, _goal_errs = _resolve_quoted_names(raw_goal, tasks)
+        _goal_errs: List[str] = []
+
+        def _goal_names(_t: str) -> str:
+            _res, _errs = _resolve_quoted_names(_t, tasks)
+            _goal_errs.extend(_errs)
+            return _res
+
+        _goal_resolved = map_scoped_text(raw_goal, task_fn=_goal_names, home="task")
         if _goal_errs:
             raise Exception(
                 "Taskipelago: goal_tasks references unknown task name(s): " + "; ".join(_goal_errs)
             )
         raw_goal = _goal_resolved
 
-        goal_ast_unresolved = parse_prereq(raw_goal, n, 0, "goal_tasks", known_regions=region_set) if raw_goal else None
+        goal_ast_unresolved = parse_prereq(
+            raw_goal, n, 0, "goal_tasks", known_regions=region_set,
+            location_label="goal_tasks", scoped_domains=field_scopes,
+        ) if raw_goal else None
+        if goal_ast_unresolved is not None and has_scoped(goal_ast_unresolved):
+            goal_ast_unresolved, _goal_changed = _check_item_scope(goal_ast_unresolved, 0, "goal_tasks")
+            if _goal_changed:
+                raw_goal = ast_to_text(goal_ast_unresolved)
 
         goal_region_reqs: List[dict] = []
         if goal_ast_unresolved is not None:
@@ -1681,23 +1863,30 @@ class TaskipelagoWorld(World):
         self._raw_goal = raw_goal
         self._goal_ast = goal_ast
         self._goal_region_reqs = goal_region_reqs
-        self._goal_indices = sorted(set(collect_leaves(goal_ast))) if goal_ast is not None else []
+        self._goal_indices = sorted(set(collect_leaves(goal_ast, "task"))) if goal_ast is not None else []
 
         # ------------------------------------------------------------------ #
         # 14. Determine forced-progression rewards                           #
         # ------------------------------------------------------------------ #
         forced_prog: set = set()
         for ast in parsed_reward_prereqs:
-            forced_prog.update(collect_leaves(ast))
+            forced_prog.update(collect_leaves(ast, "item", "item"))
         # Items a region's item(...) scope depends on gate every task in that
-        # region, so they must be progression just like an item prereq's.
+        # region, so they must be progression just like an item prereq's. The
+        # same holds for item(...) scopes in task prereqs and the goal.
         for ast in parsed_region_prereqs.values():
             forced_prog.update(collect_leaves(ast, "item"))
+        for ast in parsed_prereqs:
+            forced_prog.update(collect_leaves(ast, "item", "task"))
+        forced_prog.update(collect_leaves(goal_ast, "item", "task"))
         referenced_groups: set = set()
         for ast in parsed_reward_prereqs:
             referenced_groups.update(_collect_group_names(ast))
         for ast in parsed_region_prereqs.values():
             referenced_groups.update(_collect_group_names(ast))
+        for ast in parsed_prereqs:
+            referenced_groups.update(_collect_group_names(ast))
+        referenced_groups.update(_collect_group_names(goal_ast))
         for gname, indices in group_to_reward_indices.items():
             # Progressive groups are always forced; other types only when referenced.
             if group_types.get(gname, "progressive") == "progressive" or gname in referenced_groups:
@@ -1715,6 +1904,24 @@ class TaskipelagoWorld(World):
         self._reward_types = item_types
         self._item_consumable = item_consumable
         self._item_fillers = item_fillers
+
+        # Filler Scout / Filler Hint: each filler item in the pool reveals one task's
+        # reward. Tasks are dealt out without repeats until every task has one, then
+        # the deck is reshuffled. Drawn only for these modes, so other seeds are unchanged.
+        self._filler_preview_targets: List[int] = []
+        if int(self.options.task_reward_previews) in (3, 4):
+            _fillers = [i for i, f in enumerate(item_fillers) if f]
+            _pool = [t for t in range(n)
+                     if not self.options.task_reward_previews_purchasable_only or task_cost_reqs[t]]
+            _deck: List[int] = []
+            while _pool and len(_deck) < len(_fillers):
+                _batch = list(_pool)
+                self.random.shuffle(_batch)
+                _deck.extend(_batch)
+            self._filler_preview_targets = [-1] * len(item_fillers)
+            for _k, _i in enumerate(_fillers):
+                if _k < len(_deck):
+                    self._filler_preview_targets[_i] = _deck[_k]
 
         self._raw_prereqs = raw_prereqs_input
         self._parsed_prereqs = parsed_prereqs
@@ -1875,8 +2082,9 @@ class TaskipelagoWorld(World):
         if self._goal_ast is not None:
             def goal_condition(state, ast=self._goal_ast, p=self.player,
                                 tn=self._token_item_names, gi=self._group_item_display_names,
-                                rt=self._region_token_names):
-                return eval_node(ast, state, p, tn, gi, rt)
+                                rt=self._region_token_names,
+                                sn={"task": self._token_item_names, "item": self._reward_display_names}):
+                return eval_node(ast, state, p, tn, gi, rt, sn)
             self.multiworld.completion_condition[self.player] = goal_condition
         else:
             reward_tokens = list(self._token_item_names)
@@ -1996,6 +2204,9 @@ class TaskipelagoWorld(World):
             "bingoal": int(self.options.bingoal),
             "task_reward_previews": int(self.options.task_reward_previews),
             "task_reward_previews_purchasable_only": bool(self.options.task_reward_previews_purchasable_only),
+            # Filler Scout / Filler Hint: reward index -> task index it reveals (-1: none).
+            **({"filler_preview_targets": list(self._filler_preview_targets)}
+               if self._filler_preview_targets else {}),
             # v1.1 F7: "key:#rrggbb" client colors, applied only while connected.
             "style_colors": [
                 str(x).strip()
@@ -2033,6 +2244,18 @@ def _resolve_quoted_copy_names(text: str, names: list) -> str:
                 return f"{i + 1}*{m.group(2)}"
         return m.group(0)
     return _re.sub(r'"([^"]*)"\*(\d+)', _replacer, text) if text else text
+
+
+def _prereq_scopes(n_tasks: int, n_items: int, regions, groups) -> dict:
+    """scoped_domains for parse_prereq on task prereqs, item prereqs and goal_tasks:
+    task(...) holds a task prereq (task indices, region names) and item(...) an
+    item prereq (item indices, item group names)."""
+    return {
+        "task": {"n": n_tasks, "groups": None, "regions": regions,
+                 "const": n_tasks, "label": "task(...) scope"},
+        "item": {"n": n_items, "groups": groups, "regions": None,
+                 "const": n_tasks, "label": "item(...) scope"},
+    }
 
 
 def _translate_prereq_indices(
@@ -2145,7 +2368,7 @@ def _resolve_typed_group_refs(
     if node is None or isinstance(node, int):
         return node, False
     op = node[0]
-    if op in ("and", "or"):
+    if op in ("and", "or", "scoped_task", "scoped_item"):
         kids = [
             _resolve_typed_group_refs(c, task_idx, group_types, group_default_pcts, group_to_reward_indices)
             for c in node[1]
@@ -2197,7 +2420,7 @@ def _collect_group_names(node: Node | None) -> set:
     return set()
 
 
-def _compute_topo_depths(parsed_prereqs: list, n: int) -> List[int]:
+def _compute_topo_depths(parsed_prereqs: list, n: int, parsed_reward_prereqs: list | None = None) -> List[int]:
     """Return a list of topological depths for each task (0 = no prereqs)."""
     depths = [-1] * n
     computing = [False] * n
@@ -2210,6 +2433,8 @@ def _compute_topo_depths(parsed_prereqs: list, n: int) -> List[int]:
         computing[v] = True
         prereq_ast = parsed_prereqs[v] if v < len(parsed_prereqs) else None
         deps = collect_leaves(prereq_ast, "task")
+        if parsed_reward_prereqs is not None and v < len(parsed_reward_prereqs):
+            deps = deps + collect_leaves(parsed_reward_prereqs[v], "task", "item")
         d = (max(depth(u) for u in deps) + 1) if deps else 0
         computing[v] = False
         depths[v] = d
@@ -2220,8 +2445,9 @@ def _compute_topo_depths(parsed_prereqs: list, n: int) -> List[int]:
     return depths
 
 
-def _assert_no_cycles(parsed_prereqs: list, n: int) -> None:
-    """DFS cycle detection on the prereq graph."""
+def _assert_no_cycles(parsed_prereqs: list, n: int, parsed_reward_prereqs: list | None = None) -> None:
+    """DFS cycle detection on the prereq graph. An item prereq's task(...) scope
+    adds task edges too."""
     visiting: set = set()
     visited: set = set()
 
@@ -2231,7 +2457,10 @@ def _assert_no_cycles(parsed_prereqs: list, n: int) -> None:
         if v in visited:
             return
         visiting.add(v)
-        for u in collect_leaves(parsed_prereqs[v], "task"):
+        deps = collect_leaves(parsed_prereqs[v], "task")
+        if parsed_reward_prereqs is not None:
+            deps = deps + collect_leaves(parsed_reward_prereqs[v], "task", "item")
+        for u in deps:
             dfs(u)
         visiting.discard(v)
         visited.add(v)

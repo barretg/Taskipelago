@@ -2,7 +2,7 @@ import { state, els } from './state.js';
 import { $ } from '../shared/dom.js';
 import {
   allChecked, prereqsSatisfied, itemPrereqsSatisfied, progressiveReqSatisfied,
-  regionPrereqSatisfied, regionReqSatisfied, regionReqSatisfiedAbs, taskCostIsPaid,
+  regionPrereqSatisfied, fillerRevealedTasks, regionReqSatisfied, regionReqSatisfiedAbs, taskCostIsPaid,
   completeTask, attemptPurchase, attemptMakeChange, costLogicReason,
 } from './logic.js';
 import { renderBingo } from './bingo_board.js';
@@ -219,7 +219,7 @@ export function taskAvailability(i, checked = allChecked(), effectiveLock = stat
   let itemPrereqText = '';
   if (i < state.itemPrereqs.length && state.itemPrereqs[i]) {
     itemPrereqText = String(state.itemPrereqs[i]).trim();
-    if (itemPrereqText) itemPrereqOk = itemPrereqsSatisfied(itemPrereqText, progReqs);
+    if (itemPrereqText) itemPrereqOk = itemPrereqsSatisfied(itemPrereqText, progReqs, checked);
   }
 
   const progHints = [];
@@ -292,8 +292,15 @@ export function taskAvailability(i, checked = allChecked(), effectiveLock = stat
  * Task `i`'s reward preview text, or '' when previews are off, the task is not
  * `eligible` (completable, or purchasable in logic), or the purchasable-only
  * setting excludes it. Hint Previews sends a real hint the first time.
+ * Filler Scout / Filler Hint show a preview only once a received filler item
+ * has revealed the task, available or not (their hints go out on receipt).
  */
 export function rewardPreview(i, eligible) {
+  if (state.taskRewardPreviews >= 3) {
+    if (!fillerRevealedTasks().has(i)) return '';
+    const name = state.sentItemNames[i] || '';
+    return name ? `${name} → ${state.sentPlayerNames[i] || 'Unknown'}` : '';
+  }
   if (!eligible || state.taskRewardPreviews === 0) return '';
   if (state.previewsPurchasableOnly && !(state.taskCostAmounts[i] || []).length) return '';
   if (state.taskRewardPreviews === 2 && !state.hintRequestedIndices.has(i)) {

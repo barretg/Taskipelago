@@ -29,7 +29,7 @@ def _set_rules_builder(world: "TaskipelagoWorld", player: int, n: int) -> None:
     has_cost = any(reqs for reqs in world._task_cost_reqs)
     # A task(...) / item(...) scope mixes both item name lists into one AST, which
     # the RuleBuilder path (one flat has() list) cannot express.
-    has_scope = any(has_scoped(ast) for ast in world._parsed_prereqs)
+    has_scope = any(has_scoped(ast) for ast in world._parsed_prereqs + world._parsed_reward_prereqs)
     if (has_prog or has_region or has_cost or has_scope
             or any(_has_or(ast) for ast in world._parsed_prereqs + world._parsed_reward_prereqs)):
         _set_rules_lambda(world, player, n)
@@ -65,7 +65,7 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
     region_tokens = world._region_token_names           # Dict[str, List[str]]
     consumable_display = world._consumable_group_display_names  # Dict[str, List[str]]
     task_cost_reqs = world._task_cost_reqs              # List[List[List[Tuple[str, int]]]] - OR of AND branches
-    # Name list each region task(...) / item(...) scope resolves its leaves against.
+    # Name list each task(...) / item(...) scope resolves its leaves against.
     scoped_names = {"task": token_names, "item": reward_names}
 
     for i in range(n):

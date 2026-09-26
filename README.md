@@ -10,7 +10,7 @@
 
 * Items are the items that are shuffled into the multi-world to match those spots
 
-* Tasks can be prerequisite on the completion of other tasks or items. It is advised to set up a hierarchy with this, as otherwise all checks will be in sphere 1
+* Tasks can be prerequisite on the completion of other tasks or items, including either-or requirements across both (e.g. `item(4) || 2`). It is advised to set up a hierarchy with this, as otherwise all checks will be in sphere 1
 
 ### DeathLink:
 

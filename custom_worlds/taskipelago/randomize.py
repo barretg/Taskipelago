@@ -83,6 +83,8 @@ def _dnf(node: Node | None) -> List[FrozenSet[int]]:
             child = _dnf(c)
             acc = _cap(list({a | b for a in acc for b in child}))
         return acc
+    if op == "scoped_task":
+        return _dnf(node[1][0])
     # region_ref / region_abs / group refs / seq_flag: no individual task pinned
     return [frozenset()]
 
@@ -154,22 +156,27 @@ def remap_int_tokens(text: str, mapping: Dict[int, int], prev_old: int | None = 
 _FALSE = ("false",)
 
 
-def remap_goal_ast(node: Node | None, mapping: Dict[int, int]) -> Node | None:
-    """Remap goal leaves; dropped leaves become false and are pruned. None if all true."""
-    out = _remap_goal(node, mapping)
+def remap_goal_ast(node: Node | None, mapping: Dict[int, int],
+                   item_mapping: Dict[int, int] | None = None) -> Node | None:
+    """Remap goal leaves; dropped leaves become false and are pruned. None if all true.
+    Leaves inside an item(...) scope go through item_mapping instead."""
+    out = _remap_goal(node, mapping, item_mapping or {})
     if out is _FALSE:
         raise Exception("Taskipelago: goal_tasks cannot be satisfied after randomization.")
     return out
 
 
-def _remap_goal(node, mapping):
+def _remap_goal(node, mapping, item_mapping):
     if node is None:
         return None
     if isinstance(node, int):
         return mapping[node] if node in mapping else _FALSE
     op = node[0]
+    if op in ("scoped_task", "scoped_item"):
+        inner = _remap_goal(node[1][0], mapping if op == "scoped_task" else item_mapping, item_mapping)
+        return inner if inner is None or inner is _FALSE else (op, [inner])
     if op in ("and", "or"):
-        kids = [_remap_goal(c, mapping) for c in node[1]]
+        kids = [_remap_goal(c, mapping, item_mapping) for c in node[1]]
         if op == "and":
             if any(k is _FALSE for k in kids):
                 return _FALSE

@@ -50,6 +50,10 @@ class TaskPrereqs(OptionList):
     the copy before it (e.g. 'sequential && "Chore"' with count 4 leaves the first
     copy depending only on "Chore", while the rest also require the prior copy).
     'prev' and 'sequential' cannot be used as region or progressive group names.
+    item( ... ) wraps an ordinary item prereq expression, so a task can depend on items
+    and tasks together, including in an OR: 'item(4) || 2' requires item 4 received or
+    task 2 completed. Inside item( ... ) a progressive group uses count mode only
+    ('keys*3'). task( ... ) is also accepted and means the same as leaving it out.
     """
     display_name = "Task Prereqs"
     default: List[str] = []
@@ -62,6 +66,10 @@ class ItemPrereqs(OptionList):
     indices (or progressive group names) that must be received before this task is accessible.
     Supports &&, ||, (), and quoted item names (e.g. "My Item").
     Example: '1 && (2 || 3)' requires item 1 and either item 2 or item 3.
+    task( ... ) wraps an ordinary task prereq expression (task numbers, quoted task names,
+    region references; not 'prev' or 'sequential'): '1 || task(3)' requires item 1
+    received or task 3 completed. item( ... ) is also accepted and means the same as
+    leaving it out.
     """
     display_name = "Item Prereqs"
     default: List[str] = []
@@ -144,6 +152,9 @@ class GoalTasks(OptionList):
     Boolean expression of 1-based task indices whose completion triggers game completion.
     Uses the same syntax as task_prereqs: &&, ||, (), quoted task names (e.g. "My Task"),
     and region references (e.g. 'chores', 'chores-75', 'chores*5').
+    item( ... ) wraps an ordinary item prereq expression: 'item("Crown") || 10' completes
+    the goal once the Crown is received or task 10 is completed. Inside item( ... ) a
+    progressive group uses count mode only ('keys*3').
     If empty, all tasks must be completed (default behaviour).
     """
     display_name = "Goal Tasks"
@@ -708,11 +719,18 @@ class TaskRewardPreviews(Choice):
     'Hint Previews' does the same, but also sends a real Archipelago hint for that task's reward
     location the first time it becomes available each session (equivalent to typing !hint).
     This is a real hint subject to the server's hint point economy and is visible to other players.
+    'Filler Scout' shows no previews automatically. Instead, at generation every filler item in
+    the pool is assigned one random task, and receiving that filler item reveals that task's
+    reward preview, whether or not the task is available yet.
+    'Filler Hint' does the same, but receiving the filler item also sends a real Archipelago
+    hint for that task's reward location.
     """
     display_name = "Task Reward Previews"
     option_no_previews = 0
     option_scout_previews = 1
     option_hint_previews = 2
+    option_filler_scout = 3
+    option_filler_hint = 4
     default = 0
 
 
@@ -720,6 +738,7 @@ class TaskRewardPreviewsPurchasableOnly(Toggle):
     """
     When on, Task Reward Previews (scout or hint) only apply to tasks that have a cost.
     A purchasable task shows its preview once its purchase is in logic.
+    With Filler Scout or Filler Hint, filler items are only assigned tasks that have a cost.
     """
     display_name = "Task Reward Previews Purchasable Only"
 

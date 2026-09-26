@@ -1,6 +1,6 @@
 // Randomized regions and item group types: export-time validation mirroring the
 // apworld's generation step 5b (randomize.py), plus the resolved final counts.
-import { parsePrereq } from '../shared/prereq_parser.js';
+import { mapScopedText, parsePrereq, prereqScopes } from '../shared/prereq_parser.js';
 
 export const GROUP_TYPES = ['progressive', 'random-choice', 'aesthetic'];
 
@@ -87,15 +87,20 @@ function walk(node, fn) {
   if (Array.isArray(node) && WALK_PARENTS.includes(node[0])) node[1].forEach(c => walk(c, fn));
 }
 
-/** Int leaves of one scope only: 'task' keeps task(...), 'item' keeps item(...). */
-export function scopedLeaves(node, domain) {
+/**
+ * Int leaves of one scope only: 'task' keeps task(...), 'item' keeps item(...).
+ * Leaves outside every wrapper belong to `home` (null: to no scope, as in a
+ * region prereq). Port of prereq_parser.py collect_leaves with a domain.
+ */
+export function scopedLeaves(node, domain, home = null) {
   if (node === null || node === undefined) return [];
-  if (typeof node === 'number') return [];
+  if (typeof node === 'number') return home === domain ? [node] : [];
   const op = node[0];
+  if (op === 'item_copies') return home === domain ? [node[1]] : [];
   if (op === 'scoped_task' || op === 'scoped_item') {
-    return op === `scoped_${domain}` ? leaves(node[1][0]) : [];
+    return scopedLeaves(node[1][0], domain, op.slice(7));
   }
-  if (op === 'and' || op === 'or') return node[1].flatMap(c => scopedLeaves(c, domain));
+  if (op === 'and' || op === 'or') return node[1].flatMap(c => scopedLeaves(c, domain, home));
   return [];
 }
 
@@ -116,6 +121,7 @@ export function goalMinimalSets(node, cap = 4096) {
   const dnf = n => {
     if (n === null || n === undefined) return [[]];
     if (typeof n === 'number') return [[n]];
+    if (n[0] === 'scoped_task') return dnf(n[1][0]);
     if (n[0] === 'or') return n[1].flatMap(dnf);
     if (n[0] === 'and') {
       let acc = [[]];
@@ -173,16 +179,33 @@ export function checkRandomization(o) {
     });
   }
   const randomOf = i => (regionKeep.has(o.taskRegions[i]) ? o.taskRegions[i] : '');
+  const nItemRows = o.itemRows.length;
+  // task(...) / item(...) scopes in task prereqs, item prereqs and the goal.
+  const fieldScopes = prereqScopes(o.tasks.length, nItemRows, regionSet, groupSet);
+  const randomChoiceItem = leaf => {
+    const row = o.itemRows[leaf];
+    return row && !row.filler && row.group && groupSetting(model, row.group).type === 'random-choice'
+      ? row.group : '';
+  };
 
   // Task prereqs: no individual refs into randomized regions, no sequential there, no self region refs.
   o.taskPrereqs.forEach((text, i) => {
     if (!text) return;
     let ast;
-    try { ast = parsePrereq(text, o.tasks.length, i, 'task prereq', null, regionSet); } catch (_) { return; }
+    try {
+      ast = parsePrereq(text, o.tasks.length, i, 'task prereq', null, regionSet, null, null, fieldScopes);
+    } catch (_) { return; }
     if (randomOf(i) && nodesOf(ast, ['seq_flag']).length) {
       errors.push(`Task ${i + 1} uses 'sequential' inside randomized region '${randomOf(i)}'.`);
     }
-    for (const leaf of leaves(ast)) {
+    for (const leaf of scopedLeaves(ast, 'item', 'task')) {
+      const g = randomChoiceItem(leaf);
+      if (g) {
+        errors.push(`Task ${i + 1} task prereq references item ${leaf + 1} inside random-choice group `
+          + `'${g}'. Reference the group instead.`);
+      }
+    }
+    for (const leaf of scopedLeaves(ast, 'task', 'task')) {
       if (randomOf(leaf)) {
         errors.push(`Task ${i + 1} references task ${leaf + 1} inside randomized region '${randomOf(leaf)}'. `
           + 'Reference the region as a whole instead.');
@@ -197,7 +220,6 @@ export function checkRandomization(o) {
       }
     }
   });
-  const nItemRows = o.itemRows.length;
   const regionScopes = {
     task: { n: o.tasks.length, groups: null, regions: regionSet,
             const: o.tasks.length, label: 'region task prereq' },
@@ -233,12 +255,13 @@ export function checkRandomization(o) {
     o.tasks.forEach((t, i) => {
       for (let c = 0; c < o.taskCounts[i]; c++) { yamlNames.push(t); yamlRegion.push(o.taskRegions[i]); }
     });
-    const resolved = o.goal.replace(/"([^"]*)"/g, (whole, name) => {
+    const resolved = mapScopedText(o.goal, t => t.replace(/"([^"]*)"/g, (whole, name) => {
       const k = yamlNames.indexOf(name);
       return k >= 0 ? String(k + 1) : whole;
-    });
+    }), null, 'task');
     tryIt('Goal tasks: ', () => {
-      const ast = parsePrereq(resolved, yamlNames.length, 0, 'goal tasks', null, regionSet);
+      const ast = parsePrereq(resolved, yamlNames.length, 0, 'goal tasks', null, regionSet, null, null,
+        prereqScopes(yamlNames.length, nItemRows, regionSet, groupSet));
       for (const [, name, k] of nodesOf(ast, ['region_abs'])) {
         if (regionKeep.has(name) && k > regionKeep.get(name)) {
           throw new Error(`'${name}*${k}' but randomized region '${name}' keeps ${regionKeep.get(name)}.`);
@@ -275,8 +298,16 @@ export function checkRandomization(o) {
   o.itemPrereqs.forEach((text, i) => {
     if (!text) return;
     let ast;
-    try { ast = parsePrereq(text, o.itemRows.length, i, 'item prereq', groupSet); } catch (_) { return; }
-    const refs = [...leaves(ast), ...nodesOf(ast, ['item_copies']).map(n => n[1])];
+    try {
+      ast = parsePrereq(text, o.itemRows.length, i, 'item prereq', groupSet, null, null, null, fieldScopes);
+    } catch (_) { return; }
+    for (const leaf of scopedLeaves(ast, 'task', 'item')) {
+      if (randomOf(leaf)) {
+        errors.push(`Task ${i + 1} item prereq references task ${leaf + 1} inside randomized region `
+          + `'${randomOf(leaf)}'. Reference the region as a whole instead.`);
+      }
+    }
+    const refs = scopedLeaves(ast, 'item', 'item');
     for (const leaf of refs) {
       const row = o.itemRows[leaf];
       if (row && !row.filler && row.group && groupSetting(model, row.group).type === 'random-choice') {

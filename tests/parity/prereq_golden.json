@@ -5192,6 +5192,730 @@
      ]
     ]
    }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(1) || 2",
+   "result": {
+    "ast": [
+     "or",
+     [
+      [
+       "scoped_item",
+       [
+        0
+       ]
+      ],
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "prev || item(weapons*2)",
+   "result": {
+    "ast": [
+     "or",
+     [
+      3,
+      [
+       "scoped_item",
+       [
+        [
+         "group_count",
+         "weapons",
+         2
+        ]
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(3*2) || task(chores)",
+   "result": {
+    "ast": [
+     "or",
+     [
+      [
+       "scoped_item",
+       [
+        [
+         "item_copies",
+         2,
+         2
+        ]
+       ]
+      ],
+      [
+       "scoped_task",
+       [
+        [
+         "region_ref",
+         "chores",
+         null
+        ]
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(9)",
+   "result": {
+    "error": "Taskipelago: item(...) scope index '9' on task 5 is out of range (1..8)."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(weapons) && task(2 || item(1))",
+   "result": {
+    "ast": [
+     "and",
+     [
+      [
+       "scoped_item",
+       [
+        [
+         "group_ref",
+         "weapons",
+         null
+        ]
+       ]
+      ],
+      [
+       "scoped_task",
+       [
+        [
+         "or",
+         [
+          1,
+          [
+           "scoped_item",
+           [
+            0
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "task(prev)",
+   "result": {
+    "error": "Taskipelago: 'prev' can only be used in task prereqs (used in task(...) scope on task 5)."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(chores)",
+   "result": {
+    "error": "Taskipelago: unknown name 'chores' in item(...) scope on task 5."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "item prereq",
+   "groups": [
+    "weapons",
+    "armor_set",
+    "shared"
+   ],
+   "regions": null,
+   "location_label": null,
+   "kind": "prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "1 || task(2)",
+   "result": {
+    "ast": [
+     "or",
+     [
+      0,
+      [
+       "scoped_task",
+       [
+        1
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "item prereq",
+   "groups": [
+    "weapons",
+    "armor_set",
+    "shared"
+   ],
+   "regions": null,
+   "location_label": null,
+   "kind": "prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "weapons-2 || task(chores-50)",
+   "result": {
+    "ast": [
+     "or",
+     [
+      [
+       "group_ref",
+       "weapons",
+       2
+      ],
+      [
+       "scoped_task",
+       [
+        [
+         "region_ref",
+         "chores",
+         50
+        ]
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "item prereq",
+   "groups": [
+    "weapons",
+    "armor_set",
+    "shared"
+   ],
+   "regions": null,
+   "location_label": null,
+   "kind": "prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "task(11)",
+   "result": {
+    "error": "Taskipelago: task(...) scope index '11' on task 5 is out of range (1..10)."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "goal_tasks",
+   "groups": null,
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": "goal_tasks",
+   "kind": "prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(1) || 3",
+   "result": {
+    "ast": [
+     "or",
+     [
+      [
+       "scoped_item",
+       [
+        0
+       ]
+      ],
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "goal_tasks",
+   "groups": null,
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": "goal_tasks",
+   "kind": "prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(1 ||",
+   "result": {
+    "error": "Taskipelago: unexpected end of item(...) scope expression on goal_tasks."
+   }
+  },
+  {
+   "n": 10,
+   "task_index": 4,
+   "label": "task prereq",
+   "groups": [
+    "weapons",
+    "my-group",
+    "weapons+",
+    "weap-",
+    "armor_set",
+    "café",
+    "shared"
+   ],
+   "regions": [
+    "chores",
+    "side-quests",
+    "shared"
+   ],
+   "location_label": null,
+   "kind": "prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "task (1)",
+   "result": {
+    "ast": [
+     "scoped_task",
+     [
+      0
+     ]
+    ]
+   }
   }
  ]
 }

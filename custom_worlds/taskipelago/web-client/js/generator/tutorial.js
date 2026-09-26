@@ -20,8 +20,29 @@ const HOSTED_VS_LAUNCHER = [
 
 const GROUPS_TITLE = 'Item Groups (Progressive, Random-Choice, Aesthetic)';
 
+const MIXED_PREREQS = [
+  'Mixing Tasks and Items',
+  'Task Prereqs, Item Prereqs and Goal Tasks can each borrow the other kind of reference '
+  + 'by wrapping it in task( ... ) or item( ... ). Whatever goes inside the parentheses is an '
+  + 'ordinary Task Prereq or Item Prereq expression, which is how you write an OR across '
+  + 'tasks and items:\n'
+  + '  Task Prereqs:  item(4) || 2          item 4 received OR task 2 completed\n'
+  + '  Task Prereqs:  item(keys*3) || 7     3 items from group keys OR task 7\n'
+  + '  Item Prereqs:  1 || task(3)          item 1 received OR task 3 completed\n'
+  + '  Item Prereqs:  2 && task(caves-50)   item 2 AND half of region caves\n'
+  + '  Goal Tasks:    item("Crown") || 10   the Crown received OR task 10 completed\n'
+  + 'Quoted names inside task( ... ) are task names and inside item( ... ) item names. '
+  + 'Wrapping a field in its own kind (task( ... ) in Task Prereqs) changes nothing.\n\n'
+  + 'Inside item( ... ) in Task Prereqs or Goal Tasks, a progressive group must use count '
+  + "mode (keys*3), never ordering mode (keys or keys-2). 'prev' and 'sequential' only work "
+  + 'outside a wrapper in Task Prereqs. As everywhere else, tasks in a randomized region and '
+  + 'items in a random-choice group can only be referenced through the region or group, and '
+  + 'a task may not depend on itself through either field.',
+];
+
 // v1.1 steps, each inserted after the legacy step with the given title.
 const V11_STEPS = [
+  ['Item Requirements (Item Prereqs column)', MIXED_PREREQS],
   ['Regions', [
     'Region Dependencies',
     "Each region row has a 'Depends on' field: an expression that gates every task in that "

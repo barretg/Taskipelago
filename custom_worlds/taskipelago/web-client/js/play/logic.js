@@ -48,11 +48,39 @@ export function allChecked() {
   return s;
 }
 
+/**
+ * task(...) / item(...) scopes for a prereq or goal expression. A task scope
+ * checks task completion and region names; an item scope checks received items
+ * and item group counts.
+ */
+function fieldScopes(checked) {
+  return {
+    task: {
+      leafFn: idx1 => state.baseCompleteId !== null && checked.has(state.baseCompleteId + idx1 - 1),
+      nameFn: (name, starN, dashN) => (starN !== null && starN !== undefined
+        ? regionReqSatisfiedAbs(name, starN, checked)
+        : regionReqSatisfied(name, dashN === null || dashN === undefined ? 100 : dashN, checked)),
+    },
+    item: itemScope(null),
+  };
+}
+
+function itemScope(progCount) {
+  const have = receivedItemIds();
+  const base = state.baseItemId;
+  return {
+    leafFn: idx1 => typeof base === 'number' && have.has(base + idx1 - 1),
+    nameFn: (name, starN) => progressiveReqSatisfied(
+      name, starN !== null && starN !== undefined ? starN : ((progCount || {})[name] ?? 1)),
+  };
+}
+
 export function prereqsSatisfied(prereqText, checked) {
   if (!prereqText || state.baseCompleteId === null) return true;
+  // Bare region names here are gated through taskRegionReqs, as before.
   return evalPrereqExpr(prereqText, idx1 =>
-    checked.has(state.baseCompleteId + idx1 - 1)
-  );
+    checked.has(state.baseCompleteId + idx1 - 1),
+  null, fieldScopes(checked));
 }
 
 export function receivedItemIds() {
@@ -63,7 +91,7 @@ export function receivedItemIds() {
   return out;
 }
 
-export function itemPrereqsSatisfied(prereqText, progReqs) {
+export function itemPrereqsSatisfied(prereqText, progReqs, checked = null) {
   if (!prereqText) return true;
   const have = receivedItemIds();
   const base = state.baseItemId;
@@ -77,10 +105,13 @@ export function itemPrereqsSatisfied(prereqText, progReqs) {
     const c = count !== null ? count : (progCount[group] ?? 1);
     return progressiveReqSatisfied(group, c);
   };
+  const scopes = fieldScopes(checked || allChecked());
+  scopes.item = itemScope(progCount);
   return evalPrereqExpr(
     prereqText,
     idx1 => typeof base === 'number' && have.has(base + idx1 - 1),
-    nameFn
+    nameFn,
+    scopes,
   );
 }
 
@@ -133,20 +164,41 @@ export function regionReqSatisfiedAbs(rname, requiredCount, checked) {
 export function regionPrereqSatisfied(rname, checked) {
   const text = (state.regionPrereqExprs || {})[rname];
   if (!text) return true;
-  const taskScope = {
-    leafFn: idx1 => state.baseCompleteId !== null && checked.has(state.baseCompleteId + idx1 - 1),
-    nameFn: (name, starN, dashN) => (starN !== null && starN !== undefined
-      ? regionReqSatisfiedAbs(name, starN, checked)
-      : regionReqSatisfied(name, dashN === null || dashN === undefined ? 100 : dashN, checked)),
-  };
-  const have = receivedItemIds();
+  const scopes = fieldScopes(checked);
+  return evalPrereqExpr(text, scopes.task.leafFn, scopes.task.nameFn, scopes);
+}
+
+// =============================================================
+// Filler Scout / Filler Hint (task_reward_previews 3 / 4)
+// =============================================================
+let revealedCache = { len: -1, targets: null, base: null, set: new Set() };
+
+/** Tasks whose reward a received filler item has revealed. */
+export function fillerRevealedTasks() {
+  const targets = state.fillerPreviewTargets || [];
   const base = state.baseItemId;
-  const itemScope = {
-    leafFn: idx1 => typeof base === 'number' && have.has(base + idx1 - 1),
-    nameFn: (name, starN) => progressiveReqSatisfied(name, starN === null || starN === undefined ? 1 : starN),
-  };
-  return evalPrereqExpr(text, taskScope.leafFn, taskScope.nameFn,
-    { task: taskScope, item: itemScope });
+  const len = ap.itemsReceived.length;
+  const c = revealedCache;
+  if (c.len === len && c.targets === targets && c.base === base) return c.set;
+  const set = new Set();
+  if (targets.length && typeof base === 'number') {
+    for (const it of ap.itemsReceived) {
+      const t = it && typeof it.item === 'number' ? targets[it.item - base] : undefined;
+      if (Number.isInteger(t) && t >= 0) set.add(t);
+    }
+  }
+  revealedCache = { len, targets, base, set };
+  return set;
+}
+
+/** Filler Hint: hint each newly revealed task's reward location once per session. */
+export function sendFillerHints() {
+  if (state.taskRewardPreviews !== 4 || state.baseRewardId === null) return;
+  const fresh = [...fillerRevealedTasks()].filter(t => !state.hintRequestedIndices.has(t));
+  if (!fresh.length) return;
+  for (const t of fresh) state.hintRequestedIndices.add(t);
+  // 2: announce only hints that are new, so a reconnect does not repeat them.
+  ap.sendLocationScouts(fresh.map(t => state.baseRewardId + t), 2);
 }
 
 // =============================================================
@@ -276,8 +328,8 @@ export function maybeSendGoal() {
   let done;
   if (state.goalExpression) {
     done = evalPrereqExpr(state.goalExpression, idx1 =>
-      checked.has(state.baseCompleteId + idx1 - 1)
-    );
+      checked.has(state.baseCompleteId + idx1 - 1),
+    null, fieldScopes(checked));
     for (const req of (state.goalRegionReqs || [])) {
       const r = req.region ?? req[0];
       const abs = req.abs_count ?? null;

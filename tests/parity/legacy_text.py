@@ -72,11 +72,23 @@ V11_TIP_CHANGES = {
                     "quoted name, 'prev' or 'sequential'). Reference the region as a whole.")],
     "task_prereq": [("A task cannot depend on its own region.\n",
                      "A task cannot depend on its own region.\n"
-                     "Tasks in a randomized region can only be referenced through the region.\n")],
+                     "Tasks in a randomized region can only be referenced through the region.\n"),
+                    ("cannot be used as region or progressive group names.",
+                     "cannot be used as region or progressive group names.\n\n"
+                     "item( ... ) wraps an item prereq, so items can stand in for tasks:\n"
+                     "  item(4) || 2          ->  item 4 received OR task 2 completed\n"
+                     "  item(\"Blue Key\") || \"Pick the lock\"\n"
+                     "  item(keys*3) || 7     ->  3 items from group 'keys' OR task 7\n"
+                     "Inside item( ... ) a progressive group uses count mode only (keys*3).")],
     "goal_tasks": [("The 'prev' and 'sequential' keywords",
                     "Goal Tasks may name tasks in a randomized region. Generation keeps enough of\n"
                     "them to satisfy at least one way to meet the goal (5 || 8 keeps 5 or 8).\n\n"
-                    "The 'prev' and 'sequential' keywords")],
+                    "The 'prev' and 'sequential' keywords"),
+                   ("(Task prereqs only).",
+                    "(Task prereqs only).\n\n"
+                    "item( ... ) wraps an item prereq, so the goal can accept items too:\n"
+                    "  item(\"Crown\") || 10  ->  the Crown received OR task 10 completed\n"
+                    "  item(keys*3)          ->  3 items from group 'keys' (count mode only)")],
     "item_prereq": [
         ("Progressive group refs:", "Item group refs (progressive groups):"),
         ("Count mode: multiple tasks can share the same threshold.",
@@ -86,7 +98,12 @@ V11_TIP_CHANGES = {
          "  mygroup-50  ->  any 50% of the group's items\n"
          "  mygroup*2   ->  any 2 items from the group\n"
          "For random-choice groups these count only the kept items, and items inside\n"
-         "the group cannot be referenced individually."),
+         "the group cannot be referenced individually.\n\n"
+         "task( ... ) wraps a task prereq, so tasks can stand in for items:\n"
+         "  1 || task(3)          ->  item 1 received OR task 3 completed\n"
+         "  2 && task(caves-50)   ->  item 2 AND half of region caves\n"
+         "Inside task( ... ) use task numbers, quoted task names and region refs\n"
+         "('prev' and 'sequential' are not allowed there)."),
     ],
     "prog_group": [
         ("Assign this item to a progressive group.", "Assign this item to an item group."),
@@ -98,6 +115,13 @@ V11_TIP_CHANGES = {
         ("Groups are defined in the Progressive Groups panel above.",
          "Groups and their types are defined in the Item Groups panel above."),
     ],
+    "reward_preview": [("(equivalent to typing !hint).",
+                        "(equivalent to typing !hint).\n"
+                        "Filler Scout: no automatic previews. At generation each filler item in the\n"
+                        "pool is assigned one random task; receiving that filler item reveals the\n"
+                        "task's reward preview, whether or not the task is available yet.\n"
+                        "Filler Hint: same as Filler Scout, but receiving the filler item also sends\n"
+                        "a real Archipelago hint for that task's reward location.")],
     "type": [("Items in a progressive group are always forced to 'progression'.",
               "Items in a progressive group are always forced to 'progression'.\n"
               "Items in random-choice and aesthetic groups are forced to 'progression'\n"

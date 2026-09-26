@@ -6,7 +6,7 @@ Grammar:
     or_expr  := and_expr ('||' and_expr)*
     and_expr := atom ('&&' atom | ',' atom)*
     atom     := INTEGER | INTEGER*INTEGER | NAME | NAME*INTEGER | NAME-INTEGER | '(' expr ')'
-                | 'task' '(' expr ')' | 'item' '(' expr ')'   (region prereqs only)
+                | 'task' '(' expr ')' | 'item' '(' expr ')'   (when scoped_domains is given)
 
     INTEGER   - 1-based task/item index
     INDEX*Y   - item prereqs only: the first Y copies of item INDEX (a row with count > 1)
@@ -14,10 +14,11 @@ Grammar:
     NAME*N    - group count mode (N items from group) or region absolute count (N tasks)
     NAME-N    - group ordering mode (N-th position) or region percentage (N%)
 
-    task(EXPR) / item(EXPR) - region "Depends on" only: EXPR is an ordinary task or item
-                   prereq expression, and the whole region waits on it. task(...) sees task
-                   indices and region names, item(...) sees item indices and progressive
-                   group names.
+    task(EXPR) / item(EXPR) - EXPR is an ordinary task or item prereq expression.
+                   task(...) sees task indices and region names, item(...) sees item
+                   indices and progressive group names. Used by region "Depends on" (the
+                   whole region waits on it) and by task prereqs, item prereqs and
+                   goal_tasks, where they let one expression mix tasks and items.
 
     "prev" and "sequential" are reserved keywords, valid only in task prereqs
     (label == "task prereq"):
@@ -40,9 +41,9 @@ Output AST nodes:
     ("seq_flag",)               - "sequential" marker; always true, carries no dependency
     ("item_copies", idx, y)     - first y copies of item idx (0-based); expanded to an AND of
                                   YAML indices by _translate_prereq_indices before generation
-    ("scoped_task", [node])     - region prereqs only: task(...) - the wrapped expression is
+    ("scoped_task", [node])     - task(...) - the wrapped expression is
                                   evaluated against task indices / regions
-    ("scoped_item", [node])     - region prereqs only: item(...) - the wrapped expression is
+    ("scoped_item", [node])     - item(...) - the wrapped expression is
                                   evaluated against item indices / progressive groups
 
 group_count and region_abs nodes are already resolved (count embedded) and pass through
@@ -332,59 +333,81 @@ def resolve_suffix_int(suffix, n_tasks: int, label: str, loc: str) -> "int | Non
     return num_expr_to_int(fold_num_expr(suffix, n_tasks, label, loc))
 
 
-def map_scoped_text(text: str, task_fn=None, item_fn=None) -> str:
+def map_scoped_text(text: str, task_fn=None, item_fn=None, home: str | None = None) -> str:
     """
-    Rewrite the contents of the task(...) / item(...) wrappers in a region prereq.
-    task_fn / item_fn each take the inner expression text and return its
-    replacement; text outside a wrapper is left exactly as written. Quoted
-    names are skipped over so a '(' inside a name never opens a scope.
+    Rewrite a prereq expression one domain at a time. Text inside task(...) is
+    passed to task_fn and text inside item(...) to item_fn; text outside every
+    wrapper belongs to `home` ("task", "item" or None) and goes through that
+    domain's function, or is left exactly as written when home is None (region
+    prereqs). Wrappers nest: each wrapper's contents are split the same way with
+    the wrapper's own domain as home. A function of None leaves its text alone.
+    Quoted names are skipped over so a '(' inside a name never opens a scope.
     """
     if not text:
         return text
-    out: List[str] = []
-    i = 0
-    n = len(text)
-    while i < n:
-        c = text[i]
-        if c == '"':
-            j = text.find('"', i + 1)
-            j = n if j < 0 else j + 1
-            out.append(text[i:j])
-            i = j
-            continue
-        if c.isalpha() or c == "_":
-            j = i
-            while j < n and (text[j].isalnum() or text[j] == "_"):
-                j += 1
-            word = text[i:j]
-            if word in ("task", "item") and j < n and text[j] == "(":
-                depth = 0
-                k = j
-                while k < n:
-                    ch = text[k]
-                    if ch == '"':
-                        q = text.find('"', k + 1)
-                        k = n if q < 0 else q + 1
+    fns = {"task": task_fn, "item": item_fn}
+
+    def _flush(buf: List[str], out: List[str], dom) -> None:
+        if not buf:
+            return
+        chunk = "".join(buf)
+        buf.clear()
+        fn = fns.get(dom) if dom else None
+        out.append(chunk if fn is None or not chunk.strip() else fn(chunk))
+
+    def _map(src: str, dom) -> str:
+        out: List[str] = []
+        buf: List[str] = []
+        i = 0
+        n = len(src)
+        while i < n:
+            c = src[i]
+            if c == '"':
+                j = src.find('"', i + 1)
+                j = n if j < 0 else j + 1
+                buf.append(src[i:j])
+                i = j
+                continue
+            if c.isalpha() or c == "_":
+                j = i
+                while j < n and (src[j].isalnum() or src[j] == "_"):
+                    j += 1
+                word = src[i:j]
+                # The parser allows whitespace between the keyword and '('.
+                p = j
+                while p < n and src[p].isspace():
+                    p += 1
+                if word in ("task", "item") and p < n and src[p] == "(":
+                    j = p
+                    depth = 0
+                    k = j
+                    while k < n:
+                        ch = src[k]
+                        if ch == '"':
+                            q = src.find('"', k + 1)
+                            k = n if q < 0 else q + 1
+                            continue
+                        if ch == "(":
+                            depth += 1
+                        elif ch == ")":
+                            depth -= 1
+                            if depth == 0:
+                                break
+                        k += 1
+                    if k < n:
+                        _flush(buf, out, dom)
+                        out.append(f"{word}({_map(src[j + 1:k], word)})")
+                        i = k + 1
                         continue
-                    if ch == "(":
-                        depth += 1
-                    elif ch == ")":
-                        depth -= 1
-                        if depth == 0:
-                            break
-                    k += 1
-                if k < n:
-                    inner = text[j + 1:k]
-                    fn = task_fn if word == "task" else item_fn
-                    out.append(f"{word}({inner if fn is None else fn(inner)})")
-                    i = k + 1
-                    continue
-            out.append(word)
-            i = j
-            continue
-        out.append(c)
-        i += 1
-    return "".join(out)
+                buf.append(word)
+                i = j
+                continue
+            buf.append(c)
+            i += 1
+        _flush(buf, out, dom)
+        return "".join(out)
+
+    return _map(text, home)
 
 
 def parse_prereq(
@@ -409,7 +432,7 @@ def parse_prereq(
                      (e.g. "region 'chores'") - for non-task callers like region prereqs.
     n_tasks_const: value bound to N_TASKS in -N / *N suffix expressions; defaults to
                      n_tasks (which is the item count for item prereqs).
-    scoped_domains: enables the task(...) / item(...) scope wrappers (region prereqs).
+    scoped_domains: enables the task(...) / item(...) scope wrappers.
                      {"task": {...}, "item": {...}} where each spec may set
                      "n", "groups", "regions", "const" and "label"; the wrapped
                      expression parses in that context and becomes a
@@ -514,7 +537,7 @@ def parse_prereq(
         if isinstance(tok, tuple) and tok[0] == "copies":
             consume()
             _, idx_1, y = tok
-            if c_label != "item prereq":
+            if c_label not in ("item prereq", "item(...) scope"):
                 raise Exception(
                     f"Taskipelago: '{idx_1}*{y}' copy counts can only be used in item prereqs "
                     f"(used in {c_label} on {loc})."
@@ -737,28 +760,29 @@ def _tokenize(text: str, task_index: int, label: str, location_label: str | None
     return tokens
 
 
-def collect_leaves(node: Node | None, domain: str | None = None) -> List[int]:
+def collect_leaves(node: Node | None, domain: str | None = None, home: str | None = None) -> List[int]:
     """Return all 0-based task/item indices (int leaves) referenced in an AST node.
-    domain ("task" or "item") keeps only leaves of that scope: scoped_task /
-    scoped_item subtrees of the other domain are skipped. The default (None)
+    domain ("task" or "item") keeps only leaves of that scope: leaves outside
+    every wrapper belong to `home` (default: domain itself), and task(...) /
+    item(...) subtrees switch to their own scope. The default domain (None)
     descends into everything, which is what every pre-scope AST needs."""
     if node is None:
         return []
+    cur = home or domain
     if isinstance(node, int):
-        return [node]
+        return [node] if domain is None or cur == domain else []
     op = node[0]
     if op == "item_copies":
-        return [node[1]]
+        return [node[1]] if domain is None or cur == domain else []
     if op in ("group_ref", "group_count", "region_ref", "region_abs", "group", "region", "seq_flag"):
         return []
     if op in ("scoped_task", "scoped_item"):
-        if domain is not None and op != f"scoped_{domain}":
-            return []
-        return collect_leaves(node[1][0], domain)
+        inner = "task" if op == "scoped_task" else "item"
+        return collect_leaves(node[1][0], domain, inner if domain is not None else None)
     _, children = node
     result = []
     for child in children:
-        result.extend(collect_leaves(child, domain))
+        result.extend(collect_leaves(child, domain, cur if domain is not None else None))
     return result
 
 

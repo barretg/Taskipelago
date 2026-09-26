@@ -33,6 +33,7 @@ export const state = {
   sentPlayerNames: [],
   taskRewardPreviews: 0,
   previewsPurchasableOnly: false, // slot_data task_reward_previews_purchasable_only
+  fillerPreviewTargets: [],     // slot_data filler_preview_targets: reward index -> task index (-1 none)
   progressiveGroups: [],
   progressiveGroupColors: [],  // v1.1 F6, parallel to progressiveGroups
   groupTypes: [],              // parallel to progressiveGroups; missing = progressive

@@ -1,7 +1,9 @@
 // Port of export_yaml (legacy_client/client.py:2947-3292), UNIFY 5.3.
 // Every validation, its order and its message text match the legacy client;
 // tests/parity/export_golden.json holds the reference results.
-import { parsePrereq, parseCostExpr, mapScopedText, validateRefName } from '../shared/prereq_parser.js';
+import {
+  parsePrereq, parseCostExpr, mapScopedText, prereqScopes, validateRefName,
+} from '../shared/prereq_parser.js';
 import { randomFiller as defaultRandomFiller } from '../shared/filler.js';
 import { remapPrereqIndices, remapCostIndices } from '../shared/expr_rewrite.js';
 import { pyInt, pySlice, pyStrip } from '../shared/pyish.js';
@@ -25,6 +27,20 @@ export function resolveNameRefs(text, names) {
   return [result, errors];
 }
 
+/**
+ * resolveNameRefs per scope: task names outside / inside task(...), item names
+ * inside item(...). `home` is the field's own domain ('task' or 'item').
+ */
+export function resolveScopedNameRefs(text, home, taskNames, itemNames) {
+  const errors = [];
+  const fn = names => t => {
+    const [res, errs] = resolveNameRefs(t, names);
+    errors.push(...errs);
+    return res;
+  };
+  return [mapScopedText(text, fn(taskNames), fn(itemNames), home), errors];
+}
+
 /** _convert_cost_idx_to_quote: idx*N -> "Name"*N so costs survive row expansion. */
 export function convertCostIdxToQuote(costText, itemNames) {
   return costText.replace(/"[^"]*"\*?\d*|\b(\d+)(?:\*(\d+))?\b/g, (whole, idxText, count) => {
@@ -41,7 +57,7 @@ export function convertCostIdxToQuote(costText, itemNames) {
 function itemCopyRefs(node) {
   if (!Array.isArray(node)) return [];
   if (node[0] === 'item_copies') return [[node[1], node[2]]];
-  if (node[0] === 'and' || node[0] === 'or') return node[1].flatMap(itemCopyRefs);
+  if (['and', 'or', 'scoped_task', 'scoped_item'].includes(node[0])) return node[1].flatMap(itemCopyRefs);
   return [];
 }
 
@@ -204,8 +220,8 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   let regionPrereqs = regionNames.map(n => regionByName.get(n).prereq ?? '');
   const randomCheck = () => checkRandomization({
     model, tasks, taskCounts, taskRegions, regionNames, regionPrereqs, itemRows,
-    taskPrereqs: taskPrereqs.map(t => resolveNameRefs(t, tasks)[0]),
-    itemPrereqs: itemPrereqsRaw.map(t => resolveNameRefs(t, rawItemNames)[0]),
+    taskPrereqs: taskPrereqs.map(t => resolveScopedNameRefs(t, 'task', tasks, rawItemNames)[0]),
+    itemPrereqs: itemPrereqsRaw.map(t => resolveScopedNameRefs(t, 'item', tasks, rawItemNames)[0]),
     goal: pyStrip(model.goalTasks),
   });
   if (randomized.regions || randomized.groups) {
@@ -228,10 +244,12 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
 
   const nameErrors = [];
   taskPrereqs.forEach((tpr, i) => {
-    nameErrors.push(...resolveNameRefs(tpr, tasks)[1].map(e => `Task ${i + 1} task prereqs: ${e}`));
+    nameErrors.push(...resolveScopedNameRefs(tpr, 'task', tasks, rawItemNames)[1]
+      .map(e => `Task ${i + 1} task prereqs: ${e}`));
   });
   itemPrereqsRaw.forEach((ipr, i) => {
-    nameErrors.push(...resolveNameRefs(ipr, rawItemNames)[1].map(e => `Task ${i + 1} item prereqs: ${e}`));
+    nameErrors.push(...resolveScopedNameRefs(ipr, 'item', tasks, rawItemNames)[1]
+      .map(e => `Task ${i + 1} item prereqs: ${e}`));
   });
   // Quoted names inside a region's task(...) / item(...) scopes.
   regionNames.forEach(name => {
@@ -260,13 +278,24 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   }
 
   const goalTasksRaw = pyStrip(model.goalTasks);
+  let goalTasksExport = goalTasksRaw;
 
   const regionSet = new Set(regionNames);
   const groupSet = new Set(model.progGroups);
   const consumableSet = new Set(rawItemNames.filter((n, i) => rawItemConsumables[i] && n));
   const nTasks = tasks.length;
   const nItems = rawItemNames.length;
+  const fieldScopes = prereqScopes(nTasks, nItems, regionSet, groupSet);
   const exprErrors = [];
+  // INDEX*Y must not ask for more copies than the item row has.
+  const checkItemCopies = (ast, label, loc) => {
+    for (const [idx, y] of itemCopyRefs(ast)) {
+      if (y > rawItemCounts[idx]) {
+        throw new Error(`Taskipelago: '${idx + 1}*${y}' in ${label} on ${loc} asks for ${y} copies `
+          + `but item ${idx + 1} has a count of ${rawItemCounts[idx]}.`);
+      }
+    }
+  };
   const attempt = (fn, prefix = '') => {
     try {
       fn();
@@ -276,28 +305,29 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   };
   taskPrereqs.forEach((tpr, i) => {
     if (!tpr) return;
-    const [resolved] = resolveNameRefs(tpr, tasks);
-    attempt(() => parsePrereq(resolved, nTasks, i, 'task prereq', groupSet, regionSet));
+    const [resolved] = resolveScopedNameRefs(tpr, 'task', tasks, rawItemNames);
+    attempt(() => checkItemCopies(
+      parsePrereq(resolved, nTasks, i, 'task prereq', groupSet, regionSet, null, null, fieldScopes),
+      'task prereq', `task ${i + 1}`));
   });
   itemPrereqsRaw.forEach((ipr, i) => {
     if (!ipr) return;
-    const [resolved] = resolveNameRefs(ipr, rawItemNames);
-    attempt(() => {
-      for (const [idx, y] of itemCopyRefs(parsePrereq(resolved, nItems, i, 'item prereq', groupSet))) {
-        if (y > rawItemCounts[idx]) {
-          throw new Error(`Taskipelago: '${idx + 1}*${y}' in item prereq on task ${i + 1} asks for ${y} copies `
-            + `but item ${idx + 1} has a count of ${rawItemCounts[idx]}.`);
-        }
-      }
-    });
+    const [resolved] = resolveScopedNameRefs(ipr, 'item', tasks, rawItemNames);
+    attempt(() => checkItemCopies(
+      parsePrereq(resolved, nItems, i, 'item prereq', groupSet, null, null, null, fieldScopes),
+      'item prereq', `task ${i + 1}`));
   });
   taskCosts.forEach((cost, i) => {
     if (cost) attempt(() => parseCostExpr(cost, consumableSet, rawItemNames), `Task ${i + 1} cost: `);
   });
   if (goalTasksRaw) {
-    const [resolvedGoal, goalNameErrors] = resolveNameRefs(goalTasksRaw, tasks);
+    const [resolvedGoal, goalNameErrors] = resolveScopedNameRefs(goalTasksRaw, 'task', tasks, rawItemNames);
     if (goalNameErrors.length) exprErrors.push('Goal tasks: ' + goalNameErrors.join('; '));
-    else attempt(() => parsePrereq(resolvedGoal, nTasks, 0, 'goal tasks', null, regionSet), 'Goal tasks: ');
+    else {
+      attempt(() => checkItemCopies(
+        parsePrereq(resolvedGoal, nTasks, 0, 'goal tasks', null, regionSet, null, null, fieldScopes),
+        'goal tasks', 'goal tasks'), 'Goal tasks: ');
+    }
   }
   // A region "Depends on" may wrap an ordinary task or item expression in
   // task(...) / item(...); each scope validates in its own index space.
@@ -338,7 +368,11 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   }
 
   if (itemRowExportIdxs.some((idxs, i) => idxs.length !== 1 || idxs[0] !== i + 1)) {
-    itemPrereqsRaw = itemPrereqsRaw.map(t => remapPrereqIndices(t, itemRowExportIdxs));
+    const remapItems = inner => remapPrereqIndices(inner, itemRowExportIdxs);
+    itemPrereqsRaw = itemPrereqsRaw.map(t => mapScopedText(t, null, remapItems, 'item'));
+    // Task prereqs and the goal hold item indices only inside item(...).
+    for (let i = 0; i < taskPrereqs.length; i++) taskPrereqs[i] = mapScopedText(taskPrereqs[i], null, remapItems);
+    goalTasksExport = mapScopedText(goalTasksExport, null, remapItems);
     taskCosts = taskCosts.map(t => remapCostIndices(t, itemRowExportIdxs));
     // Only the item(...) scope of a region "Depends on" holds item indices.
     regionPrereqs = regionPrereqs.map(t =>
@@ -409,7 +443,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       lock_prereqs: !!model.lockPrereqs,
       hide_unreachable_tasks: !!model.hideUnreachable,
       task_reward_previews: model.taskRewardPreviews,
-      goal_tasks: goalTasksRaw ? [goalTasksRaw] : [],
+      goal_tasks: goalTasksExport ? [goalTasksExport] : [],
 
       death_link_pool: deathLinkPool,
       death_link_weights: deathLinkWeights,

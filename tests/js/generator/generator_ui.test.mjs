@@ -401,9 +401,10 @@ test('tutorial shows the legacy steps plus the hosted/launcher and v1.1 steps', 
   button(root(), 'Tutorial').click();
   const panel = doc.querySelector('.tutorial-panel');
   assert.ok(panel);
-  assert.equal(STEPS.length, 30);
+  assert.equal(STEPS.length, 31);
   const titles = STEPS.map(s => s[0]);
   const after = (a, b) => assert.equal(titles.indexOf(b), titles.indexOf(a) + 1, `${b} follows ${a}`);
+  after('Item Requirements (Item Prereqs column)', 'Mixing Tasks and Items');
   after('Regions', 'Region Dependencies');
   after('Region Dependencies', 'Randomized Regions and Dependencies');
   after('Item Groups (Progressive, Random-Choice, Aesthetic)', 'Group Types, Keep and Default %');
@@ -415,9 +416,9 @@ test('tutorial shows the legacy steps plus the hosted/launcher and v1.1 steps', 
   after('Clicker Mode (Tasclickpelago)', 'Clicker Values and Constants');
   after('While Playing: Hints and Item Filters', 'Hosted Page and Launcher Client');
   assert.match(panel.textContent, /Welcome to the YAML Generator/);
-  assert.match(panel.textContent, /Step 1 of 30/);
+  assert.match(panel.textContent, /Step 1 of 31/);
   after('DeathLink Task Cards and Lock', 'Slot Colors');
-  for (let i = 0; i < 28; i++) button(panel, 'Next >').click();
+  for (let i = 0; i < 29; i++) button(panel, 'Next >').click();
   assert.match(panel.textContent, /Hosted Page and Launcher Client/);
   button(panel, 'Next >').click();
   assert.match(panel.textContent, /Export, Import, and Reset/);

@@ -1650,6 +1650,405 @@
     }
    },
    "text": "task(chores) || (item(2) && side-quests-25)"
+  },
+  {
+   "kind": "prereq",
+   "label": "task prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(1) || 2"
+  },
+  {
+   "kind": "prereq",
+   "label": "task prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "prev || item(weapons*2)"
+  },
+  {
+   "kind": "prereq",
+   "label": "task prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(3*2) || task(chores)"
+  },
+  {
+   "kind": "prereq",
+   "label": "task prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(9)"
+  },
+  {
+   "kind": "prereq",
+   "label": "task prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(weapons) && task(2 || item(1))"
+  },
+  {
+   "kind": "prereq",
+   "label": "task prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "task(prev)"
+  },
+  {
+   "kind": "prereq",
+   "label": "task prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(chores)"
+  },
+  {
+   "kind": "prereq",
+   "label": "item prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "1 || task(2)",
+   "groups": [
+    "weapons",
+    "armor_set",
+    "shared"
+   ],
+   "regions": null
+  },
+  {
+   "kind": "prereq",
+   "label": "item prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "weapons-2 || task(chores-50)",
+   "groups": [
+    "weapons",
+    "armor_set",
+    "shared"
+   ],
+   "regions": null
+  },
+  {
+   "kind": "prereq",
+   "label": "item prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "task(11)",
+   "groups": [
+    "weapons",
+    "armor_set",
+    "shared"
+   ],
+   "regions": null
+  },
+  {
+   "kind": "prereq",
+   "label": "goal_tasks",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(1) || 3",
+   "location_label": "goal_tasks",
+   "groups": null
+  },
+  {
+   "kind": "prereq",
+   "label": "goal_tasks",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "item(1 ||",
+   "location_label": "goal_tasks",
+   "groups": null
+  },
+  {
+   "kind": "prereq",
+   "label": "task prereq",
+   "scopes": {
+    "task": {
+     "n": 10,
+     "groups": null,
+     "regions": [
+      "chores",
+      "side-quests",
+      "shared"
+     ],
+     "const": 10,
+     "label": "task(...) scope"
+    },
+    "item": {
+     "n": 8,
+     "groups": [
+      "weapons",
+      "armor_set",
+      "shared"
+     ],
+     "regions": null,
+     "const": 10,
+     "label": "item(...) scope"
+    }
+   },
+   "text": "task (1)"
   }
  ]
 }

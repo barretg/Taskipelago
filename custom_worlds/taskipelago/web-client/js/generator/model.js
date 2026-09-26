@@ -26,8 +26,11 @@ export const DEATHLINK_LOCK_TIP = 'When on, a pending DeathLink task card locks 
 export const REWARD_TYPE_VALUES = ['junk', 'useful', 'progression', 'trap'];
 export const DEFAULT_REWARD_TYPE = 'useful';
 export const PREVIEWS_PURCHASABLE_TIP = 'When on, reward previews (scout or hint) only apply to tasks '
-  + 'that have a cost, shown once the purchase is in logic.';
-export const TASK_REWARD_PREVIEW_LABELS = ['No Previews', 'Scout Previews', 'Hint Previews'];
+  + 'that have a cost, shown once the purchase is in logic. With Filler Scout or Filler Hint, '
+  + 'filler items are only assigned tasks that have a cost.';
+export const TASK_REWARD_PREVIEW_LABELS = [
+  'No Previews', 'Scout Previews', 'Hint Previews', 'Filler Scout', 'Filler Hint',
+];
 
 // Clicker mode (Tasclickpelago). These fields ride along on the normal model and
 // are only exported when model.clickerMode is on, so a slot stays a plain
@@ -472,26 +475,45 @@ export function renameProgGroup(model, oldName, rawNew) {
 // Name references in expressions (v1.1 F4). kind is 'region' or 'group'.
 // ---------------------------------------------------------------------------
 
-/** [object, key] pairs of every expression field that can name a region or group. */
+/**
+ * [object, key, home] for every expression field that can name a region or
+ * group. home is the field's own domain: a group lives in the item domain and a
+ * region in the task domain, so an item(...) scope can name a group and a
+ * task(...) scope a region in any prereq field.
+ */
 export function nameRefFields(model, kind) {
-  // A region's item(...) scope can name a progressive group, so region "Depends on"
-  // is a group reference site as well as a region one.
-  if (kind === 'group') {
-    return [...model.tasks.map(t => [t, 'itemPrereq']), ...model.regions.map(r => [r, 'prereq'])];
-  }
-  return [...model.tasks.map(t => [t, 'prereq']), ...model.regions.map(r => [r, 'prereq']), [model, 'goalTasks']];
+  return [
+    ...model.tasks.map(t => [t, 'prereq', 'task']), ...model.tasks.map(t => [t, 'itemPrereq', 'item']),
+    ...model.regions.map(r => [r, 'prereq', null]), [model, 'goalTasks', 'task'],
+  ];
+}
+
+/** renameNameRefs limited to the domain that holds `kind` names. */
+function renameInDomain(text, kind, home, oldName, newName) {
+  let count = 0;
+  const fn = t => {
+    const res = renameNameRefs(t, oldName, newName);
+    count += res.count;
+    return res.text;
+  };
+  // Region "Depends on" names regions outside its scopes too.
+  const out = kind === 'group'
+    ? mapScopedText(text, null, fn, home)
+    : mapScopedText(text, fn, null, home ?? 'task');
+  return { text: out, count };
 }
 
 /** Number of expression fields that reference name. */
 export function countNameRefFields(model, kind, name) {
-  return nameRefFields(model, kind).filter(([obj, key]) => renameNameRefs(obj[key], name, name).count > 0).length;
+  return nameRefFields(model, kind)
+    .filter(([obj, key, home]) => renameInDomain(obj[key], kind, home, name, name).count > 0).length;
 }
 
 /** Rewrite name references in place; returns the number of fields changed. */
 export function rewriteNameRefs(model, kind, oldName, newName) {
   let fields = 0;
-  for (const [obj, key] of nameRefFields(model, kind)) {
-    const { text, count } = renameNameRefs(obj[key], oldName, newName);
+  for (const [obj, key, home] of nameRefFields(model, kind)) {
+    const { text, count } = renameInDomain(obj[key], kind, home, oldName, newName);
     if (count) {
       obj[key] = text;
       fields++;
@@ -533,16 +555,22 @@ function remapRowRefs(model, kind, indexMap) {
     if (text !== obj[key]) { obj[key] = text; changed++; }
   };
   const prereq = text => remapPrereqIndices(text, indexMap, false);
+  // Each field's own domain holds index refs outside task(...) / item(...);
+  // a region "Depends on" holds them only inside a scope.
   if (kind === 'tasks') {
-    for (const t of model.tasks) set(t, 'prereq', prereq(t.prereq));
-    set(model, 'goalTasks', prereq(model.goalTasks));
-    // Only the task(...) scope of a region "Depends on" holds task indices.
+    for (const t of model.tasks) {
+      set(t, 'prereq', mapScopedText(t.prereq, prereq, null, 'task'));
+      set(t, 'itemPrereq', mapScopedText(t.itemPrereq, prereq, null, 'item'));
+    }
+    set(model, 'goalTasks', mapScopedText(model.goalTasks, prereq, null, 'task'));
     for (const r of model.regions) set(r, 'prereq', mapScopedText(r.prereq, prereq, null));
   } else {
     for (const t of model.tasks) {
-      set(t, 'itemPrereq', prereq(t.itemPrereq));
+      set(t, 'prereq', mapScopedText(t.prereq, null, prereq, 'task'));
+      set(t, 'itemPrereq', mapScopedText(t.itemPrereq, null, prereq, 'item'));
       set(t, 'cost', remapCostIndices(t.cost, indexMap));
     }
+    set(model, 'goalTasks', mapScopedText(model.goalTasks, null, prereq, 'task'));
     for (const r of model.regions) set(r, 'prereq', mapScopedText(r.prereq, null, prereq));
   }
   return changed;
