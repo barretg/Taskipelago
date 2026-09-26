@@ -258,11 +258,13 @@ button:disabled {
 @media (min-width: 768px) {
   .tasks-panel .scroll-area,
   .tasks-panel .bingo-wrapper { flex: 1; overflow-y: auto; }
+  .tasks-panel .clicker-wrapper { flex: 1; overflow-y: auto; }
 }
 
 @media (max-width: 767px) {
   .tasks-panel .scroll-area,
   .tasks-panel .bingo-wrapper { max-height: 55vh; overflow-y: auto; }
+  .tasks-panel .clicker-wrapper { max-height: 55vh; overflow-y: auto; }
 }
 
 /* =============================================================
@@ -298,6 +300,32 @@ button:disabled {
   gap: 8px;
   padding: 2px 8px 3px;
   font-size: 12px;
+}
+
+.region-progress-caret {
+  width: 12px;
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 9px;
+  text-align: center;
+  user-select: none;
+}
+
+.region-progress-row.has-subregions {
+  cursor: pointer;
+}
+
+.region-progress-row.has-subregions:hover .region-progress-name {
+  color: var(--fg);
+}
+
+.region-progress-sub .region-progress-name {
+  padding-left: 12px;
+  color: var(--muted);
+}
+
+.region-progress-sub .region-progress-bar-outer {
+  height: 7px;
 }
 
 .region-progress-name {
@@ -392,6 +420,7 @@ button:disabled {
   flex-shrink: 0;
   align-self: center;
 }
+.clicker-card .task-reward-preview { white-space: normal; align-self: auto; }
 
 /* =============================================================
    Bingo board
@@ -448,6 +477,139 @@ button:disabled {
   padding: 2px 8px;
   flex-shrink: 0;
 }
+
+/* =============================================================
+   Tasclickpelago board
+   ============================================================= */
+.clicker-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.clicker-header {
+  padding: 5px 4px 3px;
+  font-size: 12px;
+  color: var(--muted);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.clicker-header-line { line-height: 1.3; }
+
+.clicker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
+  padding: 4px 2px;
+  flex: 1;
+  align-content: start;
+}
+
+.clicker-manual {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 4px;
+}
+
+.clicker-manual-title {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 2px 4px 4px;
+}
+
+.clicker-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 7px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.clicker-card.is-done   { opacity: 0.6; }
+.clicker-card.is-locked { opacity: 0.75; }
+
+.clicker-name {
+  font-size: 13px;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.clicker-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.clicker-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--accent, #5c8de0);
+  transition: width 120ms linear;
+}
+
+.clicker-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.clicker-stats > span {
+  white-space: nowrap;
+}
+
+/* The click value sits with the rate: both are per task now. */
+.clicker-click-value {
+  color: var(--accent, #5c8de0);
+}
+
+/* Grants aimed at this task in particular, rather than at every task. */
+.clicker-detail {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.clicker-detail:empty {
+  display: none;
+}
+
+.clicker-hint {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.25;
+}
+
+.clicker-click-btn {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.clicker-card.is-ready { border-color: var(--accent, #5c8de0); }
+
+/* Purchase / Make Change on a cost-locked card. */
+.clicker-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.clicker-actions button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.clicker-cost { color: var(--accent, #5c8de0); }
 
 /* =============================================================
    Side panel (sub-tabs)
@@ -897,6 +1059,17 @@ button.primary { border-color: var(--accent); }
   grid-template-columns: 70px minmax(220px, 3fr) 120px 76px 112px minmax(120px, 1fr) 64px 76px;
 }
 
+/* Clicker mode grows both tables by its own columns. */
+.gen-task-table.clicker .gt-row {
+  grid-template-columns: 70px minmax(200px, 3fr) minmax(140px, 2fr) minmax(120px, 2fr) minmax(110px, 2fr) minmax(100px, 1.4fr) 40px 64px minmax(150px, 1.6fr) 56px 56px 76px;
+}
+
+.gen-item-table.clicker .gt-row {
+  grid-template-columns: 70px minmax(180px, 2.4fr) 110px 76px 112px minmax(110px, 1fr) 64px minmax(170px, 1.4fr) minmax(90px, 1fr) minmax(150px, 1.6fr) 76px;
+}
+
+.region-row .region-offline { width: 72px; }
+
 .gt-cell { min-width: 0; font-size: 13px; }
 .gt-cell > input[type="text"], .gt-cell > select { width: 100%; }
 .gt-head { font-size: 12px; color: var(--fg); }
@@ -951,11 +1124,21 @@ button.primary { border-color: var(--accent); }
   font-size: 13px;
 }
 .region-head { font-size: 12px; }
+.region-head .col-num { width: 70px; }
+.region-row > .row-num-cell { width: 70px; }
 .region-head .col-color { width: 40px; }
 .region-head .col-name { width: 160px; }
 .region-head .col-pct { width: 64px; }
 .region-name { width: 160px; }
 .region-prereq { width: 200px; }
+.region-head .col-prereq { width: 200px; }
+.region-head .col-parent { width: 140px; }
+.region-parent { width: 140px; }
+.region-head .col-random { width: 110px; }
+.region-head .col-pick { width: 64px; }
+.region-head .col-order { width: 130px; }
+.region-random { gap: 4px; }
+.region-pick, .group-pick, .group-pct { width: 64px; }
 .empty-note { font-size: 13px; }
 
 .color-swatch {
@@ -977,6 +1160,23 @@ button.primary { border-color: var(--accent); }
 .hex-input { width: 100px; }
 .color-hex-row input[type="color"] { width: 36px; height: 28px; padding: 0; border: 1px solid var(--border); background: none; }
 .color-preview { width: 40px; height: 24px; border: 1px solid var(--border); border-radius: 3px; }
+
+/* Style section (F7): one color picker per themable CSS variable. */
+.style-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 6px 16px;
+  margin: 6px 0;
+}
+.style-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.style-row-label { flex: 1 1 auto; min-width: 0; }
+.style-color-native {
+  width: 36px; height: 26px; padding: 0;
+  border: 1px solid var(--border); background: none; flex-shrink: 0;
+}
+.style-row .hex-input { width: 90px; flex-shrink: 0; }
+.style-row-default { flex-shrink: 0; font-size: 12px; padding: 2px 8px; }
+.style-row-default:disabled { opacity: 0.4; cursor: default; }
 
 .dl-table { display: flex; flex-direction: column; gap: 4px; }
 .dl-row {
@@ -1010,7 +1210,7 @@ button.primary { border-color: var(--accent); }
   .region-row:not(.region-head) { padding-bottom: 6px; border-bottom: 1px solid var(--border); }
   .bingo-columns { grid-template-columns: 1fr; }
   .gen-namebar #gen-player-name { width: 100%; }
-  .region-name, .region-prereq { width: 100%; }
+  .region-name, .region-prereq, .region-parent { width: 100%; }
 }
 
 /* =============================================================
@@ -1156,3 +1356,55 @@ button.primary { border-color: var(--accent); }
    Utility
    ============================================================= */
 .hidden { display: none !important; }
+
+/* Tasclickpelago generator tab */
+.clicker-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.clicker-table th {
+  text-align: left;
+  font-weight: normal;
+  color: var(--muted);
+  padding: 2px 4px;
+  white-space: nowrap;
+}
+
+.clicker-table td {
+  padding: 2px 4px;
+  vertical-align: top;
+}
+
+.clicker-table .clicker-num { color: var(--muted); padding-top: 6px; }
+.clicker-table .clicker-check { text-align: center; padding-top: 6px; }
+.clicker-cell { width: 100%; min-width: 70px; box-sizing: border-box; }
+
+.clicker-expr { display: flex; flex-direction: column; gap: 1px; }
+.clicker-preview { font-size: 10px; color: var(--muted); }
+.clicker-preview.is-error { color: #e05c5c; }
+
+.clicker-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+}
+
+.clicker-constants { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.clicker-constants .chip { font-size: 10px; padding: 1px 5px; }
+
+.clicker-row-btns { display: flex; gap: 2px; }
+.clicker-row-btns button { padding: 1px 6px; }
+
+.clicker-warnings { display: flex; flex-direction: column; gap: 2px; }
+.gen-warning { font-size: 11px; color: #e0b45c; }
+
+.clicker-intro {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+  white-space: pre-wrap;
+}

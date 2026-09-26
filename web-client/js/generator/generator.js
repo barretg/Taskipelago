@@ -4,14 +4,15 @@ import * as storage from '../shared/storage.js';
 import { $, h } from '../shared/dom.js';
 import { alertDialog, confirmDialog } from '../shared/dialog.js';
 import { downloadText, pickTextFile, safeFileName } from '../shared/files.js';
-import { PyError } from '../shared/pyish.js';
+import { PyError, pyInt } from '../shared/pyish.js';
 import { tipHeader } from '../shared/tooltip.js';
 import { getUiPref, setUiPref } from '../shared/ui_prefs.js';
 import { dumpYaml, loadYaml } from '../shared/yaml11.js';
 import { TIPS } from './legacy_text.js';
 import {
-  DEATHLINK_LOCK_TIP, MAX_PLAYER_NAME_LEN, TASK_REWARD_PREVIEW_LABELS, defaultModel, limitPlayerName, normalizeModel, slotCounts,
+  DEATHLINK_LOCK_TIP, PREVIEWS_PURCHASABLE_TIP, MAX_PLAYER_NAME_LEN, TASK_REWARD_PREVIEW_LABELS, defaultModel, limitPlayerName, normalizeModel, slotCounts,
 } from './model.js';
+import { finalCounts, usesRandomization } from './randomize_check.js';
 import { buildExport } from './yaml_export.js';
 import { importDoc } from './yaml_import.js';
 import { addTask, renderTaskTable } from './task_rows.js';
@@ -23,10 +24,25 @@ import { openTutorial } from './tutorial.js';
 import { openCommunityYamls } from './community.js';
 import { reorderUpdatesRefs, setReorderUpdatesRefs } from './reorder.js';
 import { openFindReplace } from './find_replace.js';
+import { STYLE_SECTION_TIP, renderStyleColors, resetStyleColors } from './style_section.js';
+import { curveFill, offlineExample } from './clicker_fields.js';
+import { TIPS as CLICKER_TIPS } from './clicker_cells.js';
 
 export const DRAFT_KEY = 'taskipelago_draft_generator';
 const SAVE_DELAY_MS = 400;
-const SECTION_DEFAULTS = { regions: false, tasks: true, items: true, deathlink: false };
+const SECTION_DEFAULTS = {
+  regions: false, tasks: true, items: true, clicker: false, deathlink: false, style: false,
+};
+
+const GLOBAL_SPLIT_TIP = 'Split a rate aimed at * evenly among the eligible tasks, instead of '
+  + 'granting it in full to each of them.';
+
+const CLICKER_TIP = 'Tasclickpelago: each task needs a number of activations instead of one '
+  + 'Complete press. Clicking adds your click value, and items you receive can add activations per '
+  + 'second on their own.\n\n'
+  + 'Turning this on adds the clicker columns to the task and item tables and the Clicker section '
+  + 'below. Everything else on this tab keeps working the same way, and turning it off again '
+  + 'exports a plain Taskipelago YAML.';
 
 const ctx = { model: defaultModel(), changed, root: null, openSection };
 const els = {};
@@ -44,6 +60,8 @@ function changed(parts = {}, { save = true } = {}) {
   if (parts.regions) renderRegions(els.regions, ctx);
   if (parts.groups) renderProgGroups(els.groups, ctx);
   if (parts.deathlink) renderDeathLinkTable(els.deathlink, ctx);
+  if (parts.style) renderStyleColors(els.style, styleOpts());
+  if (parts.clicker) syncClicker();
   if (parts.goal) els.goalTasks.value = ctx.model.goalTasks;
   updateCounter();
   if (parts.focusLast) {
@@ -56,9 +74,33 @@ function changed(parts = {}, { save = true } = {}) {
 }
 
 function updateCounter() {
-  const { tasks, items } = slotCounts(ctx.model);
+  const { tasks, items } = counterCounts(ctx.model);
   els.counter.textContent = `${items}/${tasks} items`;
   els.counter.classList.toggle('warning-text', items !== tasks);
+}
+
+/** Slot counts for the header; per-seed final counts when regions or groups are randomized. */
+function counterCounts(model) {
+  const used = usesRandomization(model);
+  if (!used.regions && !used.groups) return slotCounts(model);
+  const count = r => { try { return Math.max(1, pyInt(r.count)); } catch (_) { return 1; } };
+  return finalCounts(
+    model,
+    model.tasks.map(t => ({ count: count(t), region: t.region })),
+    model.items.map(it => ({ count: count(it), group: it.progGroup, filler: !!it.filler })),
+  );
+}
+
+/** Reflect clicker mode: the section only exists while the mode is on. */
+function syncClicker() {
+  const on = !!ctx.model.clickerMode;
+  els.clickerToggle.checked = on;
+  els.sections.clicker.classList.toggle('hidden', !on);
+  els.distributeGlobal.checked = !!ctx.model.clickerDistributeGlobal;
+  els.offlineEnabled.checked = !!ctx.model.clickerOffline;
+  els.offlineRate.value = ctx.model.clickerOfflineRate;
+  els.offlineCap.value = ctx.model.clickerOfflineCapHours;
+  els.offlineExample.textContent = offlineExample(ctx.model);
 }
 
 /** Show a whole new model (reset, import, draft restore). Callers save when it is a change. */
@@ -69,13 +111,15 @@ function loadModel(model) {
   els.lockPrereqs.checked = !!m.lockPrereqs;
   els.hideUnreachable.checked = !!m.hideUnreachable;
   els.rewardPreviews.value = String(m.taskRewardPreviews);
+  els.previewsPurchasableOnly.checked = !!m.previewsPurchasableOnly;
   els.goalTasks.value = m.goalTasks;
   els.progression.value = m.progressionBalancing;
   els.accessibility.value = m.accessibility;
   els.deathLinkEnabled.checked = !!m.deathLinkEnabled;
   els.deathLinkLock.checked = !!m.deathLinkLockTasks;
   els.amnesty.value = m.deathLinkAmnesty;
-  changed({ tasks: true, items: true, regions: true, groups: true, deathlink: true }, { save: false });
+  changed({ tasks: true, items: true, regions: true, groups: true, deathlink: true, style: true, clicker: true },
+    { save: false });
 }
 
 // ---------------------------------------------------------------------------
@@ -136,6 +180,16 @@ async function exportYaml() {
   await alertDialog('info', 'Success', `YAML exported as:\n${fileName}`);
 }
 
+async function runCurveFill() {
+  const result = curveFill(ctx.model.tasks, els.curveFirst.value, els.curveGrowth.value);
+  if (result.error) {
+    await alertDialog('error', ...result.error);
+    return;
+  }
+  ctx.model.tasks = result.tasks;
+  changed({ tasks: true });
+}
+
 async function resetGenerator() {
   const ok = await confirmDialog('Reset YAML Generator',
     'Clear every field and start over?\n\nThis cannot be undone. Export first if you want to keep your work.');
@@ -171,6 +225,13 @@ function section(key, title, ...body) {
   return details;
 }
 
+/** Style section wiring: the pickers read and write ctx.model.styleColors. */
+const styleOpts = () => ({
+  get: () => ctx.model.styleColors,
+  set: colors => { ctx.model.styleColors = colors; },
+  onChange: () => changed(),
+});
+
 const setting = (key, parse = v => v) => e => {
   ctx.model[key] = parse(e.target.type === 'checkbox' ? e.target.checked : e.target.value);
   changed();
@@ -193,14 +254,25 @@ function build(root) {
     h('span', { className: 'spacer' }),
     h('label', {
       className: 'check-label',
-      title: 'When on, moving a task or item with the up/down carets also updates index references to it.',
+      title: 'When on, moving a task or item with the up/down carets, or removing one, also updates index references to it and to the rows after it.',
     }, h('input', {
       type: 'checkbox', checked: reorderUpdatesRefs(), id: 'gen-reorder-refs',
       onchange: e => setReorderUpdatesRefs(e.target.checked),
-    }), 'Reordering updates references'),
+    }), 'Moving/removing rows updates references'),
     h('button', { type: 'button', onclick: () => openFindReplace(ctx) }, 'Find/Replace'),
     h('button', { type: 'button', onclick: () => openCommunityYamls(applyDoc) }, 'Community YAMLs'),
     h('button', { type: 'button', onclick: openTutorial }, 'Tutorial'));
+
+  els.clickerToggle = h('input', {
+    type: 'checkbox', id: 'gen-clicker-mode',
+    onchange: e => {
+      ctx.model.clickerMode = e.target.checked;
+      changed({ tasks: true, items: true, regions: true, clicker: true });
+    },
+  });
+  const modeStrip = h('div', { className: 'gen-namebar' },
+    h('label', { className: 'check-label' }, els.clickerToggle,
+      tipHeader('Enable Tasclickpelago', CLICKER_TIP)));
 
   els.regions = h('div', { className: 'region-list' });
   const regions = section('regions', 'Regions', els.regions, buildRegionAddRow(ctx));
@@ -209,6 +281,7 @@ function build(root) {
   els.hideUnreachable = h('input', { type: 'checkbox', onchange: setting('hideUnreachable') });
   els.rewardPreviews = h('select', { onchange: setting('taskRewardPreviews', Number) },
     TASK_REWARD_PREVIEW_LABELS.map((label, i) => h('option', { value: String(i) }, label)));
+  els.previewsPurchasableOnly = h('input', { type: 'checkbox', onchange: setting('previewsPurchasableOnly') });
   els.goalTasks = h('input', {
     type: 'text', spellcheck: false, className: 'goal-input', dataset: { field: 'goalTasks' }, oninput: setting('goalTasks'),
   });
@@ -218,6 +291,8 @@ function build(root) {
       h('label', { className: 'check-label' }, els.lockPrereqs, 'In logic only (lock task completion behind prereqs)'),
       h('label', { className: 'check-label' }, els.hideUnreachable, 'Hide Unreachable Tasks'),
       h('label', { className: 'inline-label' }, tipHeader('Reward Previews:', TIPS.reward_preview), els.rewardPreviews),
+      h('label', { className: 'check-label' }, els.previewsPurchasableOnly,
+        tipHeader('Only preview purchasable', PREVIEWS_PURCHASABLE_TIP)),
       h('label', { className: 'inline-label' }, tipHeader('Goal task(s):', TIPS.goal_tasks), els.goalTasks,
         h('span', { className: 'muted-text' }, '(blank = all)'))),
     h('div', { className: 'gen-table-scroll' }, els.tasks),
@@ -234,7 +309,7 @@ function build(root) {
       h('label', { className: 'inline-label' }, 'Progression Balancing (0-99):', els.progression),
       h('label', { className: 'inline-label' }, 'Accessibility:', els.accessibility),
       els.counter),
-    h('fieldset', { className: 'panel gen-groups' }, h('legend', {}, 'Progressive Groups'), els.groups, buildGroupAddRow(ctx)),
+    h('fieldset', { className: 'panel gen-groups' }, h('legend', {}, 'Item Groups'), els.groups, buildGroupAddRow(ctx)),
     h('div', { className: 'gen-table-scroll' }, els.items),
     h('div', { className: 'btn-row' }, h('button', { type: 'button', onclick: () => addItem(ctx) }, 'Add Item')));
 
@@ -251,13 +326,58 @@ function build(root) {
     els.deathlink,
     h('div', { className: 'btn-row' }, h('button', { type: 'button', onclick: () => addDeathLink(ctx) }, 'Add DeathLink Task')));
 
+  els.curveFirst = h('input', { type: 'text', className: 'count-input', value: '10', spellcheck: false });
+  els.curveGrowth = h('input', { type: 'text', className: 'count-input', value: '1.5', spellcheck: false });
+  els.distributeGlobal = h('input', { type: 'checkbox', onchange: setting('clickerDistributeGlobal') });
+  els.offlineEnabled = h('input', {
+    type: 'checkbox',
+    onchange: e => { ctx.model.clickerOffline = e.target.checked; changed({ clicker: true }); },
+  });
+  els.offlineRate = h('input', {
+    type: 'text', className: 'count-input', spellcheck: false,
+    oninput: e => { ctx.model.clickerOfflineRate = e.target.value; changed({ clicker: true }); },
+  });
+  els.offlineCap = h('input', {
+    type: 'number', min: 0, max: 168, className: 'count-input',
+    oninput: e => { ctx.model.clickerOfflineCapHours = e.target.value; changed({ clicker: true }); },
+  });
+  els.offlineExample = h('div', { className: 'muted-text' });
+  const clicker = section('clicker', 'Clicker',
+    h('div', { className: 'gen-settings' },
+      h('label', { className: 'check-label' }, els.distributeGlobal,
+        tipHeader('Distribute global production', GLOBAL_SPLIT_TIP)),
+      h('label', { className: 'inline-label' }, 'First cost:', els.curveFirst),
+      h('label', { className: 'inline-label' }, 'Growth:', els.curveGrowth),
+      h('button', {
+        type: 'button', onclick: runCurveFill,
+        title: 'Fill the Activations column geometrically: first cost, then multiplied by growth each row.',
+      }, 'Curve Fill')),
+    h('div', { className: 'gen-settings' },
+      h('label', { className: 'check-label' }, els.offlineEnabled, 'Offline production'),
+      h('label', { className: 'inline-label' },
+        tipHeader('Away rate:', CLICKER_TIPS.offlineRate), els.offlineRate),
+      h('label', { className: 'inline-label' }, 'Cap (hours):', els.offlineCap)),
+    els.offlineExample);
+
+  els.style = h('div', { className: 'style-grid' });
+  const style = section('style', 'Style',
+    h('div', { className: 'gen-settings' },
+      tipHeader('Colors applied while connected to this slot', STYLE_SECTION_TIP)),
+    els.style,
+    h('div', { className: 'btn-row' },
+      h('button', {
+        type: 'button', onclick: () => resetStyleColors(els.style, styleOpts()),
+      }, 'Reset Colors')));
+
   const bottom = h('div', { className: 'gen-bottom' },
     h('button', { type: 'button', onclick: resetGenerator }, 'Reset'),
     h('span', { className: 'spacer' }),
     h('button', { type: 'button', onclick: importYaml }, 'Import YAML'),
     h('button', { type: 'button', className: 'primary', onclick: exportYaml }, 'Export YAML'));
 
-  root.replaceChildren(h('div', { className: 'gen-scroll' }, nameStrip, regions, tasks, items, deathlink), bottom);
+  root.replaceChildren(
+    h('div', { className: 'gen-scroll' }, nameStrip, modeStrip, regions, tasks, items, clicker, deathlink, style),
+    bottom);
 }
 
 export function initGenerator(root = $('generator-root')) {

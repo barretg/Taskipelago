@@ -32,27 +32,61 @@ export const state = {
   sentItemNames: [],
   sentPlayerNames: [],
   taskRewardPreviews: 0,
+  previewsPurchasableOnly: false, // slot_data task_reward_previews_purchasable_only
+  fillerPreviewTargets: [],     // slot_data filler_preview_targets: reward index -> task index (-1 none)
   progressiveGroups: [],
   progressiveGroupColors: [],  // v1.1 F6, parallel to progressiveGroups
+  groupTypes: [],              // parallel to progressiveGroups; missing = progressive
   itemFillers: null,           // v1.1 F7, expanded item_fillers; null for older seeds
   rewardProgressiveGroup: [],
   taskProgressiveReqs: [],
   taskCostAmounts: [],
+  taskCostReqs: [],            // cumulative AP cost thresholds; [] for older seeds
   itemConsumable: [],
   regions: [],
   regionColors: [],
+  regionParent: {},            // subregion name -> parent region name
+  regionRollup: false,         // region refs to a parent also count its subregions' tasks
   taskRegion: [],
   taskRegionReqs: [],
+  regionRefsInline: false,     // newer seeds: region refs evaluated inside prereq/goal text
+  taskInheritedRegionReqs: [], // with regionRefsInline: reqs inherited from the task's region
+  // Region name -> resolved "Depends on" expression, only for regions that use
+  // a task(...) / item(...) scope; plain region deps still ride taskRegionReqs.
+  regionPrereqExprs: {},
   taskDescriptions: [],
   bingoMode: false,
   bingoDimX: 5,
   bingoDimY: 5,
   bingoal: 3,
 
+  // Tasclickpelago (clicker mode). Absent slot_data keys leave clickerMode off,
+  // so an older seed behaves exactly as before.
+  clickerMode: false,
+  taskActivations: [],         // ints, parallel to tasks
+  taskManual: [],              // bools, parallel to tasks: a normal task row, never clickable
+  taskAutoComplete: null,      // bools, parallel to tasks; null (an older seed) auto-completes all
+  // Every grant kind carries a target, so each entry is a list of resolved
+  // specs. A pre-targeting seed sends one bare value per item, which
+  // connection.js normalizes to a single '*' spec.
+  itemProduction: [],          // parallel to items: resolved target specs
+  itemClickPower: [],          // parallel to items: resolved target specs
+  itemProductionMult: [],      // parallel to items: resolved target specs
+  itemClickMult: [],           // parallel to items: resolved target specs
+  itemOfflineMult: [],         // parallel to items: resolved target specs
+  regionDistributed: {},       // region name -> bool
+  clickerDistributeGlobal: false,
+  clickerOffline: true,
+  clickerOfflineRate: 1,       // number | AST
+  regionOfflineRate: {},       // region name -> number | AST
+  clickerOfflineCapHours: 8,
+
   // Runtime
   checkedLocations: new Set(), // combined server + optimistic
   pendingLocations: new Set(), // optimistic (not yet confirmed by server)
   taskPurchases: {},           // taskIdx -> {name: amount}
+  clickerProgress: {},         // taskIdx -> float activations accrued
+  clickerLastTick: 0,          // ms epoch of the last accrual write
   manualConsumptions: {},      // name -> count of manually consumed units
   hintRequestedIndices: new Set(), // task indices already hinted this session
   notifications: [],           // [{kind, title, body, createdAt}]
@@ -96,6 +130,12 @@ export const els = {
   bingoSection:  $('bingo-section'),
   bingoCounter:  $('bingo-counter'),
   bingoGrid:     $('bingo-grid'),
+
+  clickerSection: $('clicker-section'),
+  clickerHeader:  $('clicker-header'),
+  clickerGrid:    $('clicker-grid'),
+  clickerManual:     $('clicker-manual'),
+  clickerManualList: $('clicker-manual-list'),
 
   notifList:     $('notif-list'),
   clearNotifsBtn:$('clear-notifs-btn'),

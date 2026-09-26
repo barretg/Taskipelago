@@ -18,13 +18,115 @@ const HOSTED_VS_LAUNCHER = [
   + 'from the Archipelago Launcher.',
 ];
 
+const GROUPS_TITLE = 'Item Groups (Progressive, Random-Choice, Aesthetic)';
+
+const MIXED_PREREQS = [
+  'Mixing Tasks and Items',
+  'Task Prereqs, Item Prereqs and Goal Tasks can each borrow the other kind of reference '
+  + 'by wrapping it in task( ... ) or item( ... ). Whatever goes inside the parentheses is an '
+  + 'ordinary Task Prereq or Item Prereq expression, which is how you write an OR across '
+  + 'tasks and items:\n'
+  + '  Task Prereqs:  item(4) || 2          item 4 received OR task 2 completed\n'
+  + '  Task Prereqs:  item(keys*3) || 7     3 items from group keys OR task 7\n'
+  + '  Item Prereqs:  1 || task(3)          item 1 received OR task 3 completed\n'
+  + '  Item Prereqs:  2 && task(caves-50)   item 2 AND half of region caves\n'
+  + '  Goal Tasks:    item("Crown") || 10   the Crown received OR task 10 completed\n'
+  + 'Quoted names inside task( ... ) are task names and inside item( ... ) item names. '
+  + 'Wrapping a field in its own kind (task( ... ) in Task Prereqs) changes nothing.\n\n'
+  + 'Inside item( ... ) in Task Prereqs or Goal Tasks, a progressive group must use count '
+  + "mode (keys*3), never ordering mode (keys or keys-2). 'prev' and 'sequential' only work "
+  + 'outside a wrapper in Task Prereqs. As everywhere else, tasks in a randomized region and '
+  + 'items in a random-choice group can only be referenced through the region or group, and '
+  + 'a task may not depend on itself through either field.',
+];
+
 // v1.1 steps, each inserted after the legacy step with the given title.
 const V11_STEPS = [
-  ['Progressive Groups', [
+  ['Item Requirements (Item Prereqs column)', MIXED_PREREQS],
+  ['Regions', [
+    'Region Dependencies',
+    "Each region row has a 'Depends on' field: an expression that gates every task in that "
+    + 'region. It is added to each of the region\'s tasks on top of that task\'s own Task Prereqs, '
+    + 'so none of them unlock until it is met.\n\n'
+    + 'Only whole regions may be named:\n'
+    + '  intro             intro\'s default % of its tasks done\n'
+    + '  intro-75          75% of intro\'s tasks done\n'
+    + '  intro*5           5 tasks in intro done\n'
+    + 'Combine them with &&, || and parentheses: intro && (caves || cliffs).\n\n'
+    + 'To gate the region on one specific task or item, wrap it in task( ... ) or item( ... ). '
+    + 'Whatever goes inside the parentheses is an ordinary Task Prereq or Item Prereq '
+    + 'expression:\n'
+    + '  task(3)                   task 3 completed\n'
+    + '  task("Do the dishes")     that named task completed\n'
+    + '  task(1 || 2)              task 1 or task 2 completed\n'
+    + '  task(caves-50)            region refs work inside task( ... ) too\n'
+    + '  item(4)                   item 4 received\n'
+    + '  item("Blue Key")          that named item received\n'
+    + '  item(keys*3)              3 items from progressive group keys\n'
+    + 'Mix the two freely with the rest of the expression: '
+    + 'task(3) && (item("Blue Key") || caves-50).\n\n'
+    + 'Inside task( ... ) you may use task numbers, quoted task names and region refs. '
+    + 'Inside item( ... ) you may use item numbers, quoted item names and group counts '
+    + '(keys*3). A progressive group must use count mode here, never ordering mode '
+    + '(keys or keys-2), because an ordering position belongs to a single task. '
+    + "'prev' and 'sequential' are never allowed in a region dependency. "
+    + 'A consumable currency item cannot be named at all, since it is spent on task '
+    + 'costs and so cannot stably gate a region.\n\n'
+    + 'A region cannot depend on itself or on a task inside itself, the region it names must '
+    + 'have at least one task assigned, and cycles between regions (a depends on b, b depends '
+    + 'on a) are an error. Leave the field blank for a region with no gate.\n\n'
+    + 'Renaming or removing a region that other regions depend on asks what to do with those '
+    + 'expressions, the same as for Task Prereqs.',
+  ]],
+  ['Regions', [
+    'Randomized Regions and Dependencies',
+    'A randomized region keeps only some of its tasks in each seed, so references into it '
+    + 'follow stricter rules.\n\n'
+    + 'Allowed:\n'
+    + '  chores            default % of the kept tasks done\n'
+    + '  chores-75         75% of the kept tasks done\n'
+    + '  chores*5          5 of the kept tasks done (at most the Keep value)\n'
+    + 'Tasks inside a randomized region may depend on tasks in normal regions.\n\n'
+    + 'Not allowed: referencing an individual task in or from inside a randomized region, by '
+    + "number, quoted name, 'prev' or 'sequential'. Reference the region as a whole instead. "
+    + "That includes a region dependency's task( ... ), and item( ... ) may not name an "
+    + 'individual item inside a random-choice group.\n\n'
+    + 'Goal Tasks may name individual tasks in a randomized region. Generation guarantees at least '
+    + 'one way to meet the goal: with 4 || 10, at least one of tasks 4 and 10 is kept. Export '
+    + 'fails if no way to meet the goal fits within the Keep values.\n\n'
+    + 'Task numbers are renumbered in the final seed, so the numbers seen while playing differ '
+    + 'from the generator.\n\n'
+    + 'Shuffle order (per region, off by default): with it off, the kept tasks stay in the order '
+    + 'they have in the task list. Check it to shuffle the order of that region\'s kept tasks in '
+    + 'each seed. It only applies to regions with Randomize checked.',
+  ]],
+  [GROUPS_TITLE, [
+    'Group Types, Keep and Default %',
+    'Each group row has a Type:\n'
+    + '  progressive     items are interchangeable; power-2 is the 2nd position, power*2 is any\n'
+    + '                  2 items (the original behavior)\n'
+    + '  random-choice   each seed keeps only some of the items; the rest are removed\n'
+    + '  aesthetic       color and inventory grouping only\n'
+    + 'Items in random-choice and aesthetic groups are normal, distinct items.\n\n'
+    + 'Keep (random-choice only): N or N% of the items to keep per seed. Percent rounds up, with '
+    + 'a minimum of 1. Blank keeps every item.\n\n'
+    + 'Default %: the share of the group required by a bare group reference. Blank on a '
+    + 'progressive group keeps the original behavior (fills the lowest unused position). Blank on '
+    + 'other types means 100%.\n\n'
+    + 'Item Prereqs for random-choice and aesthetic groups:\n'
+    + '  gems              default % of the group\n'
+    + '  gems-50           any 50% of the group\n'
+    + '  gems*2            any 2 items from the group\n'
+    + 'For random-choice groups these count only the kept items, and items inside the group '
+    + 'cannot be referenced individually.\n\n'
+    + 'Progressive group items are always Progression. Random-choice and aesthetic items are '
+    + 'Progression only when an Item Prereq references them or their group.',
+  ]],
+  [GROUPS_TITLE, [
     'Group Colors and Renaming',
-    'Each progressive group gets a color from the same palette as regions. Click the swatch on a '
+    'Each item group gets a color from the same palette as regions. Click the swatch on a '
     + "group's row to change it. In the client's Items tab, received items are grouped under their "
-    + 'progressive group and marked with its color.\n\n'
+    + 'item group and marked with its color.\n\n'
     + 'Region and group names can be edited inline. Names must start with a letter or underscore and '
     + 'cannot contain digits, spaces, quotes, parentheses, commas, && or ||.\n\n'
     + 'When you rename a region or group that expressions already use (Task Prereqs, Item Prereqs, '
@@ -36,13 +138,18 @@ const V11_STEPS = [
     + 'will fail to export.',
   ]],
   ['Item Count and Item Settings', [
-    'Reordering Tasks and Items',
-    'Use the ^ and v buttons next to a row number to move a task or item up or down.\n\n'
-    + 'With "Reordering updates references" checked (in the bar at the top of the generator), '
-    + 'numbered references follow the moved row: task numbers in Task Prereqs and Goal Tasks, and '
-    + 'item numbers in Item Prereqs and Cost. Quoted names never need updating. Uncheck it to move '
-    + 'rows without touching any expression.\n\n'
-    + "'prev' always means the task directly above, so moving a task changes what 'prev' refers to.",
+    'Reordering Rows',
+    'Use the ^ and v buttons next to a row number to move a task, item or region up or down.\n\n'
+    + 'With "Moving/removing rows updates references" checked (in the bar at the top of the '
+    + 'generator, on by default), numbered references follow the moved row: task numbers in Task '
+    + 'Prereqs, Goal Tasks and region Depends on, and item numbers in Item Prereqs and Cost. '
+    + 'Removing a task or item shifts references to the rows below it down by one; references to '
+    + 'the removed row itself become 0 and fail export until fixed, so you are asked first. '
+    + 'Quoted names never need updating. Uncheck it to move or remove rows without touching any '
+    + 'expression.\n\n'
+    + "'prev' always means the task directly above, so moving a task changes what 'prev' refers to.\n\n"
+    + 'Regions are only ever referenced by name, so moving a region row just changes the order '
+    + 'they are listed in.',
   ]],
   ['Item Count and Item Settings', [
     'Find and Replace',
@@ -68,6 +175,64 @@ const V11_STEPS = [
     + 'The client also highlights DeathLink notifications in red and can play a short sound '
     + '("Sound on DeathLink" in the Notifications tab).',
   ]],
+  ['DeathLink (Optional Challenge)', [
+    'Slot Colors',
+    'The Style section sets the colors this client uses while it is connected to the slot made '
+    + 'from this YAML. Pick a color with the swatch or type a hex code; Default puts one row back, '
+    + 'and Reset Colors puts them all back.\n\n'
+    + 'Nothing changes until you connect: disconnecting restores the standard color scheme, and '
+    + 'slots exported without color changes leave it alone. The Taskipelabingo tab has its own '
+    + 'Style panel, including the two bingo board colors.',
+  ]],
+  ['DeathLink (Optional Challenge)', [
+    'Clicker Mode (Tasclickpelago)',
+    'Tick "Enable Tasclickpelago" in the bar at the top of the generator to turn this slot into an '
+    + 'idle/clicker game. Nothing else changes: the same regions, item groups, prereqs, DeathLink '
+    + 'and Style panels all still apply, and a slot stays a normal Taskipelago YAML until the '
+    + 'toggle is on.\n\n'
+    + 'The toggle adds columns to the tables you already have:\n'
+    + '  Tasks   Activations - how many activations finish the task (blank means 1)\n'
+    + '  Items   Grants, Target and Value - what an item does when you receive it\n'
+    + '  Regions Distributed and Offline rate\n\n'
+    + 'Activations come from clicking and from production granted by items. Grants can be:\n'
+    + '  Production (/s)              activations per second\n'
+    + '  Click power (+)              added to the value of one click\n'
+    + '  Production multiplier (x)    scales production only\n'
+    + '  Click multiplier (x)         scales clicks only\n'
+    + '  Offline multiplier (x)       scales what accrues while you are away\n'
+    + '  Unlock only (no effect)      grants nothing; use it as an Item Prereq\n'
+    + 'The two multiplier channels never touch each other, and copies of a multiplier stack '
+    + 'multiplicatively.\n\n'
+    + 'Target applies to every kind but Unlock only, in the usual reference syntax: '
+    + '* for every task, a bare region name, a quoted "Task Name" or a task number, joined with &&. '
+    + 'Click power and both multipliers are per target too, so one item can be a slot-wide upgrade '
+    + '(*) and another a boost for a single task or region. A task\'s click value is '
+    + '(1 + the click power aimed at it) x the click multipliers aimed at it, and the board shows '
+    + 'each card\'s own click value and rate. Nothing can be aimed at a manual task, which is an '
+    + 'ordinary task: export refuses it.\n\n'
+    + 'Distributed (per region) splits that region\'s rate evenly among its eligible tasks instead '
+    + 'of giving each one the full rate, so the region\'s throughput stays constant as tasks '
+    + 'complete. The Clicker section has the same switch for the whole slot, plus offline '
+    + 'production: the away rate, the cap in hours and a worked example.',
+  ]],
+  ['DeathLink (Optional Challenge)', [
+    'Clicker Values and Constants',
+    'Every clicker number can be an expression instead of a plain number: integers, decimals, '
+    + '+ - * / and parentheses over five constants:\n'
+    + '  N_TASKS             total tasks in the slot (fixed when the seed is made)\n'
+    + '  N_TASKS_UNLOCKED    tasks unlocked so far, including completed ones\n'
+    + '  N_TASKS_LOCKED      N_TASKS - N_TASKS_UNLOCKED\n'
+    + '  N_TASKS_COMPLETED   tasks completed so far\n'
+    + '  CPS                 the current click value, after click power and the click multiplier\n\n'
+    + 'The preview beside each cell shows the value at both ends of the curve, with CPS at its base '
+    + 'value of 1. Examples: 0.1 * N_TASKS_UNLOCKED, 1 + 0.02 * N_TASKS, 0.25 * CPS.\n\n'
+    + 'Two rules follow from when each value is decided. Activations are fixed when the seed is '
+    + 'generated, so only N_TASKS is allowed there. CPS is the click value itself, so it cannot be '
+    + 'used in Click power or Click multiplier, which are what define it; use it to price '
+    + 'production in clicks instead.\n\n'
+    + 'Curve Fill in the Clicker section writes the whole Activations column from a first cost and '
+    + 'a growth factor, the usual idle-game pacing. The values stay editable afterwards.',
+  ]],
   [null, [
     'While Playing: Hints and Item Filters',
     'The Hints tab lists every hint for your slot, like the Archipelago text client: who receives '
@@ -75,7 +240,7 @@ const V11_STEPS = [
     + 'items you receive, set the status to Priority, No Priority or Avoid. Use !hint <item> in the '
     + 'Text Console to request a hint.\n\n'
     + 'In the Items tab, Filter hides items by type (Progression, Useful, Junk, Trap, Filler, '
-    + 'Consumable) and by progressive group. The last line shows how many received items are hidden.',
+    + 'Consumable) and by item group. The last line shows how many received items are hidden.',
   ]],
 ];
 

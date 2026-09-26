@@ -6,9 +6,12 @@
 //   taskipelago_notify::<slot>::<seed>     int item index           max; replace on server-restart reset
 //   taskipelago_purchases::<slot>::<seed>  {taskIdx: {name: amt}}   update
 //   taskipelago_deathlink::<slot>::<seed>  {id: entry}              update to add, pop to remove (v1.1 F3)
+//   taskipelago_clicker::<slot>::<seed>    {p:{taskIdx: n}, t: ms}  replace (clicker mode)
 import { ap, state, CLIENT_ID } from '../play/state.js';
 
 const NOTIFY_DEBOUNCE_MS = 1000;
+// Clicker progress moves every tick; writing at tick rate would hammer data storage.
+const CLICKER_DEBOUNCE_MS = 5000;
 
 export function serverKeys(slot = state.slotName, seed = state.seedName) {
   const id = `${slot || ''}::${seed || ''}`;
@@ -17,6 +20,7 @@ export function serverKeys(slot = state.slotName, seed = state.seedName) {
     notify: `taskipelago_notify::${id}`,
     purchases: `taskipelago_purchases::${id}`,
     deathlink: `taskipelago_deathlink::${id}`,
+    clicker: `taskipelago_clicker::${id}`,
   };
 }
 
@@ -44,6 +48,39 @@ export function sanitizeCounts(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return out;
   for (const [k, v] of Object.entries(obj)) if (isCount(v)) out[k] = v;
   return out;
+}
+
+/**
+ * Clicker progress read back from the server: {"p": {taskIdx: activations}, "t": ms}.
+ * Task indices are non-negative integers and activations finite non-negative
+ * numbers; anything else is dropped rather than trusted.
+ */
+export function sanitizeClickerProgress(obj) {
+  const out = { p: {}, t: 0 };
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return out;
+  const p = obj.p;
+  if (p && typeof p === 'object' && !Array.isArray(p)) {
+    for (const [k, v] of Object.entries(p)) {
+      if (!/^\d+$/.test(k)) continue;
+      const n = typeof v === 'number' ? v : NaN;
+      if (Number.isFinite(n) && n >= 0) out.p[Number(k)] = n;
+    }
+  }
+  const t = obj.t;
+  if (typeof t === 'number' && Number.isFinite(t) && t > 0) out.t = t;
+  return out;
+}
+
+/**
+ * Merge a remote clicker value into a local one, taking the max per task so two
+ * open clients cannot roll each other back. The timestamp takes the max too.
+ */
+export function mergeClickerProgress(local, remote) {
+  const a = sanitizeClickerProgress(local);
+  const b = sanitizeClickerProgress(remote);
+  const p = { ...a.p };
+  for (const [k, v] of Object.entries(b.p)) p[k] = Math.max(p[k] ?? 0, v);
+  return { p, t: Math.max(a.t, b.t) };
 }
 
 /** {taskIdx: {name: amount}} with non-negative integer task indices. */
@@ -87,6 +124,29 @@ export function writeDeathLinkMerge(queue) {
 /** v1.1 F3: remove a completed entry. */
 export function writeDeathLinkRemove(id) {
   ap.sendSetOps(serverKeys().deathlink, {}, [{ operation: 'pop', value: id }], false, OWN);
+}
+
+let clickerTimer = null;
+let clickerPending = null; // {key, value}
+
+/**
+ * Queue a clicker progress write. Debounced, and flushed by
+ * flushClickerProgress() on visibilitychange / pagehide so a closing tab does
+ * not lose the last few seconds.
+ */
+export function writeClickerProgress(progress, tickMs) {
+  const key = serverKeys().clicker;
+  if (clickerPending && clickerPending.key !== key) flushClickerProgress();
+  clickerPending = { key, value: sanitizeClickerProgress({ p: progress, t: tickMs }) };
+  if (!clickerTimer) clickerTimer = setTimeout(flushClickerProgress, CLICKER_DEBOUNCE_MS);
+}
+
+export function flushClickerProgress() {
+  if (clickerTimer) { clearTimeout(clickerTimer); clickerTimer = null; }
+  if (!clickerPending) return;
+  const { key, value } = clickerPending;
+  clickerPending = null;
+  ap.sendSetOps(key, { p: {}, t: 0 }, [{ operation: 'replace', value }], false, OWN);
 }
 
 let notifyTimer = null;

@@ -2,7 +2,11 @@ import { splitNameSuffix } from './prereq_parser.js';
 
 // Client-side prereq evaluator (port of legacy_client/client.py _eval_prereq_expr).
 // Unknown input evaluates to true so a bad expression never locks the UI.
-export function evalPrereqExpr(text, leafFn, nameFn) {
+// scopes, when given, enables the region "Depends on" wrappers: a name token
+// that matches a scope key and is followed by '(' swaps leafFn/nameFn for the
+// wrapped expression. { task: { leafFn, nameFn }, item: { leafFn, nameFn } }.
+// nameFn is called as (base, starCount|null, dashCount|null).
+export function evalPrereqExpr(text, leafFn, nameFn, scopes = null) {
   text = (text || '').trim();
   if (!text) return true;
 
@@ -35,6 +39,7 @@ export function evalPrereqExpr(text, leafFn, nameFn) {
   let pos = 0;
   const peek = () => (pos < tokens.length ? tokens[pos] : null);
   const consume = () => tokens[pos++];
+  const ctx = [{ leafFn, nameFn }];
 
   const parseOr = () => {
     const results = [parseAnd()];
@@ -49,12 +54,26 @@ export function evalPrereqExpr(text, leafFn, nameFn) {
   const parseAtom = () => {
     const tok = peek();
     if (tok === '(') { consume(); const v = parseOr(); consume(); return v; }
-    if (typeof tok === 'number') { consume(); return leafFn(tok); }
-    if (typeof tok === 'string' && tok !== '&&' && tok !== '||' && tok !== '(' && tok !== ')' && tok !== ',') {
+    if (typeof tok === 'number') {
       consume();
-      if (nameFn) {
+      const fn = ctx[ctx.length - 1].leafFn;
+      return fn ? fn(tok) : true;
+    }
+    if (typeof tok === 'string' && tok !== '&&' && tok !== '||' && tok !== '(' && tok !== ')' && tok !== ',') {
+      if (scopes && Object.hasOwn(scopes, tok) && tokens[pos + 1] === '(') {
+        consume();
+        consume(); // '('
+        ctx.push(scopes[tok]);
+        let v;
+        try { v = parseOr(); } finally { ctx.pop(); }
+        consume(); // ')'
+        return v;
+      }
+      consume();
+      const fn = ctx[ctx.length - 1].nameFn;
+      if (fn) {
         const [base, n, mode] = splitNameSuffix(tok);
-        return nameFn(base, mode === 'star' ? n : null);
+        return fn(base, mode === 'star' ? n : null, mode === 'dash' ? n : null);
       }
       return true;
     }

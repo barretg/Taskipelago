@@ -7,6 +7,8 @@ import { downloadText, pickTextFile, safeFileName } from '../shared/files.js';
 import { PyError } from '../shared/pyish.js';
 import { dumpYaml, loadYaml } from '../shared/yaml11.js';
 import { DEATHLINK_LOCK_TIP as DL_LOCK_TIP, limitPlayerName } from '../generator/model.js';
+import { STYLE_SECTION_TIP, renderStyleColors, resetStyleColors } from '../generator/style_section.js';
+import { THEME_COLORS } from '../shared/theme.js';
 import {
   bingoCounts, bingoSettingsDoc, buildBingoExport, defaultBingoModel, loadBingoDoc, normalizeBingoModel,
 } from './bingo_model.js';
@@ -39,9 +41,18 @@ const FIELDS = [
   ['deathLinkAmnesty', 'value'], ['deathLinkLockTasks', 'checked'], ['spaces', 'value'], ['rewards', 'value'], ['deathLinkPool', 'value'],
 ];
 
+/** Style panel wiring: the pickers read and write model.styleColors. */
+const styleOpts = () => ({
+  specs: THEME_COLORS,
+  get: () => model.styleColors,
+  set: colors => { model.styleColors = colors; },
+  onChange: () => changed(),
+});
+
 function loadModel(next) {
   model = next;
   for (const [key, prop] of FIELDS) els[key][prop] = prop === 'checked' ? !!model[key] : model[key];
+  renderStyleColors(els.style, styleOpts());
   changed({ save: false });
 }
 
@@ -120,6 +131,7 @@ async function clearTab() {
 function build(root) {
   els.spacesCount = h('div', { className: 'muted-text bingo-count' });
   els.rewardsCount = h('div', { className: 'muted-text bingo-count' });
+  els.style = h('div', { className: 'style-grid' });
   const label = (text, node) => h('label', { className: 'inline-label' }, text, node);
   root.replaceChildren(
     h('div', { className: 'gen-scroll bingo-gen' },
@@ -145,7 +157,15 @@ function build(root) {
           h('label', { className: 'check-label', title: DL_LOCK_TIP },
             bind('deathLinkLockTasks', h('input', { type: 'checkbox' })), 'Lock other tasks until DeathLink tasks are done')),
         h('label', { className: 'stack-label' }, 'Pool (one per line):',
-          bind('deathLinkPool', h('textarea', { className: 'bingo-dl-text', rows: 3, spellcheck: false }))))),
+          bind('deathLinkPool', h('textarea', { className: 'bingo-dl-text', rows: 3, spellcheck: false })))),
+      h('fieldset', { className: 'panel' }, h('legend', {}, 'Style'),
+        h('div', { className: 'muted-text', title: STYLE_SECTION_TIP },
+          'Colors applied while connected to this slot'),
+        els.style,
+        h('div', { className: 'btn-row' },
+          h('button', {
+            type: 'button', onclick: () => resetStyleColors(els.style, styleOpts()),
+          }, 'Reset Colors')))),
     h('div', { className: 'gen-bottom' },
       h('span', { className: 'spacer' }),
       h('button', { type: 'button', onclick: clearTab }, 'Clear'),

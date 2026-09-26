@@ -6,9 +6,13 @@ import { alertDialog, openDialog } from '../shared/dialog.js';
 import { tipMarker } from '../shared/tooltip.js';
 import { TIPS } from './legacy_text.js';
 import {
-  REGION_COLOR_PALETTE, addRegion, checkRegionRename, commitRegionPct, removeRegion, renameRegion,
+  REGION_COLOR_PALETTE, addRegion, checkRegionRename, commitRegionPct, normalizeRegionParents,
+  regionCanHaveParent, regionChildren, regionParentOptions, removeRegion, renameRegion,
 } from './model.js';
+import { regionCells } from './clicker_cells.js';
+import { rowNumberCell } from './reorder.js';
 import { commitNameChange, confirmNameRemoval } from './rename_refs.js';
+import { regionRandom } from './randomize_check.js';
 
 const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
@@ -55,7 +59,72 @@ export function openColorPicker(title, currentColor, onPick) {
   });
 }
 
-function regionRow(region, i, ctx) {
+/**
+ * Parent dropdown for subregions. Blank means a top-level region. Only
+ * non-randomized, non-nested regions are offered, so nesting stays one level
+ * deep and a randomized region is never a parent.
+ */
+function parentCell(region, ctx) {
+  const canNest = regionCanHaveParent(ctx.model, region);
+  const options = canNest ? regionParentOptions(ctx.model, region) : [];
+  const sel = h('select', {
+    className: 'region-parent', disabled: !canNest,
+    'aria-label': `Parent region of ${region.name}`,
+    title: canNest ? '' : 'A region that already has subregions cannot itself have a parent.',
+    onchange: e => {
+      region.parent = e.target.value;
+      ctx.changed({ regions: true });
+    },
+  }, [
+    h('option', { value: '' }, '(none)'),
+    ...options.map(n => h('option', { value: n }, n)),
+  ]);
+  sel.value = canNest ? region.parent || '' : '';
+  return sel;
+}
+
+/** Randomize checkbox, pick field (N or N%), and shuffle-order checkbox for one region. */
+function randomizeCells(region, ctx) {
+  const rr = regionRandom(ctx.model, region.name);
+  const isParent = regionChildren(ctx.model, region.name).length > 0;
+  const pick = h('input', {
+    type: 'text', value: rr.pick, placeholder: 'N or N%', className: 'count-input region-pick',
+    spellcheck: false, disabled: !rr.on, 'aria-label': `Tasks kept from ${region.name}`,
+    dataset: { field: `regions.${region.name}.pick` },
+    oninput: e => {
+      ctx.model.regionRandom[region.name] = { ...regionRandom(ctx.model, region.name), pick: e.target.value.trim() };
+      ctx.changed();
+    },
+  });
+  const orderBox = h('input', {
+    type: 'checkbox', checked: rr.order, disabled: !rr.on,
+    'aria-label': `Shuffle task order in ${region.name}`,
+    onchange: e => {
+      ctx.model.regionRandom[region.name] = { ...regionRandom(ctx.model, region.name), order: e.target.checked };
+      ctx.changed();
+    },
+  });
+  const box = h('input', {
+    type: 'checkbox', checked: rr.on && !isParent, disabled: isParent,
+    'aria-label': `Randomize ${region.name}`,
+    title: isParent ? 'A region with subregions cannot be randomized.' : '',
+    onchange: e => {
+      ctx.model.regionRandom[region.name] = { ...regionRandom(ctx.model, region.name), on: e.target.checked };
+      pick.disabled = !e.target.checked;
+      orderBox.disabled = !e.target.checked;
+      // Randomizing a region drops any child that pointed at it.
+      normalizeRegionParents(ctx.model);
+      ctx.changed({ regions: true });
+    },
+  });
+  return [
+    h('label', { className: 'check-label region-random' }, box, 'Randomize', tipMarker(TIPS.rg_random)),
+    pick,
+    h('label', { className: 'check-label region-random' }, orderBox, 'Shuffle order', tipMarker(TIPS.rg_order)),
+  ];
+}
+
+function regionRow(region, i, ctx, container) {
   const name = h('input', { type: 'text', value: region.name, className: 'region-name', spellcheck: false });
   let committing = false; // blur fires again when the prompt takes focus
   const commitName = async () => {
@@ -86,6 +155,7 @@ function regionRow(region, i, ctx) {
   pct.addEventListener('blur', commitPct);
 
   return h('div', { className: 'region-row' },
+    rowNumberCell(ctx, 'regions', i, container),
     h('button', {
       type: 'button', className: 'color-swatch', style: { background: region.color || '#808080' },
       'aria-label': `Change color of ${region.name}`,
@@ -101,6 +171,9 @@ function regionRow(region, i, ctx) {
       'aria-label': 'Depends on', dataset: { field: `regions.${i}.prereq` },
       oninput: e => { region.prereq = e.target.value.trim(); ctx.changed(); },
     }),
+    parentCell(region, ctx),
+    ...randomizeCells(region, ctx),
+    ...(ctx.model.clickerMode ? regionCells(region, ctx) : []),
     h('button', {
       type: 'button', className: 'remove-btn',
       onclick: async () => {
@@ -113,15 +186,20 @@ function regionRow(region, i, ctx) {
 
 export function renderRegions(container, ctx) {
   const { model } = ctx;
+  normalizeRegionParents(model);
   if (!model.regions.length) {
     container.replaceChildren(h('div', { className: 'muted-text empty-note' }, 'No regions defined.'));
     return;
   }
   container.replaceChildren(
     h('div', { className: 'region-row region-head muted-text' },
+      h('span', { className: 'col-num' }, '#'),
       h('span', { className: 'col-color' }, 'Color'), h('span', { className: 'col-name' }, 'Name'),
-      h('span', { className: 'col-pct' }, 'Default %'), h('span', { className: 'col-prereq' }, 'Depends on')),
-    ...model.regions.map((r, i) => regionRow(r, i, ctx)),
+      h('span', { className: 'col-pct' }, 'Default %'), h('span', { className: 'col-prereq' }, 'Depends on', tipMarker(TIPS.rg_prereq)),
+      h('span', { className: 'col-parent' }, 'Parent', tipMarker(TIPS.rg_parent)),
+      h('span', { className: 'col-random' }, 'Randomize'), h('span', { className: 'col-pick' }, 'Keep'),
+      h('span', { className: 'col-order' }, 'Shuffle order')),
+    ...model.regions.map((r, i) => regionRow(r, i, ctx, container)),
   );
 }
 

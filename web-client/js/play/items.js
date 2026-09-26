@@ -56,6 +56,12 @@ export function itemCategory(idx, name, flags) {
   return 'junk';
 }
 
+/** Item group type ('progressive', 'random-choice', 'aesthetic'); older seeds are progressive. */
+export function groupType(group) {
+  const i = state.progressiveGroups.indexOf(group);
+  return (i >= 0 && state.groupTypes[i]) || 'progressive';
+}
+
 function groupColorMap() {
   const m = {};
   state.progressiveGroups.forEach((g, i) => { m[g] = state.progressiveGroupColors[i] || ''; });
@@ -120,7 +126,7 @@ export function renderItems() {
       frag.appendChild(h('div', { className: 'group-row' },
         h('span', { className: 'group-row-name' },
           h('span', { className: 'group-swatch', style: { background: colors[name] || 'var(--border)' } }),
-          name),
+          groupType(name) === 'progressive' ? name : `${name}  (${groupType(name)})`),
         h('span', { className: 'group-row-count' }, `${received} / ${total}`)));
     }
     for (const name of consNames) {
@@ -228,7 +234,7 @@ function buildPopover() {
   return h('div', { className: 'items-filter-popover', role: 'dialog', 'aria-label': 'Item filters' },
     h('div', { className: 'filter-group-title' }, 'Types'),
     h('div', { className: 'filter-options' }, ITEM_CATEGORIES.map(([key, label]) => box('hiddenCategories', key, label))),
-    h('div', { className: 'filter-group-title' }, 'Progressive Groups'),
+    h('div', { className: 'filter-group-title' }, 'Item Groups'),
     h('div', { className: 'filter-options' },
       filterGroups().map(g => box('hiddenGroups', g, g === NO_GROUP ? '(No group)' : g))),
     h('div', { className: 'btn-row' },

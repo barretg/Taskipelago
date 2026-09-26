@@ -1,14 +1,19 @@
 // Port of export_yaml (legacy_client/client.py:2947-3292), UNIFY 5.3.
 // Every validation, its order and its message text match the legacy client;
 // tests/parity/export_golden.json holds the reference results.
-import { parsePrereq, parseCostExpr, validateRefName } from '../shared/prereq_parser.js';
+import {
+  parsePrereq, parseCostExpr, mapScopedText, prereqScopes, validateRefName,
+} from '../shared/prereq_parser.js';
 import { randomFiller as defaultRandomFiller } from '../shared/filler.js';
 import { remapPrereqIndices, remapCostIndices } from '../shared/expr_rewrite.js';
 import { pyInt, pySlice, pyStrip } from '../shared/pyish.js';
 import { dumpYaml } from '../shared/yaml11.js';
+import { encodeThemeColors } from '../shared/theme.js';
 import {
   MAX_TASK_DESCRIPTION_LEN, isReservedWord, taskData, itemData,
 } from './model.js';
+import { clickerExportKeys, validateClicker } from './clicker_fields.js';
+import { checkRandomization, groupSetting, regionRandom, scopedLeaves, usesRandomization } from './randomize_check.js';
 
 /** _resolve_name_refs: "Quoted Name" -> first matching 1-based index. */
 export function resolveNameRefs(text, names) {
@@ -20,6 +25,20 @@ export function resolveNameRefs(text, names) {
     return whole;
   });
   return [result, errors];
+}
+
+/**
+ * resolveNameRefs per scope: task names outside / inside task(...), item names
+ * inside item(...). `home` is the field's own domain ('task' or 'item').
+ */
+export function resolveScopedNameRefs(text, home, taskNames, itemNames) {
+  const errors = [];
+  const fn = names => t => {
+    const [res, errs] = resolveNameRefs(t, names);
+    errors.push(...errs);
+    return res;
+  };
+  return [mapScopedText(text, fn(taskNames), fn(itemNames), home), errors];
 }
 
 /** _convert_cost_idx_to_quote: idx*N -> "Name"*N so costs survive row expansion. */
@@ -38,7 +57,7 @@ export function convertCostIdxToQuote(costText, itemNames) {
 function itemCopyRefs(node) {
   if (!Array.isArray(node)) return [];
   if (node[0] === 'item_copies') return [[node[1], node[2]]];
-  if (node[0] === 'and' || node[0] === 'or') return node[1].flatMap(itemCopyRefs);
+  if (['and', 'or', 'scoped_task', 'scoped_item'].includes(node[0])) return node[1].flatMap(itemCopyRefs);
   return [];
 }
 
@@ -68,6 +87,9 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   const taskPriorities = [];
   const taskCounts = [];
   const taskDescriptions = [];
+  const taskActivations = [];
+  const taskManual = [];
+  const taskAutoComplete = [];
   for (const row of model.tasks) {
     const t = taskData(row);
     if (!t.name) continue;
@@ -79,6 +101,9 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     taskPriorities.push(t.priority);
     taskCounts.push(t.count);
     taskDescriptions.push(pySlice(t.desc, MAX_TASK_DESCRIPTION_LEN));
+    taskActivations.push(t.activations);
+    taskManual.push(t.manual);
+    taskAutoComplete.push(t.autoComplete);
   }
   if (!tasks.length) return fail('Error', 'No tasks defined.');
 
@@ -89,6 +114,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   }
 
   const rawItemNames = [];
+  const itemRows = []; // per editor row, for randomization checks
   const rawItemConsumables = [];
   const rawItemCounts = [];
   // itemRowExportIdxs[row] = 1-based indices the editor row occupies in the exported list.
@@ -99,10 +125,15 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   const itemProgGroups = [];
   const itemConsumables = [];
   const itemCounts = [];
+  // Parallel to `items`, so an expanded filler row repeats its (empty) spec.
+  const itemSpecs = [];
+  const specOf = it => ({ kind: it.clickerKind, target: it.clickerTarget, value: it.clickerValue });
+  const noSpec = { kind: 'none', target: '*', value: '' };
   for (const row of model.items) {
     const it = itemData(row);
     rawItemNames.push(it.name);
     rawItemCounts.push(it.count);
+    itemRows.push({ name: it.name, count: it.count, group: it.progGroup, filler: it.filler || !it.name });
     const isFillerRow = it.filler || !it.name;
     rawItemConsumables.push(isFillerRow ? false : it.consumable);
     const start = items.length + 1;
@@ -114,6 +145,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
         itemProgGroups.push('');
         itemConsumables.push(false);
         itemCounts.push(1);
+        itemSpecs.push(noSpec);
       }
     } else {
       items.push(isFillerRow ? randomFiller() : it.name);
@@ -122,6 +154,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       itemProgGroups.push(isFillerRow ? '' : it.progGroup);
       itemConsumables.push(isFillerRow ? false : it.consumable);
       itemCounts.push(it.count);
+      itemSpecs.push(isFillerRow ? noSpec : specOf(it));
     }
     const idxs = [];
     for (let k = start; k <= items.length; k++) idxs.push(k);
@@ -162,8 +195,41 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       + reservedGroups.join('\n'));
   }
 
-  const totalTaskSlots = taskCounts.reduce((a, b) => a + b, 0);
-  const totalItemSlots = itemCounts.reduce((a, b) => a + b, 0);
+  // Subregions: parents must exist, nesting is one level, randomized regions are never parents.
+  const parentErrors = [];
+  const usesParents = model.regions.some(r => r.parent);
+  for (const r of model.regions) {
+    if (!r.parent) continue;
+    const p = regionByName.get(r.parent);
+    if (!p) parentErrors.push(`${r.name}: parent region '${r.parent}' does not exist.`);
+    else if (p.name === r.name) parentErrors.push(`${r.name}: a region cannot be its own parent.`);
+    else if (p.parent) {
+      parentErrors.push(`${r.name}: parent '${p.name}' is itself a subregion; nesting is one level deep.`);
+    } else if (regionRandom(model, p.name).on) {
+      parentErrors.push(`${r.name}: parent '${p.name}' is randomized; randomized regions cannot be parents.`);
+    }
+  }
+  if (parentErrors.length) {
+    return fail('Invalid Subregions',
+      'The following region parent settings must be fixed before exporting:\n\n' + parentErrors.join('\n'));
+  }
+
+  let totalTaskSlots = taskCounts.reduce((a, b) => a + b, 0);
+  let totalItemSlots = itemCounts.reduce((a, b) => a + b, 0);
+  const randomized = usesRandomization(model);
+  let regionPrereqs = regionNames.map(n => regionByName.get(n).prereq ?? '');
+  const randomCheck = () => checkRandomization({
+    model, tasks, taskCounts, taskRegions, regionNames, regionPrereqs, itemRows,
+    taskPrereqs: taskPrereqs.map(t => resolveScopedNameRefs(t, 'task', tasks, rawItemNames)[0]),
+    itemPrereqs: itemPrereqsRaw.map(t => resolveScopedNameRefs(t, 'item', tasks, rawItemNames)[0]),
+    goal: pyStrip(model.goalTasks),
+  });
+  if (randomized.regions || randomized.groups) {
+    // Balance against the final per-seed counts after random selection.
+    const { finalTasks, finalItems } = randomCheck();
+    totalTaskSlots = finalTasks;
+    totalItemSlots = finalItems;
+  }
   if (totalTaskSlots !== totalItemSlots) {
     const proceed = await confirm('Unbalanced Counts',
       'Warning: Unbalanced item and task slot counts will cause generation failures.\n\n'
@@ -178,10 +244,18 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
 
   const nameErrors = [];
   taskPrereqs.forEach((tpr, i) => {
-    nameErrors.push(...resolveNameRefs(tpr, tasks)[1].map(e => `Task ${i + 1} task prereqs: ${e}`));
+    nameErrors.push(...resolveScopedNameRefs(tpr, 'task', tasks, rawItemNames)[1]
+      .map(e => `Task ${i + 1} task prereqs: ${e}`));
   });
   itemPrereqsRaw.forEach((ipr, i) => {
-    nameErrors.push(...resolveNameRefs(ipr, rawItemNames)[1].map(e => `Task ${i + 1} item prereqs: ${e}`));
+    nameErrors.push(...resolveScopedNameRefs(ipr, 'item', tasks, rawItemNames)[1]
+      .map(e => `Task ${i + 1} item prereqs: ${e}`));
+  });
+  // Quoted names inside a region's task(...) / item(...) scopes.
+  regionNames.forEach(name => {
+    mapScopedText(regionByName.get(name).prereq,
+      t => { nameErrors.push(...resolveNameRefs(t, tasks)[1].map(e => `Region '${name}' depends on: ${e}`)); return t; },
+      t => { nameErrors.push(...resolveNameRefs(t, rawItemNames)[1].map(e => `Region '${name}' depends on: ${e}`)); return t; });
   });
   if (nameErrors.length) return fail('Unresolved Names', 'Unresolved name references:\n\n' + nameErrors.join('\n'));
 
@@ -204,13 +278,24 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   }
 
   const goalTasksRaw = pyStrip(model.goalTasks);
+  let goalTasksExport = goalTasksRaw;
 
   const regionSet = new Set(regionNames);
   const groupSet = new Set(model.progGroups);
   const consumableSet = new Set(rawItemNames.filter((n, i) => rawItemConsumables[i] && n));
   const nTasks = tasks.length;
   const nItems = rawItemNames.length;
+  const fieldScopes = prereqScopes(nTasks, nItems, regionSet, groupSet);
   const exprErrors = [];
+  // INDEX*Y must not ask for more copies than the item row has.
+  const checkItemCopies = (ast, label, loc) => {
+    for (const [idx, y] of itemCopyRefs(ast)) {
+      if (y > rawItemCounts[idx]) {
+        throw new Error(`Taskipelago: '${idx + 1}*${y}' in ${label} on ${loc} asks for ${y} copies `
+          + `but item ${idx + 1} has a count of ${rawItemCounts[idx]}.`);
+      }
+    }
+  };
   const attempt = (fn, prefix = '') => {
     try {
       fn();
@@ -220,42 +305,87 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   };
   taskPrereqs.forEach((tpr, i) => {
     if (!tpr) return;
-    const [resolved] = resolveNameRefs(tpr, tasks);
-    attempt(() => parsePrereq(resolved, nTasks, i, 'task prereq', groupSet, regionSet));
+    const [resolved] = resolveScopedNameRefs(tpr, 'task', tasks, rawItemNames);
+    attempt(() => checkItemCopies(
+      parsePrereq(resolved, nTasks, i, 'task prereq', groupSet, regionSet, null, null, fieldScopes),
+      'task prereq', `task ${i + 1}`));
   });
   itemPrereqsRaw.forEach((ipr, i) => {
     if (!ipr) return;
-    const [resolved] = resolveNameRefs(ipr, rawItemNames);
-    attempt(() => {
-      for (const [idx, y] of itemCopyRefs(parsePrereq(resolved, nItems, i, 'item prereq', groupSet))) {
-        if (y > rawItemCounts[idx]) {
-          throw new Error(`Taskipelago: '${idx + 1}*${y}' in item prereq on task ${i + 1} asks for ${y} copies `
-            + `but item ${idx + 1} has a count of ${rawItemCounts[idx]}.`);
-        }
-      }
-    });
+    const [resolved] = resolveScopedNameRefs(ipr, 'item', tasks, rawItemNames);
+    attempt(() => checkItemCopies(
+      parsePrereq(resolved, nItems, i, 'item prereq', groupSet, null, null, null, fieldScopes),
+      'item prereq', `task ${i + 1}`));
   });
   taskCosts.forEach((cost, i) => {
     if (cost) attempt(() => parseCostExpr(cost, consumableSet, rawItemNames), `Task ${i + 1} cost: `);
   });
   if (goalTasksRaw) {
-    const [resolvedGoal, goalNameErrors] = resolveNameRefs(goalTasksRaw, tasks);
+    const [resolvedGoal, goalNameErrors] = resolveScopedNameRefs(goalTasksRaw, 'task', tasks, rawItemNames);
     if (goalNameErrors.length) exprErrors.push('Goal tasks: ' + goalNameErrors.join('; '));
-    else attempt(() => parsePrereq(resolvedGoal, nTasks, 0, 'goal tasks', null, regionSet), 'Goal tasks: ');
+    else {
+      attempt(() => checkItemCopies(
+        parsePrereq(resolvedGoal, nTasks, 0, 'goal tasks', null, regionSet, null, null, fieldScopes),
+        'goal tasks', 'goal tasks'), 'Goal tasks: ');
+    }
   }
+  // A region "Depends on" may wrap an ordinary task or item expression in
+  // task(...) / item(...); each scope validates in its own index space.
+  const regionScopes = {
+    task: { n: nTasks, groups: null, regions: regionSet, const: nTasks, label: 'region task prereq' },
+    item: { n: nItems, groups: groupSet, regions: null, const: nTasks, label: 'region item prereq' },
+  };
   for (const name of regionNames) {
     const rpr = regionByName.get(name).prereq;
-    if (rpr) attempt(() => parsePrereq(rpr, 0, 0, 'region prereq', null, regionSet));
+    if (!rpr) continue;
+    const resolved = mapScopedText(rpr,
+      t => resolveNameRefs(t, tasks)[0], t => resolveNameRefs(t, rawItemNames)[0]);
+    attempt(() => {
+      const ast = parsePrereq(
+        resolved, 0, 0, 'region prereq', null, regionSet, `region '${name}'`, nTasks, regionScopes);
+      // Consumables are spent on task costs, so "received" is not a stable gate:
+      // the region would lock itself again on the next purchase.
+      for (const leaf of scopedLeaves(ast, 'item')) {
+        if (rawItemConsumables[leaf]) {
+          throw new Error(`Taskipelago: region '${name}' depends on item ${leaf + 1} `
+            + `('${rawItemNames[leaf]}'), which is a consumable currency. A region cannot `
+            + 'depend on a currency item.');
+        }
+      }
+    });
   }
   if (exprErrors.length) {
     return fail('Invalid Expressions',
       'The following expressions could not be parsed and must be fixed before exporting:\n\n' + exprErrors.join('\n'));
   }
+  if (randomized.regions || randomized.groups) {
+    const { errors } = randomCheck();
+    if (errors.length) {
+      return fail('Invalid Randomization',
+        'The following randomized region or item group settings must be fixed before exporting:\n\n'
+        + errors.join('\n'));
+    }
+  }
 
   if (itemRowExportIdxs.some((idxs, i) => idxs.length !== 1 || idxs[0] !== i + 1)) {
-    itemPrereqsRaw = itemPrereqsRaw.map(t => remapPrereqIndices(t, itemRowExportIdxs));
+    const remapItems = inner => remapPrereqIndices(inner, itemRowExportIdxs);
+    itemPrereqsRaw = itemPrereqsRaw.map(t => mapScopedText(t, null, remapItems, 'item'));
+    // Task prereqs and the goal hold item indices only inside item(...).
+    for (let i = 0; i < taskPrereqs.length; i++) taskPrereqs[i] = mapScopedText(taskPrereqs[i], null, remapItems);
+    goalTasksExport = mapScopedText(goalTasksExport, null, remapItems);
     taskCosts = taskCosts.map(t => remapCostIndices(t, itemRowExportIdxs));
+    // Only the item(...) scope of a region "Depends on" holds item indices.
+    regionPrereqs = regionPrereqs.map(t =>
+      mapScopedText(t, null, inner => remapPrereqIndices(inner, itemRowExportIdxs)));
   }
+
+  const clickerError = validateClicker(model, {
+    taskNames: tasks, taskActivations, items, itemSpecs, regionNames,
+    taskManual, taskRegions,
+  });
+  if (clickerError) return { error: clickerError };
+
+  const styleColors = encodeThemeColors(model.styleColors);
 
   const data = {
     name: playerName,
@@ -270,11 +400,32 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       progressive_group_colors: model.progGroups.map(g => ( // v1.1 F6
         model.progGroupColors && Object.hasOwn(model.progGroupColors, g) ? model.progGroupColors[g] : '')),
       item_progressive_group: itemProgGroups,
+      // Emitted only when used, so older exports and older apworlds are unaffected.
+      ...(randomized.groups ? {
+        group_types: model.progGroups.map(g => groupSetting(model, g).type),
+        group_random_pick: model.progGroups.map(g => {
+          const s = groupSetting(model, g);
+          return s.type === 'random-choice' ? s.pick : '';
+        }),
+        group_default_pcts: model.progGroups.map(g => groupSetting(model, g).pct),
+      } : {}),
 
       regions: regionNames,
       region_default_pcts: regionNames.map(n => regionByName.get(n).pct ?? 100),
       region_colors: regionNames.map(n => regionByName.get(n).color ?? ''),
-      region_prereqs: regionNames.map(n => regionByName.get(n).prereq ?? ''),
+      region_prereqs: regionPrereqs,
+      // Emitted only when subregions are used, so older apworlds are unaffected.
+      ...(usesParents ? { region_parent: regionNames.map(n => regionByName.get(n).parent ?? '') } : {}),
+      ...(randomized.regions ? {
+        region_random_pick: regionNames.map(n => {
+          const rr = regionRandom(model, n);
+          return rr.on ? rr.pick : '';
+        }),
+        region_random_order: regionNames.map(n => {
+          const rr = regionRandom(model, n);
+          return rr.on && rr.order ? 'true' : 'false';
+        }),
+      } : {}),
       task_region: taskRegions,
       task_priority: taskPriorities.map(p => (p ? 'true' : 'false')),
 
@@ -292,12 +443,20 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       lock_prereqs: !!model.lockPrereqs,
       hide_unreachable_tasks: !!model.hideUnreachable,
       task_reward_previews: model.taskRewardPreviews,
-      goal_tasks: goalTasksRaw ? [goalTasksRaw] : [],
+      goal_tasks: goalTasksExport ? [goalTasksExport] : [],
 
       death_link_pool: deathLinkPool,
       death_link_weights: deathLinkWeights,
       death_link_amnesty: pyInt(model.deathLinkAmnesty),
       death_link_lock_tasks: !!model.deathLinkLockTasks, // v1.1 F3
+      // v1.1 F7: only non-default colors, so an all-default Style section adds nothing.
+      ...clickerExportKeys(model, {
+        taskActivations, taskManual, taskAutoComplete, itemSpecs, taskNames: tasks,
+        regionRows: regionNames.map(n => regionByName.get(n)),
+      }),
+      ...(styleColors.length ? { style_colors: styleColors } : {}),
+      // Only when on, so existing exports stay byte-identical.
+      ...(model.previewsPurchasableOnly ? { task_reward_previews_purchasable_only: true } : {}),
     },
   };
   return { data };

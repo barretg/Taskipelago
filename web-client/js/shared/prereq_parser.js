@@ -12,6 +12,8 @@
 //   ['region_ref', name, pct|null]  ['region_abs', name, n]
 //   ['seq_flag']
 //   ['item_copies', idx, y]      first y copies of item idx (INDEX*Y, item prereqs only)
+//   ['scoped_task', [node]]      task(...) wrapper
+//   ['scoped_item', [node]]      item(...) wrapper
 //   ['cost_group', name, count]  (cost expressions)
 //
 // Python details kept for parity: str.isspace()/strip() character set,
@@ -19,7 +21,16 @@
 // ("list index out of range") when an expression ends where ')' is expected.
 // Digits are ASCII only (Python also accepts other Unicode digits there).
 
+import {
+  LIVE_NUM_CONSTANTS, NumExprError, evalNumExprStrict, numExprConstants, numExprToInt, parseNumExpr,
+} from './num_expr.js';
+
 export const RESERVED_WORDS = new Set(['prev', 'sequential']);
+
+/** Names the numeric-expression grammar reserves; unusable as region/group/item names. */
+export const RESERVED_NAMES = new Set([
+  ...RESERVED_WORDS, 'n_tasks', 'n_tasks_unlocked', 'n_tasks_locked', 'n_tasks_completed',
+]);
 
 const INDEX_ERROR = 'list index out of range';
 
@@ -38,12 +49,54 @@ const isAlpha = c => /^\p{L}$/u.test(c);
 const NAME_DASH_RE = /^(\P{Nd}+)-(\d+)$/u;
 const NAME_STAR_RE = /^(\P{Nd}+)\*(\d+)$/u;
 
-/** Returns [base, n, mode]; mode is 'dash', 'star' or 'none'. */
-export function splitNameSuffix(tok) {
-  let m = NAME_DASH_RE.exec(tok);
-  if (m) return [m[1], Number(m[2]), 'dash'];
-  m = NAME_STAR_RE.exec(tok);
-  if (m) return [m[1], Number(m[2]), 'star'];
+/**
+ * Returns [base, n, mode]; mode is 'dash', 'star' or 'none'.
+ * A suffix that mentions N_TASKS ("chores-N_TASKS") is folded with `nTasks`;
+ * every suffix that parsed before still takes the plain-integer path.
+ * knownNames, when given, restricts which prefixes may be split off, which
+ * disambiguates names that themselves contain '-'.
+ */
+export function splitNameSuffix(tok, knownNames = null, nTasks = 0, errCtx = null) {
+  const dash = NAME_DASH_RE.exec(tok);
+  if (dash && (!knownNames || knownNames.has(dash[1]))) return [dash[1], Number(dash[2]), 'dash'];
+  const star = NAME_STAR_RE.exec(tok);
+  if (star && (!knownNames || knownNames.has(star[1]))) return [star[1], Number(star[2]), 'star'];
+  if (tok.includes('N')) {
+    for (let i = 1; i < tok.length; i++) {
+      const ch = tok[i];
+      if (ch !== '-' && ch !== '*') continue;
+      const base = tok.slice(0, i);
+      const rest = tok.slice(i + 1);
+      if (!rest) continue;
+      if (knownNames && !knownNames.has(base)) continue;
+      let ast;
+      try {
+        ast = parseNumExpr(rest, { allowLive: true });
+      } catch (_) {
+        continue;
+      }
+      const consts = numExprConstants(ast);
+      if (!consts.size) continue;
+      for (const live of LIVE_NUM_CONSTANTS) {
+        if (consts.has(live)) {
+          fail(`Taskipelago: '${live}' changes during play and cannot be used in '${tok}'; `
+            + 'only N_TASKS is allowed in a prereq, goal or cost suffix.');
+        }
+      }
+      let value;
+      try {
+        value = evalNumExprStrict(
+          ast, { N_TASKS: nTasks },
+          errCtx ? errCtx.label : 'numeric expression', errCtx ? errCtx.loc : null);
+      } catch (e) {
+        if (!(e instanceof NumExprError)) throw e;
+        fail(e.message);
+      }
+      return [base, numExprToInt(value), ch === '-' ? 'dash' : 'star'];
+    }
+  }
+  if (dash) return [dash[1], Number(dash[2]), 'dash'];
+  if (star) return [star[1], Number(star[2]), 'star'];
   return [tok, null, 'none'];
 }
 
@@ -167,11 +220,105 @@ function tokenize(chars, taskIndex, label, locationLabel) {
 }
 
 /**
+ * Port of prereq_parser.py map_scoped_text. Rewrites a prereq expression one
+ * domain at a time: text inside task(...) goes to taskFn, text inside item(...)
+ * to itemFn, and text outside every wrapper to the `home` domain's function
+ * ('task', 'item' or null; null leaves it exactly as written, as region
+ * prereqs need). Wrappers nest, and quoted names are skipped over.
+ */
+export function mapScopedText(text, taskFn = null, itemFn = null, home = null) {
+  if (!text) return text;
+  const fns = { task: taskFn, item: itemFn };
+  const map = (chars, dom) => {
+    const n = chars.length;
+    const findQuote = from => {
+      for (let k = from; k < n; k++) if (chars[k] === '"') return k;
+      return -1;
+    };
+    const out = [];
+    let buf = [];
+    const flush = () => {
+      if (!buf.length) return;
+      const chunk = buf.join('');
+      buf = [];
+      const fn = dom ? fns[dom] : null;
+      out.push(!fn || !chunk.trim() ? chunk : fn(chunk));
+    };
+    let i = 0;
+    while (i < n) {
+      const c = chars[i];
+      if (c === '"') {
+        const q = findQuote(i + 1);
+        const j = q < 0 ? n : q + 1;
+        buf.push(chars.slice(i, j).join(''));
+        i = j;
+        continue;
+      }
+      if (isAlpha(c) || c === '_') {
+        let j = i;
+        while (j < n && (isAlpha(chars[j]) || isDigit(chars[j]) || chars[j] === '_')) j++;
+        const word = chars.slice(i, j).join('');
+        // The parser allows whitespace between the keyword and '('.
+        let p = j;
+        while (p < n && isSpace(chars[p])) p++;
+        if ((word === 'task' || word === 'item') && chars[p] === '(') {
+          j = p;
+          let depth = 0;
+          let k = j;
+          while (k < n) {
+            const ch = chars[k];
+            if (ch === '"') {
+              const q = findQuote(k + 1);
+              k = q < 0 ? n : q + 1;
+              continue;
+            }
+            if (ch === '(') depth++;
+            else if (ch === ')') {
+              depth--;
+              if (depth === 0) break;
+            }
+            k++;
+          }
+          if (k < n) {
+            flush();
+            out.push(`${word}(${map(chars.slice(j + 1, k), word)})`);
+            i = k + 1;
+            continue;
+          }
+        }
+        buf.push(word);
+        i = j;
+        continue;
+      }
+      buf.push(c);
+      i++;
+    }
+    flush();
+    return out.join('');
+  };
+  return map(Array.from(text), home);
+}
+
+/**
+ * The scopedDomains parsePrereq takes for task prereqs, item prereqs and goal
+ * text: task(...) holds a task prereq (task indices, region names) and item(...)
+ * an item prereq (item indices, item group names). Mirrors __init__.py
+ * _prereq_scopes.
+ */
+export function prereqScopes(nTasks, nItems, regions, groups) {
+  return {
+    task: { n: nTasks, groups: null, regions, const: nTasks, label: 'task(...) scope' },
+    item: { n: nItems, groups, regions: null, const: nTasks, label: 'item(...) scope' },
+  };
+}
+
+/**
  * Parse a prereq expression. Returns null for an empty expression, throws Error
  * with the Python message otherwise. Integer leaves are 0-based.
  */
 export function parsePrereq(text, nTasks, taskIndex, label,
-                            knownGroups = null, knownRegions = null, locationLabel = null) {
+                            knownGroups = null, knownRegions = null, locationLabel = null,
+                            nTasksConst = null, scopedDomains = null) {
   const chars = pyStrip(text);
   if (!chars.length) return null;
 
@@ -182,13 +329,22 @@ export function parsePrereq(text, nTasks, taskIndex, label,
   const tokens = tokenize(chars, taskIndex, label, locationLabel);
   if (!tokens.length) return null;
 
+  // Parsing context; task(...) / item(...) push a scoped copy onto the stack.
+  const ctx = [{
+    n: nTasks,
+    groups,
+    regions,
+    const: nTasksConst === null ? nTasks : nTasksConst,
+    label,
+  }];
+
   let pos = 0;
   const peek = () => (pos < tokens.length ? tokens[pos] : null);
   const consume = (expected = null) => {
     if (pos >= tokens.length) fail(INDEX_ERROR);
     const tok = tokens[pos];
     if (expected !== null && tok !== expected) {
-      fail(`Taskipelago: expected '${expected}' but got '${tokText(tok)}' in ${label} on ${loc}.`);
+      fail(`Taskipelago: expected '${expected}' but got '${tokText(tok)}' in ${ctx[ctx.length - 1].label} on ${loc}.`);
     }
     pos++;
     return tok;
@@ -215,9 +371,14 @@ export function parsePrereq(text, nTasks, taskIndex, label,
   }
 
   function parseAtom() {
+    const c = ctx[ctx.length - 1];
+    const cLabel = c.label;
+    const cN = c.n;
+    const cGroups = c.groups;
+    const cRegions = c.regions;
     const tok = peek();
     if (tok === null) {
-      fail(`Taskipelago: unexpected end of ${label} expression on ${loc}.`);
+      fail(`Taskipelago: unexpected end of ${cLabel} expression on ${loc}.`);
     }
     if (tok === '(') {
       consume('(');
@@ -225,21 +386,42 @@ export function parsePrereq(text, nTasks, taskIndex, label,
       consume(')');
       return node;
     }
+    if (scopedDomains && typeof tok === 'string' && Object.hasOwn(scopedDomains, tok)
+        && tokens[pos + 1] === '(') {
+      consume();
+      consume('(');
+      const spec = scopedDomains[tok];
+      ctx.push({
+        n: spec.n ?? 0,
+        groups: toSet(spec.groups ?? null),
+        regions: toSet(spec.regions ?? null),
+        const: spec.const ?? spec.n ?? 0,
+        label: spec.label ?? cLabel,
+      });
+      let node;
+      try {
+        node = parseExpr();
+        consume(')');
+      } finally {
+        ctx.pop();
+      }
+      return [`scoped_${tok}`, [node]];
+    }
     if (typeof tok === 'bigint') {
       consume();
-      if (tok < 1n || tok > BigInt(nTasks)) {
-        fail(`Taskipelago: ${label} index '${tok}' on ${loc} is out of range (1..${nTasks}).`);
+      if (tok < 1n || tok > BigInt(cN)) {
+        fail(`Taskipelago: ${cLabel} index '${tok}' on ${loc} is out of range (1..${cN}).`);
       }
       return Number(tok) - 1;
     }
     if (Array.isArray(tok) && tok[0] === 'copies') {
       consume();
       const [, idx, y] = tok;
-      if (label !== 'item prereq') {
-        fail(`Taskipelago: '${idx}*${y}' copy counts can only be used in item prereqs (used in ${label} on ${loc}).`);
+      if (cLabel !== 'item prereq' && cLabel !== 'item(...) scope') {
+        fail(`Taskipelago: '${idx}*${y}' copy counts can only be used in item prereqs (used in ${cLabel} on ${loc}).`);
       }
-      if (idx < 1n || idx > BigInt(nTasks)) {
-        fail(`Taskipelago: ${label} index '${idx}' on ${loc} is out of range (1..${nTasks}).`);
+      if (idx < 1n || idx > BigInt(cN)) {
+        fail(`Taskipelago: ${cLabel} index '${idx}' on ${loc} is out of range (1..${cN}).`);
       }
       if (y < 1n) fail(`Taskipelago: copy count in '${idx}*${y}' on ${loc} must be at least 1.`);
       return ['item_copies', Number(idx) - 1, Number(y)];
@@ -247,8 +429,8 @@ export function parsePrereq(text, nTasks, taskIndex, label,
     if (typeof tok === 'string' && !['&&', '||', '(', ')', ','].includes(tok)) {
       consume();
       if (RESERVED_WORDS.has(tok)) {
-        if (label !== 'task prereq') {
-          fail(`Taskipelago: '${tok}' can only be used in task prereqs (used in ${label} on ${loc}).`);
+        if (cLabel !== 'task prereq') {
+          fail(`Taskipelago: '${tok}' can only be used in task prereqs (used in ${cLabel} on ${loc}).`);
         }
         if (tok === 'prev') {
           if (taskIndex < 1) {
@@ -258,16 +440,18 @@ export function parsePrereq(text, nTasks, taskIndex, label,
         }
         return ['seq_flag'];
       }
-      const [base, suffix, mode] = splitNameSuffix(tok);
-      if (groups !== null && groups.has(base)) {
+      const known = new Set([...(cGroups || []), ...(cRegions || [])]);
+      const [base, suffix, mode] = splitNameSuffix(
+        tok, known.size ? known : null, c.const, { label: cLabel, loc });
+      if (cGroups !== null && cGroups.has(base)) {
         return mode === 'star' ? ['group_count', base, suffix] : ['group_ref', base, suffix];
       }
-      if (regions !== null && regions.has(base)) {
+      if (cRegions !== null && cRegions.has(base)) {
         return mode === 'star' ? ['region_abs', base, suffix] : ['region_ref', base, suffix];
       }
-      fail(`Taskipelago: unknown name '${base}' in ${label} on ${loc}.`);
+      fail(`Taskipelago: unknown name '${base}' in ${cLabel} on ${loc}.`);
     }
-    fail(`Taskipelago: unexpected token '${tok}' in ${label} on ${loc}.`);
+    fail(`Taskipelago: unexpected token '${tok}' in ${cLabel} on ${loc}.`);
   }
 
   const result = parseExpr();
@@ -281,17 +465,45 @@ export function parsePrereq(text, nTasks, taskIndex, label,
 // Cost expressions
 // ---------------------------------------------------------------------------
 
-function readCount(chars, j) {
-  // "*N" after a name or index; returns [count, nextIndex]
-  if (j < chars.length && chars[j] === '*') {
-    let k = j + 1;
-    while (k < chars.length && isDigit(chars[k])) k++;
-    if (k > j + 1) return [Number(chars.slice(j + 1, k).join('')), k];
+const COST_SUFFIX_CHARS = new Set('0123456789._+-*/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz');
+
+function readCount(chars, j, nTasks = 0) {
+  // "*N" after a name or index, where N is an integer or an N_TASKS expression;
+  // returns [count, nextIndex]
+  if (j >= chars.length || chars[j] !== '*') return [1, j];
+  let digitsEnd = j + 1;
+  while (digitsEnd < chars.length && isDigit(chars[digitsEnd])) digitsEnd++;
+  let k = j + 1;
+  while (k < chars.length && COST_SUFFIX_CHARS.has(chars[k])) k++;
+  const rest = chars.slice(j + 1, k).join('');
+  if (k > digitsEnd && rest.includes('N')) {
+    let ast = null;
+    try {
+      ast = parseNumExpr(rest, { label: 'cost count', allowLive: true });
+    } catch (_) { /* fall through to the digits-only reading */ }
+    const consts = ast ? numExprConstants(ast) : new Set();
+    if (consts.size) {
+      for (const live of LIVE_NUM_CONSTANTS) {
+        if (consts.has(live)) {
+          fail(`Taskipelago: '${live}' changes during play and cannot be used in a cost `
+            + 'expression; only N_TASKS is allowed there.');
+        }
+      }
+      let value;
+      try {
+        value = evalNumExprStrict(ast, { N_TASKS: nTasks }, 'cost count');
+      } catch (e) {
+        if (!(e instanceof NumExprError)) throw e;
+        fail(e.message);
+      }
+      return [numExprToInt(value), k];
+    }
   }
+  if (digitsEnd > j + 1) return [Number(chars.slice(j + 1, digitsEnd).join('')), digitsEnd];
   return [1, j];
 }
 
-function tokenizeCost(chars, itemNamesOrdered) {
+function tokenizeCost(chars, itemNamesOrdered, nTasks = 0) {
   const tokens = [];
   let i = 0;
   while (i < chars.length) {
@@ -309,7 +521,7 @@ function tokenizeCost(chars, itemNamesOrdered) {
       while (j < chars.length && chars[j] !== '"') j++;
       if (j >= chars.length) fail('Taskipelago: unclosed quote in cost expression.');
       const name = chars.slice(i + 1, j).join('');
-      const [count, next] = readCount(chars, j + 1);
+      const [count, next] = readCount(chars, j + 1, nTasks);
       tokens.push(['cost_item', name, count]);
       i = next;
       continue;
@@ -319,7 +531,7 @@ function tokenizeCost(chars, itemNamesOrdered) {
       let j = i;
       while (j < chars.length && isDigit(chars[j])) j++;
       const idx = BigInt(chars.slice(i, j).join(''));
-      const [count, next] = readCount(chars, j);
+      const [count, next] = readCount(chars, j, nTasks);
       const name = itemNamesOrdered && itemNamesOrdered.length && idx >= 1n && idx <= BigInt(itemNamesOrdered.length)
         ? itemNamesOrdered[Number(idx) - 1]
         : String(idx); // left as the index; the name check reports it
@@ -337,12 +549,12 @@ function tokenizeCost(chars, itemNamesOrdered) {
  * Parse a task cost expression. consumableNames: valid consumable names.
  * itemNamesOrdered: all item names (index 0 = item 1) for numeric references.
  */
-export function parseCostExpr(text, consumableNames, itemNamesOrdered = null) {
+export function parseCostExpr(text, consumableNames, itemNamesOrdered = null, nTasks = 0) {
   const chars = pyStrip(text);
   if (!chars.length) return null;
 
   const consumables = toSet(consumableNames) || new Set();
-  const tokens = tokenizeCost(chars, itemNamesOrdered);
+  const tokens = tokenizeCost(chars, itemNamesOrdered, nTasks);
   if (!tokens.length) return null;
 
   let pos = 0;

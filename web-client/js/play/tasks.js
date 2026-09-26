@@ -2,10 +2,11 @@ import { state, els } from './state.js';
 import { $ } from '../shared/dom.js';
 import {
   allChecked, prereqsSatisfied, itemPrereqsSatisfied, progressiveReqSatisfied,
-  regionReqSatisfied, regionReqSatisfiedAbs, taskCostIsPaid,
-  completeTask, attemptPurchase, attemptMakeChange,
+  regionPrereqSatisfied, fillerRevealedTasks, regionReqSatisfied, regionReqSatisfiedAbs, taskCostIsPaid,
+  completeTask, attemptPurchase, attemptMakeChange, costLogicReason,
 } from './logic.js';
 import { renderBingo } from './bingo_board.js';
+import { isManualTask, renderClicker } from './clicker_board.js';
 import { ap } from './state.js';
 import { getUiPref, setUiPref } from '../shared/ui_prefs.js';
 import { h } from '../shared/dom.js';
@@ -15,6 +16,7 @@ import { completeDeathLinkEntry, isDeathLinkLocked, pendingDeathLinks } from './
 // Region helpers
 // =============================================================
 let regionProgressExpanded = true;
+let subregionsExpanded = null;  // Set of expanded parent region names (lazy, from UI prefs)
 
 function buildRegionColorMap() {
   const m = {};
@@ -23,6 +25,93 @@ function buildRegionColorMap() {
     if (c) m[state.regions[i]] = c;
   }
   return m;
+}
+
+/**
+ * Subregions: state.regionParent maps a region to the region it is displayed
+ * under. Nesting is one level, so a parent that itself names a parent is
+ * ignored and its children are shown at the top level.
+ */
+function regionParentOf(rname) {
+  const p = state.regionParent ? state.regionParent[rname] : '';
+  if (!p || p === rname || !state.regions.includes(p)) return '';
+  const gp = state.regionParent ? state.regionParent[p] : '';
+  return gp && gp !== p && state.regions.includes(gp) ? '' : p;
+}
+
+/** Parent region name -> its subregion names, in region order. */
+function buildSubregionMap() {
+  const kids = new Map();
+  for (const rname of state.regions) {
+    const p = regionParentOf(rname);
+    if (!p) continue;
+    if (!kids.has(p)) kids.set(p, []);
+    kids.get(p).push(rname);
+  }
+  return kids;
+}
+
+function expandedSubregions() {
+  if (!subregionsExpanded) {
+    const saved = getUiPref('expandedSubregions', []);
+    subregionsExpanded = new Set(Array.isArray(saved) ? saved : []);
+  }
+  return subregionsExpanded;
+}
+
+/** Completed / total task slots directly assigned to one region. */
+function regionCounts(rname, checked) {
+  const indices = state.taskRegion.map((r, i) => (r === rname ? i : -1)).filter(i => i >= 0);
+  const done = state.baseCompleteId !== null
+    ? indices.filter(i => checked.has(state.baseCompleteId + i)).length
+    : 0;
+  return { done, total: indices.length };
+}
+
+function regionProgressRow(rname, { color, done, total, sub, kids, onToggle, expanded }) {
+  const pct = total > 0 ? done / total : 0;
+  const row = document.createElement('div');
+  row.className = 'region-progress-row' + (sub ? ' region-progress-sub' : '')
+    + (kids ? ' has-subregions' : '');
+
+  const caret = document.createElement('span');
+  caret.className = 'region-progress-caret';
+  caret.textContent = kids ? (expanded ? '\u25bc' : '\u25b6') : '';
+  row.appendChild(caret);
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'region-progress-name';
+  nameEl.textContent = rname;
+  row.appendChild(nameEl);
+
+  const barOuter = document.createElement('div');
+  barOuter.className = 'region-progress-bar-outer';
+  const barInner = document.createElement('div');
+  barInner.className = 'region-progress-bar-inner';
+  barInner.style.width = `${Math.round(pct * 100)}%`;
+  barInner.style.backgroundColor = color;
+  barOuter.appendChild(barInner);
+  row.appendChild(barOuter);
+
+  const countEl = document.createElement('span');
+  countEl.className = 'region-progress-count';
+  countEl.textContent = `${done}/${total}`;
+  row.appendChild(countEl);
+
+  if (kids) {
+    row.setAttribute('role', 'button');
+    row.tabIndex = 0;
+    row.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    row.title = `${kids} subregion${kids === 1 ? '' : 's'} - click to ${expanded ? 'collapse' : 'expand'}`;
+    row.addEventListener('click', onToggle);
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onToggle();
+      }
+    });
+  }
+  return row;
 }
 
 export function renderRegionProgress() {
@@ -40,40 +129,40 @@ export function renderRegionProgress() {
 
   const checked = allChecked();
   const rColors = buildRegionColorMap();
+  const kidsOf = buildSubregionMap();
+  const open = expandedSubregions();
   const frag = document.createDocumentFragment();
 
+  const toggleParent = rname => {
+    if (open.has(rname)) open.delete(rname);
+    else open.add(rname);
+    setUiPref('expandedSubregions', [...open]);
+    renderRegionProgress();
+  };
+
   for (const rname of state.regions) {
-    const color = rColors[rname] || '#808080';
-    const indices = state.taskRegion.map((r, i) => r === rname ? i : -1).filter(i => i >= 0);
-    const total = indices.length;
-    const done = state.baseCompleteId !== null
-      ? indices.filter(i => checked.has(state.baseCompleteId + i)).length
-      : 0;
-    const pct = total > 0 ? done / total : 0;
+    if (regionParentOf(rname)) continue;  // shown under its parent instead
+    const kids = kidsOf.get(rname) || [];
+    const expanded = open.has(rname);
+    // A parent's bar rolls up its own tasks and every task in its subregions.
+    const own = regionCounts(rname, checked);
+    const totals = kids.reduce((acc, k) => {
+      const c = regionCounts(k, checked);
+      return { done: acc.done + c.done, total: acc.total + c.total };
+    }, own);
 
-    const row = document.createElement('div');
-    row.className = 'region-progress-row';
-
-    const nameEl = document.createElement('span');
-    nameEl.className = 'region-progress-name';
-    nameEl.textContent = rname;
-    row.appendChild(nameEl);
-
-    const barOuter = document.createElement('div');
-    barOuter.className = 'region-progress-bar-outer';
-    const barInner = document.createElement('div');
-    barInner.className = 'region-progress-bar-inner';
-    barInner.style.width = `${Math.round(pct * 100)}%`;
-    barInner.style.backgroundColor = color;
-    barOuter.appendChild(barInner);
-    row.appendChild(barOuter);
-
-    const countEl = document.createElement('span');
-    countEl.className = 'region-progress-count';
-    countEl.textContent = `${done}/${total}`;
-    row.appendChild(countEl);
-
-    frag.appendChild(row);
+    frag.appendChild(regionProgressRow(rname, {
+      color: rColors[rname] || '#808080',
+      done: totals.done, total: totals.total, sub: false,
+      kids: kids.length, expanded, onToggle: () => toggleParent(rname),
+    }));
+    if (!kids.length || !expanded) continue;
+    for (const kid of kids) {
+      const c = regionCounts(kid, checked);
+      frag.appendChild(regionProgressRow(kid, {
+        color: rColors[kid] || '#808080', done: c.done, total: c.total, sub: true, kids: 0,
+      }));
+    }
   }
 
   list.innerHTML = '';
@@ -103,11 +192,141 @@ export function renderDeathLinkCards() {
 // =============================================================
 // Rendering: tasks
 // =============================================================
+/**
+ * Whether task `i` is completed and whether anything still locks it, with the
+ * human-readable reasons. Shared by the task list and the clicker board so both
+ * agree on exactly one notion of "unlocked".
+ *
+ * `effectiveLock` defaults to the YAML setting plus the local override, which
+ * is what the task list uses; cost only locks a task when it is on.
+ */
+export function taskAvailability(i, checked = allChecked(), effectiveLock = state.lockPrereqs || state.localEnforce) {
+  const completed = state.baseCompleteId !== null && checked.has(state.baseCompleteId + i);
+
+  // Task prereqs
+  let taskPrereqOk = true;
+  let taskPrereqText = '';
+  if (i < state.taskPrereqs.length && state.taskPrereqs[i]) {
+    taskPrereqText = String(state.taskPrereqs[i]).trim();
+    if (taskPrereqText) taskPrereqOk = prereqsSatisfied(taskPrereqText, checked);
+  }
+
+  // Progressive group requirements
+  const progReqs = (Array.isArray(state.taskProgressiveReqs[i]) ? state.taskProgressiveReqs[i] : []);
+
+  // Item prereqs
+  let itemPrereqOk = true;
+  let itemPrereqText = '';
+  if (i < state.itemPrereqs.length && state.itemPrereqs[i]) {
+    itemPrereqText = String(state.itemPrereqs[i]).trim();
+    if (itemPrereqText) itemPrereqOk = itemPrereqsSatisfied(itemPrereqText, progReqs, checked);
+  }
+
+  const progHints = [];
+  for (const req of progReqs) {
+    const g = req.group ?? req[0];
+    const c = req.count ?? req[1] ?? 1;
+    if (!progressiveReqSatisfied(g, c)) progHints.push(`group '${g}' (need ${c})`);
+  }
+
+  // Region requirements
+  // With inline region refs only the region's inherited reqs gate separately;
+  // the task's own refs are part of its prereq expression.
+  const regionSrc = state.regionRefsInline ? state.taskInheritedRegionReqs : state.taskRegionReqs;
+  const regionReqs = (Array.isArray(regionSrc[i]) ? regionSrc[i] : []);
+  let regionOk = true;
+  const regionHints = [];
+  for (const req of regionReqs) {
+    const r   = req.region ?? req[0];
+    const abs = req.abs_count ?? null;
+    const pct = req.pct ?? req[1] ?? 100;
+    if (abs !== null) {
+      if (!regionReqSatisfiedAbs(r, abs, checked)) {
+        regionOk = false;
+        regionHints.push(`region '${r}' (need ${abs} tasks)`);
+      }
+    } else {
+      if (!regionReqSatisfied(r, pct, checked)) {
+        regionOk = false;
+        regionHints.push(`region '${r}' (${pct}% completed)`);
+      }
+    }
+  }
+
+  // Cost
+  const branches = state.taskCostAmounts[i] || [];
+  const hasCost  = branches.length > 0;
+  const costPaid = !hasCost || !effectiveLock || taskCostIsPaid(i);
+
+  // A region "Depends on" that uses task(...) / item(...) ships as one expression.
+  const regionName = state.taskRegion[i] || '';
+  const regionExprText = (state.regionPrereqExprs || {})[regionName] || '';
+  const regionExprOk = !regionExprText || regionPrereqSatisfied(regionName, checked);
+  if (!regionExprOk) regionOk = false;
+
+  const otherPrereqsOk = taskPrereqOk && itemPrereqOk && regionOk;
+  const costOnlyLocked = otherPrereqsOk && !costPaid;
+
+  const reasons = [];
+  if (taskPrereqText && !taskPrereqOk) reasons.push(`Locked behind task(s): ${taskPrereqText}`);
+  if ((itemPrereqText || progHints.length) && !itemPrereqOk) {
+    const parts = [];
+    if (itemPrereqText) parts.push(itemPrereqText);
+    parts.push(...progHints);
+    reasons.push(`Locked behind item(s): ${parts.join(', ')}`);
+  }
+  if (regionHints.length && !regionOk) reasons.push(`Locked behind region(s): ${regionHints.join(', ')}`);
+  if (!regionExprOk) reasons.push(`Locked behind region '${regionName}': ${regionExprText}`);
+  // Out-of-logic purchases stay locked so spending cannot strand an in-logic one.
+  const costLogicText = costOnlyLocked && effectiveLock ? costLogicReason(i) : '';
+  if (costOnlyLocked && effectiveLock) reasons.push(costLogicText || 'Requires purchase');
+
+  return {
+    completed,
+    unlocked: otherPrereqsOk && costPaid,
+    reasons,
+    taskPrereqOk, taskPrereqText, itemPrereqOk, itemPrereqText, progHints,
+    regionOk, regionHints, branches, hasCost, costPaid, otherPrereqsOk, costOnlyLocked,
+    costLogicText,
+  };
+}
+
+/**
+ * Task `i`'s reward preview text, or '' when previews are off, the task is not
+ * `eligible` (completable, or purchasable in logic), or the purchasable-only
+ * setting excludes it. Hint Previews sends a real hint the first time.
+ * Filler Scout / Filler Hint show a preview only once a received filler item
+ * has revealed the task, available or not (their hints go out on receipt).
+ */
+export function rewardPreview(i, eligible) {
+  if (state.taskRewardPreviews >= 3) {
+    if (!fillerRevealedTasks().has(i)) return '';
+    const name = state.sentItemNames[i] || '';
+    return name ? `${name} → ${state.sentPlayerNames[i] || 'Unknown'}` : '';
+  }
+  if (!eligible || state.taskRewardPreviews === 0) return '';
+  if (state.previewsPurchasableOnly && !(state.taskCostAmounts[i] || []).length) return '';
+  if (state.taskRewardPreviews === 2 && !state.hintRequestedIndices.has(i)) {
+    state.hintRequestedIndices.add(i);
+    ap.sendLocationScouts([state.baseRewardId + i], 1);
+  }
+  const rName = state.sentItemNames[i] || '';
+  return rName ? `${rName} → ${state.sentPlayerNames[i] || 'Unknown'}` : '';
+}
+
+function previewEl(text) {
+  const el = document.createElement('span');
+  el.className = 'task-reward-preview';
+  el.textContent = text;
+  return el;
+}
+
 export function renderTasks() {
   renderDeathLinkCards();
   const dlLocked = isDeathLinkLocked();
   els.tasksList.classList.toggle('locked-dl', dlLocked);
   els.bingoSection.classList.toggle('locked-dl', dlLocked);
+  if (els.clickerSection) els.clickerSection.classList.toggle('locked-dl', dlLocked);
   const connected = !!(
     state.tasks.length &&
     state.baseRewardId !== null &&
@@ -148,81 +367,58 @@ export function renderTasks() {
     els.tasksList.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">Connect to a server to see tasks.</div>';
     els.tasksList.classList.remove('hidden');
     els.bingoSection.classList.add('hidden');
+    if (els.clickerSection) els.clickerSection.classList.add('hidden');
     return;
   }
 
   if (state.bingoMode) {
     els.tasksList.classList.add('hidden');
     els.bingoSection.classList.remove('hidden');
+    if (els.clickerSection) els.clickerSection.classList.add('hidden');
     renderBingo();
     return;
   }
 
-  els.bingoSection.classList.add('hidden');
-  els.tasksList.classList.remove('hidden');
+  if (state.clickerMode) {
+    els.tasksList.classList.add('hidden');
+    els.bingoSection.classList.add('hidden');
+    els.clickerSection.classList.remove('hidden');
+    renderClicker();
+    // Manual tasks opt out of clicking, so they keep the ordinary task row,
+    // Complete button and all, in their own section under the cards.
+    if (els.clickerManualList) {
+      renderTaskCards(els.clickerManualList, effectiveLock, dlLocked, isManualTask);
+      if (els.clickerManual) {
+        els.clickerManual.classList.toggle('hidden', !els.clickerManualList.children.length);
+      }
+    }
+    return;
+  }
 
+  els.bingoSection.classList.add('hidden');
+  if (els.clickerSection) els.clickerSection.classList.add('hidden');
+  els.tasksList.classList.remove('hidden');
+  if (els.clickerManual) els.clickerManual.classList.add('hidden');
+
+  renderTaskCards(els.tasksList, effectiveLock, dlLocked);
+}
+
+/**
+ * The ordinary task cards, into `container`. `include` filters which task
+ * indices are drawn, which is how clicker mode puts its manual tasks in a
+ * section of their own; everything else renders the full list.
+ */
+function renderTaskCards(container, effectiveLock, dlLocked, include = null) {
   const checked = allChecked();
   const frag = document.createDocumentFragment();
 
   for (let i = 0; i < state.tasks.length; i++) {
+    if (include && !include(i)) continue;
     const taskName = state.tasks[i];
-    const completeId = state.baseCompleteId + i;
-    const completed  = checked.has(completeId);
-
-    // Task prereqs
-    let taskPrereqOk = true;
-    let taskPrereqText = '';
-    if (i < state.taskPrereqs.length && state.taskPrereqs[i]) {
-      taskPrereqText = String(state.taskPrereqs[i]).trim();
-      if (taskPrereqText) taskPrereqOk = prereqsSatisfied(taskPrereqText, checked);
-    }
-
-    // Progressive group requirements
-    const progReqs = (Array.isArray(state.taskProgressiveReqs[i]) ? state.taskProgressiveReqs[i] : []);
-
-    // Item prereqs
-    let itemPrereqOk = true;
-    let itemPrereqText = '';
-    if (i < state.itemPrereqs.length && state.itemPrereqs[i]) {
-      itemPrereqText = String(state.itemPrereqs[i]).trim();
-      if (itemPrereqText) itemPrereqOk = itemPrereqsSatisfied(itemPrereqText, progReqs);
-    }
-
-    const progHints = [];
-    for (const req of progReqs) {
-      const g = req.group ?? req[0];
-      const c = req.count ?? req[1] ?? 1;
-      if (!progressiveReqSatisfied(g, c)) progHints.push(`group '${g}' (need ${c})`);
-    }
-
-    // Region requirements
-    const regionReqs = (Array.isArray(state.taskRegionReqs[i]) ? state.taskRegionReqs[i] : []);
-    let regionOk = true;
-    const regionHints = [];
-    for (const req of regionReqs) {
-      const r   = req.region ?? req[0];
-      const abs = req.abs_count ?? null;
-      const pct = req.pct ?? req[1] ?? 100;
-      if (abs !== null) {
-        if (!regionReqSatisfiedAbs(r, abs, checked)) {
-          regionOk = false;
-          regionHints.push(`region '${r}' (need ${abs} tasks)`);
-        }
-      } else {
-        if (!regionReqSatisfied(r, pct, checked)) {
-          regionOk = false;
-          regionHints.push(`region '${r}' (${pct}% completed)`);
-        }
-      }
-    }
-
-    // Cost
-    const branches = state.taskCostAmounts[i] || [];
-    const hasCost  = branches.length > 0;
-    const costPaid = !hasCost || !effectiveLock || taskCostIsPaid(i);
-
-    const otherPrereqsOk = taskPrereqOk && itemPrereqOk && regionOk;
-    const costOnlyLocked = otherPrereqsOk && !costPaid;
+    const { completed,
+      taskPrereqOk, taskPrereqText, itemPrereqOk, itemPrereqText, progHints,
+      regionOk, regionHints, branches, costPaid, otherPrereqsOk, costOnlyLocked, costLogicText,
+    } = taskAvailability(i, checked, effectiveLock);
 
     const wouldHide = !otherPrereqsOk && state.hideUnreachable && effectiveLock;
     const showAsLocked = wouldHide && state.showLocked;
@@ -262,8 +458,12 @@ export function renderTasks() {
         actions.appendChild(mcBtn);
       }
     } else if (costOnlyLocked && effectiveLock) {
+      const preview = rewardPreview(i, !costLogicText);
+      if (preview) top.appendChild(previewEl(preview));
+
       const pBtn = document.createElement('button');
       pBtn.textContent = '$$ Purchase $$';
+      pBtn.disabled = !!costLogicText;
       pBtn.onclick = () => attemptPurchase(i);
       actions.appendChild(pBtn);
 
@@ -276,20 +476,8 @@ export function renderTasks() {
     } else {
       const canComplete = !(effectiveLock && (!otherPrereqsOk || !costPaid));
 
-      if (canComplete && state.taskRewardPreviews !== 0) {
-        const rName = state.sentItemNames[i] || '';
-        const rPlayer = state.sentPlayerNames[i] || 'Unknown';
-        if (rName) {
-          const previewEl = document.createElement('span');
-          previewEl.className = 'task-reward-preview';
-          previewEl.textContent = `${rName} → ${rPlayer}`;
-          top.appendChild(previewEl);
-        }
-        if (state.taskRewardPreviews === 2 && !state.hintRequestedIndices.has(i)) {
-          state.hintRequestedIndices.add(i);
-          ap.sendLocationScouts([state.baseRewardId + i], 1);
-        }
-      }
+      const preview = rewardPreview(i, canComplete);
+      if (preview) top.appendChild(previewEl(preview));
 
       const cBtn = document.createElement('button');
       cBtn.textContent = 'Complete';
@@ -332,20 +520,24 @@ export function renderTasks() {
       card.appendChild(makeHint(`Locked behind region(s): ${regionHints.join(', ')}`));
     }
     if (!completed && costOnlyLocked && effectiveLock && branches.length) {
-      const costParts = branches.map(branch =>
-        branch.map(([name, amt]) => `${amt} ${name}`).join(' && ')
-      );
-      const costText = costParts.length > 1
-        ? costParts.map(p => `(${p})`).join(' || ')
-        : costParts[0];
-      card.appendChild(makeHint(`Requires purchase: ${costText}`));
+      card.appendChild(makeHint(`Requires purchase: ${formatCostBranches(branches)}`));
+      if (costLogicText) card.appendChild(makeHint(costLogicText));
     }
 
     frag.appendChild(card);
   }
 
-  els.tasksList.innerHTML = '';
-  els.tasksList.appendChild(frag);
+  container.innerHTML = '';
+  container.appendChild(frag);
+}
+
+/** A task's cost branches as one line: '2 Coin && 1 Gem' or '(2 Coin) || (1 Gem)'. */
+export function formatCostBranches(branches) {
+  const parts = (branches || []).map(branch =>
+    branch.map(([name, amt]) => `${amt} ${name}`).join(' && ')
+  );
+  if (!parts.length) return '';
+  return parts.length > 1 ? parts.map(p => `(${p})`).join(' || ') : parts[0];
 }
 
 function makeHint(text) {
