@@ -122,7 +122,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     const v = pyGet(block, 'task_reward_previews', 0);
     return pyInt(pyTruthy(v) ? v : 0);
   }, 0, VALUE_OR_TYPE);
-  if (![0, 1, 2].includes(trp)) trp = 0;
+  if (![0, 1, 2, 3, 4].includes(trp)) trp = 0;
   model.taskRewardPreviews = trp;
   model.previewsPurchasableOnly = toggleOption(pyGet(block, 'task_reward_previews_purchasable_only', false));
 
@@ -284,15 +284,16 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
 
   // Numeric item references are one per exported row; shift them onto collapsed rows.
   if (flatToRow.some((rows, k) => rows.length !== 1 || rows[0] !== k + 1)) {
+    const remapItems = t => remapPrereqIndices(collapseCopyGroups(t, flatToRow), flatToRow);
     for (const t of tasks) {
-      t.itemPrereq = remapPrereqIndices(collapseCopyGroups(t.itemPrereq, flatToRow), flatToRow);
+      t.itemPrereq = mapScopedText(t.itemPrereq, null, remapItems, 'item');
+      // Task prereqs carry item indices only inside item(...).
+      t.prereq = mapScopedText(t.prereq, null, remapItems);
       t.cost = remapCostIndices(t.cost, flatToRow);
     }
     // A region "Depends on" carries item indices only inside its item(...) scope.
-    for (const r of model.regions) {
-      r.prereq = mapScopedText(r.prereq, null,
-        t => remapPrereqIndices(collapseCopyGroups(t, flatToRow), flatToRow));
-    }
+    for (const r of model.regions) r.prereq = mapScopedText(r.prereq, null, remapItems);
+    model.goalTasks = mapScopedText(model.goalTasks, null, remapItems);
   }
 
   // Randomized regions and random-choice groups balance on the final per-seed counts.

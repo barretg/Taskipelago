@@ -12,8 +12,8 @@
 //   ['region_ref', name, pct|null]  ['region_abs', name, n]
 //   ['seq_flag']
 //   ['item_copies', idx, y]      first y copies of item idx (INDEX*Y, item prereqs only)
-//   ['scoped_task', [node]]      task(...) wrapper (region prereqs only)
-//   ['scoped_item', [node]]      item(...) wrapper (region prereqs only)
+//   ['scoped_task', [node]]      task(...) wrapper
+//   ['scoped_item', [node]]      item(...) wrapper
 //   ['cost_group', name, count]  (cost expressions)
 //
 // Python details kept for parity: str.isspace()/strip() character set,
@@ -220,66 +220,96 @@ function tokenize(chars, taskIndex, label, locationLabel) {
 }
 
 /**
- * Port of prereq_parser.py map_scoped_text. Rewrites the contents of the
- * task(...) / item(...) wrappers in a region prereq; text outside a wrapper is
- * left exactly as written and quoted names are skipped over.
+ * Port of prereq_parser.py map_scoped_text. Rewrites a prereq expression one
+ * domain at a time: text inside task(...) goes to taskFn, text inside item(...)
+ * to itemFn, and text outside every wrapper to the `home` domain's function
+ * ('task', 'item' or null; null leaves it exactly as written, as region
+ * prereqs need). Wrappers nest, and quoted names are skipped over.
  */
-export function mapScopedText(text, taskFn = null, itemFn = null) {
+export function mapScopedText(text, taskFn = null, itemFn = null, home = null) {
   if (!text) return text;
-  const chars = Array.from(text);
-  const n = chars.length;
-  const findQuote = from => {
-    for (let k = from; k < n; k++) if (chars[k] === '"') return k;
-    return -1;
-  };
-  const out = [];
-  let i = 0;
-  while (i < n) {
-    const c = chars[i];
-    if (c === '"') {
-      const q = findQuote(i + 1);
-      const j = q < 0 ? n : q + 1;
-      out.push(chars.slice(i, j).join(''));
-      i = j;
-      continue;
-    }
-    if (isAlpha(c) || c === '_') {
-      let j = i;
-      while (j < n && (isAlpha(chars[j]) || isDigit(chars[j]) || chars[j] === '_')) j++;
-      const word = chars.slice(i, j).join('');
-      if ((word === 'task' || word === 'item') && chars[j] === '(') {
-        let depth = 0;
-        let k = j;
-        while (k < n) {
-          const ch = chars[k];
-          if (ch === '"') {
-            const q = findQuote(k + 1);
-            k = q < 0 ? n : q + 1;
+  const fns = { task: taskFn, item: itemFn };
+  const map = (chars, dom) => {
+    const n = chars.length;
+    const findQuote = from => {
+      for (let k = from; k < n; k++) if (chars[k] === '"') return k;
+      return -1;
+    };
+    const out = [];
+    let buf = [];
+    const flush = () => {
+      if (!buf.length) return;
+      const chunk = buf.join('');
+      buf = [];
+      const fn = dom ? fns[dom] : null;
+      out.push(!fn || !chunk.trim() ? chunk : fn(chunk));
+    };
+    let i = 0;
+    while (i < n) {
+      const c = chars[i];
+      if (c === '"') {
+        const q = findQuote(i + 1);
+        const j = q < 0 ? n : q + 1;
+        buf.push(chars.slice(i, j).join(''));
+        i = j;
+        continue;
+      }
+      if (isAlpha(c) || c === '_') {
+        let j = i;
+        while (j < n && (isAlpha(chars[j]) || isDigit(chars[j]) || chars[j] === '_')) j++;
+        const word = chars.slice(i, j).join('');
+        // The parser allows whitespace between the keyword and '('.
+        let p = j;
+        while (p < n && isSpace(chars[p])) p++;
+        if ((word === 'task' || word === 'item') && chars[p] === '(') {
+          j = p;
+          let depth = 0;
+          let k = j;
+          while (k < n) {
+            const ch = chars[k];
+            if (ch === '"') {
+              const q = findQuote(k + 1);
+              k = q < 0 ? n : q + 1;
+              continue;
+            }
+            if (ch === '(') depth++;
+            else if (ch === ')') {
+              depth--;
+              if (depth === 0) break;
+            }
+            k++;
+          }
+          if (k < n) {
+            flush();
+            out.push(`${word}(${map(chars.slice(j + 1, k), word)})`);
+            i = k + 1;
             continue;
           }
-          if (ch === '(') depth++;
-          else if (ch === ')') {
-            depth--;
-            if (depth === 0) break;
-          }
-          k++;
         }
-        if (k < n) {
-          const inner = chars.slice(j + 1, k).join('');
-          const fn = word === 'task' ? taskFn : itemFn;
-          out.push(`${word}(${fn ? fn(inner) : inner})`);
-          i = k + 1;
-          continue;
-        }
+        buf.push(word);
+        i = j;
+        continue;
       }
-      out.push(word);
-      i = j;
-      continue;
+      buf.push(c);
+      i++;
     }
-    out.push(c);
-    i++;
-  }
-  return out.join('');
+    flush();
+    return out.join('');
+  };
+  return map(Array.from(text), home);
+}
+
+/**
+ * The scopedDomains parsePrereq takes for task prereqs, item prereqs and goal
+ * text: task(...) holds a task prereq (task indices, region names) and item(...)
+ * an item prereq (item indices, item group names). Mirrors __init__.py
+ * _prereq_scopes.
+ */
+export function prereqScopes(nTasks, nItems, regions, groups) {
+  return {
+    task: { n: nTasks, groups: null, regions, const: nTasks, label: 'task(...) scope' },
+    item: { n: nItems, groups, regions: null, const: nTasks, label: 'item(...) scope' },
+  };
 }
 
 /**
@@ -387,7 +417,7 @@ export function parsePrereq(text, nTasks, taskIndex, label,
     if (Array.isArray(tok) && tok[0] === 'copies') {
       consume();
       const [, idx, y] = tok;
-      if (cLabel !== 'item prereq') {
+      if (cLabel !== 'item prereq' && cLabel !== 'item(...) scope') {
         fail(`Taskipelago: '${idx}*${y}' copy counts can only be used in item prereqs (used in ${cLabel} on ${loc}).`);
       }
       if (idx < 1n || idx > BigInt(cN)) {

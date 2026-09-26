@@ -1,5 +1,5 @@
 import { ap, state, els } from './state.js';
-import { recalcPurchasesFromCompleted, maybeSendGoal } from './logic.js';
+import { recalcPurchasesFromCompleted, maybeSendGoal, sendFillerHints } from './logic.js';
 import { showItemNotification, handleDeathLinkBounce } from './notifications.js';
 import {
   loadManualConsumptions, applyServerManualConsumptions, handleManualSyncBounce,
@@ -156,6 +156,7 @@ function applySlotData(sd) {
   state.sentItemNames       = sd.sent_item_names || [];
   state.sentPlayerNames     = sd.sent_player_names || [];
   state.taskRewardPreviews  = parseInt(sd.task_reward_previews || 0);
+  state.fillerPreviewTargets = Array.isArray(sd.filler_preview_targets) ? sd.filler_preview_targets : [];
   state.previewsPurchasableOnly = !!sd.task_reward_previews_purchasable_only;
   state.progressiveGroups   = sd.progressive_groups || [];
   state.progressiveGroupColors = Array.isArray(sd.progressive_group_colors) ? sd.progressive_group_colors : [];
@@ -291,6 +292,7 @@ function clearPlayState() {
   state.sentItemNames = [];
   state.sentPlayerNames = [];
   state.taskRewardPreviews = 0;
+  state.fillerPreviewTargets = [];
   state.previewsPurchasableOnly = false;
   state.progressiveGroups = [];
   state.progressiveGroupColors = [];
@@ -433,6 +435,7 @@ export function initConnection() {
     if (state.notifyReady) processNotify(items, packetIndex);
     else state.notifyQueue.push({ items, packetIndex });
     recalcPurchasesFromCompleted();
+    sendFillerHints();
     renderAll();
   };
 
