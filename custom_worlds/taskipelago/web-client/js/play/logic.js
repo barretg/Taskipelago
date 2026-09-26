@@ -77,10 +77,12 @@ function itemScope(progCount) {
 
 export function prereqsSatisfied(prereqText, checked) {
   if (!prereqText || state.baseCompleteId === null) return true;
-  // Bare region names here are gated through taskRegionReqs, as before.
+  // Newer seeds ship region refs resolved inline ('chores-75') and evaluate them
+  // here; older seeds gate bare region names through taskRegionReqs instead.
+  const scopes = fieldScopes(checked);
   return evalPrereqExpr(prereqText, idx1 =>
     checked.has(state.baseCompleteId + idx1 - 1),
-  null, fieldScopes(checked));
+  state.regionRefsInline ? scopes.task.nameFn : null, scopes);
 }
 
 export function receivedItemIds() {
@@ -327,10 +329,11 @@ export function maybeSendGoal() {
   const checked = allChecked();
   let done;
   if (state.goalExpression) {
+    const scopes = fieldScopes(checked);
     done = evalPrereqExpr(state.goalExpression, idx1 =>
       checked.has(state.baseCompleteId + idx1 - 1),
-    null, fieldScopes(checked));
-    for (const req of (state.goalRegionReqs || [])) {
+    state.regionRefsInline ? scopes.task.nameFn : null, scopes);
+    for (const req of (state.regionRefsInline ? [] : (state.goalRegionReqs || []))) {
       const r = req.region ?? req[0];
       const abs = req.abs_count ?? null;
       const pct = req.pct ?? req[1] ?? 100;

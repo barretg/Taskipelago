@@ -43,6 +43,21 @@ test('item prereq: task(...) OR item', () => {
   assert.equal(logic.itemPrereqsSatisfied('1 || task(3)', [], checked), true);
 });
 
+test('inline region refs keep OR semantics (newer seeds only)', () => {
+  state.taskRegion = ['Yard', 'Yard', '', ''];
+  state.regionRefsInline = true;
+  let checked = new Set([100]);
+  ap.itemsReceived = [];
+  assert.equal(logic.prereqsSatisfied('item(1) || Yard-100', checked), false);
+  assert.equal(logic.prereqsSatisfied('item(1) || Yard-50', checked), true);
+  ap.itemsReceived = [{ item: 300 }];
+  assert.equal(logic.prereqsSatisfied('item(1) || Yard*2', checked), true);
+  // Older seeds: bare region names are gated elsewhere and read as true here.
+  state.regionRefsInline = false;
+  ap.itemsReceived = [];
+  assert.equal(logic.prereqsSatisfied('item(1) || Yard', checked), true);
+});
+
 test('plain prereqs are unchanged', () => {
   const checked = setup({ items: [1], checked: [0] });
   assert.equal(logic.prereqsSatisfied('1 && 2', checked), false);

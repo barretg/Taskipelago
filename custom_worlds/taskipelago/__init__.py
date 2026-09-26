@@ -1614,6 +1614,7 @@ class TaskipelagoWorld(World):
             task_region_reqs.append(reqs)
 
         parsed_prereqs = []
+        task_own_region_count: List[int] = []
         for i, ast in enumerate(parsed_prereqs_unresolved):
             # Resolve the task's own region refs first, using only its own pct map -
             # region-level reqs are folded in below AFTER resolution (as an already-resolved
@@ -1626,6 +1627,11 @@ class TaskipelagoWorld(World):
                 if "pct" in req
             }
             ast = resolve_ast_refs(ast, {}, own_region_pct)
+            # Region refs ship inline with their resolved pct ('chores-75') so the
+            # client can evaluate them inside the expression, keeping OR semantics.
+            if task_region_reqs[i]:
+                raw_prereqs_input[i] = ast_to_text(ast)
+            task_own_region_count.append(len(task_region_reqs[i]))
 
             rname_i = task_region[i]
             if rname_i and parsed_region_prereqs.get(rname_i) is not None:
@@ -1859,6 +1865,8 @@ class TaskipelagoWorld(World):
 
         goal_region_pct = {req["region"]: req["pct"] for req in goal_region_reqs if "pct" in req}
         goal_ast = resolve_ast_refs(goal_ast_unresolved, {}, goal_region_pct)
+        if goal_region_reqs:
+            raw_goal = ast_to_text(goal_ast)
 
         self._raw_goal = raw_goal
         self._goal_ast = goal_ast
@@ -1924,6 +1932,11 @@ class TaskipelagoWorld(World):
                     self._filler_preview_targets[_i] = _deck[_k]
 
         self._raw_prereqs = raw_prereqs_input
+        # Region reqs a task inherits from its region's 'Depends on' (always ANDed);
+        # the task's own region refs are evaluated inline in its prereq text.
+        self._task_inherited_region_reqs = [
+            reqs[own:] for reqs, own in zip(task_region_reqs, task_own_region_count)
+        ]
         self._parsed_prereqs = parsed_prereqs
         self._raw_reward_prereqs = raw_reward_prereqs_input
         self._parsed_reward_prereqs = parsed_reward_prereqs
@@ -2178,6 +2191,11 @@ class TaskipelagoWorld(World):
             # Region refs to a parent count its subregions' tasks too; older seeds
             # lack the key and keep counting only a region's own tasks.
             "region_rollup": True,
+            # Newer clients evaluate region refs inside task prereqs and the goal
+            # expression (OR-aware); task_region_reqs / goal_region_reqs stay for
+            # older clients, which AND every entry.
+            "region_refs_inline": True,
+            "task_inherited_region_reqs": [list(r) for r in self._task_inherited_region_reqs],
             # Only regions that use task(...) / item(...); older clients ignore it.
             "region_prereq_exprs": dict(self._region_prereq_exprs),
             "task_region": list(self._task_region),

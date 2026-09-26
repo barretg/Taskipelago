@@ -97,6 +97,23 @@ class ItemPrereqTaskScopeTest(unittest.TestCase):
         self.assertEqual(w._raw_reward_prereqs[2], "1 || task(Yard-50)")
         self.assertEqual(w._task_region_reqs[2], [])
 
+    def test_task_prereq_region_ref_ships_inline(self):
+        w = world(regions=["Yard", "Shed"], task_region=["Yard", "Yard", "Shed", ""],
+                  region_prereqs=["", "Yard*1"], region_default_pcts=["50", "100"],
+                  task_prereqs=["", "", "", "item(1) || Yard"])
+        self.assertEqual(w._raw_prereqs[3], "item(1) || Yard-50")
+        self.assertEqual(w._task_inherited_region_reqs[3], [])
+        # Old clients still AND the full list.
+        self.assertEqual(w._task_region_reqs[3], [{"region": "Yard", "pct": 50}])
+        # Tasks in Shed inherit its gate separately from their own prereq.
+        self.assertEqual(w._task_inherited_region_reqs[2], [{"region": "Yard", "abs_count": 1}])
+
+    def test_goal_region_ref_ships_inline(self):
+        w = world(regions=["Yard"], task_region=["Yard", "Yard", "", ""],
+                  goal_tasks=["item(1) || Yard*2"])
+        self.assertEqual(w._raw_goal, "item(1) || Yard*2")
+        self.assertEqual(w._goal_region_reqs, [{"region": "Yard", "abs_count": 2}])
+
 
 def _eval_reward(w, ast, have):
     pp = load_world().prereq_parser
