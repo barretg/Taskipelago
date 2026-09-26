@@ -3,8 +3,9 @@ Local host for the Taskipelago web client (UNIFY_PLAN section 2).
 
 Serves the same static files as the hosted client from http://127.0.0.1, adds a
 generated config.json (feature flags, launch info, per-run token) and a small
-device-storage API, then opens a Chromium app-mode window (or the default
-browser as a fallback) and lives as long as that window does.
+device-storage API, then opens the user's default browser (as a Chromium
+app-mode window when the default is Chromium-based, otherwise as a normal
+tab) and lives as long as that window does.
 
 Stdlib only.
 """
@@ -49,8 +50,10 @@ MIME_TYPES = {
     ".woff2": "font/woff2",
 }
 
+# Unused by the current launch flow (the default browser always wins now); kept
+# only so external callers relying on these names keep working.
 NO_BROWSER_PROMPT = (
-    "No Chromium-based browser (Chromium, Chrome, Edge, Brave) was found. The "
+    "No Chromium-based browser (Chromium, Chrome, Brave) was found. The "
     "Taskipelago Client works best in one. Open it in your default browser instead?"
 )
 
@@ -635,11 +638,113 @@ def _linux_data_home() -> str:
     return os.environ.get("XDG_DATA_HOME") or os.path.join(os.path.expanduser("~"), ".local", "share")
 
 
-def _find_windows_browser() -> str | None:
+# Known Chromium-based browsers we can put into app-mode. Anything else the
+# user has set as their default (Firefox, Safari, ...) just opens normally.
+_CHROMIUM_BROWSERS = ("chromium", "chrome", "brave", "vivaldi", "edge")
+
+
+def _is_edge(name: str) -> bool:
+    return "edge" in name.lower()
+
+
+def _browser_of(name: str) -> str | None:
+    """Which known Chromium browser a path/id/exe name belongs to, if any."""
+    lowered = name.lower()
+    for browser in _CHROMIUM_BROWSERS:
+        if browser in lowered:
+            return browser
+    return None
+
+
+# ProgId -> normalized browser name, for matching the user's chosen default
+# handler (Settings > Default apps > Web browser on Windows).
+_WINDOWS_PROGID_BROWSER = {
+    "ChromeHTML": "chrome",
+    "ChromiumHTM": "chromium",
+    "BraveHTML": "brave",
+    "VivaldiHTM": "vivaldi",
+    "MSEdgeHTM": "edge",
+}
+
+
+def _windows_default_browser() -> str | None:
+    """Normalized name of the user's default https handler, if known."""
     try:
         import winreg
-        for hive in (winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER):
-            for exe in ("msedge.exe", "chrome.exe", "brave.exe"):
+        key_path = (r"Software\Microsoft\Windows\CurrentVersion\Explorer\Shell\Associations"
+                    r"\UrlAssociations\https\UserChoice")
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path) as k:
+            prog_id, _ = winreg.QueryValueEx(k, "ProgId")
+    except (ImportError, OSError):
+        return None
+    return _WINDOWS_PROGID_BROWSER.get(str(prog_id))
+
+
+# xdg-settings prints a .desktop id (native or flatpak); match it against the
+# same names find_browser() searches for.
+def _linux_default_browser() -> str | None:
+    try:
+        out = subprocess.run(["xdg-settings", "get", "default-web-browser"],
+                             env=sanitized_env(), capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return _browser_of(out.stdout.strip())
+
+
+# Bundle id (LSHandlerRoleAll for the https/http URL scheme) -> normalized name.
+_MAC_BUNDLE_ID_BROWSER = {
+    "com.google.chrome": "chrome",
+    "org.chromium.chromium": "chromium",
+    "com.brave.browser": "brave",
+    "com.vivaldi.vivaldi": "vivaldi",
+    "com.microsoft.edgemac": "edge",
+}
+
+
+def _mac_default_browser() -> str | None:
+    plist_path = os.path.join(os.path.expanduser("~"), "Library", "Preferences",
+                              "com.apple.LaunchServices", "com.apple.launchservices.secure.plist")
+    try:
+        import plistlib
+        with open(plist_path, "rb") as f:
+            data = plistlib.load(f)
+    except (OSError, ImportError, ValueError):
+        return None
+    handlers = data.get("LSHandlers", [])
+    for scheme in ("https", "http"):
+        for handler in handlers:
+            if handler.get("LSHandlerURLScheme") == scheme:
+                bundle_id = str(handler.get("LSHandlerRoleAll", "")).lower()
+                return _MAC_BUNDLE_ID_BROWSER.get(bundle_id)
+    return None
+
+
+def default_browser_name() -> str | None:
+    """Normalized name (chrome/chromium/brave/vivaldi/edge) of the OS default
+    browser, or None if it's something else (Firefox, Safari, ...) or could
+    not be determined. Detection failure always falls soft to None."""
+    try:
+        if IS_WINDOWS:
+            return _windows_default_browser()
+        if IS_MAC:
+            return _mac_default_browser()
+        if IS_LINUX:
+            return _linux_default_browser()
+    except Exception:
+        return None
+    return None
+
+
+def _find_windows_browser(only: str | None) -> str | None:
+    search_order = [b for b in ("chrome", "chromium", "brave", "vivaldi", "edge")
+                    if only is None or b == only]
+    exe_names = {"chrome": "chrome.exe", "chromium": "chromium.exe", "brave": "brave.exe",
+                "vivaldi": "vivaldi.exe", "edge": "msedge.exe"}
+    try:
+        import winreg
+        for browser in search_order:
+            exe = exe_names[browser]
+            for hive in (winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER):
                 key = rf"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\{exe}"
                 try:
                     with winreg.OpenKey(hive, key) as k:
@@ -654,26 +759,42 @@ def _find_windows_browser() -> str | None:
     pf86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
     pf = os.environ.get("ProgramFiles", r"C:\Program Files")
     lad = os.environ.get("LocalAppData", "")
-    for path in (
-        os.path.join(pf86, "Microsoft", "Edge", "Application", "msedge.exe"),
-        os.path.join(pf, "Microsoft", "Edge", "Application", "msedge.exe"),
-        os.path.join(pf, "Google", "Chrome", "Application", "chrome.exe"),
-        os.path.join(lad, "Google", "Chrome", "Application", "chrome.exe") if lad else "",
-        os.path.join(pf, "BraveSoftware", "Brave-Browser", "Application", "brave.exe"),
-    ):
-        if path and os.path.isfile(path):
-            return path
+    fallback_paths = {
+        "chrome": [os.path.join(pf, "Google", "Chrome", "Application", "chrome.exe"),
+                  os.path.join(lad, "Google", "Chrome", "Application", "chrome.exe") if lad else ""],
+        "chromium": [os.path.join(lad, "Chromium", "Application", "chrome.exe") if lad else ""],
+        "brave": [os.path.join(pf, "BraveSoftware", "Brave-Browser", "Application", "brave.exe")],
+        "vivaldi": [os.path.join(lad, "Vivaldi", "Application", "vivaldi.exe") if lad else ""],
+        "edge": [os.path.join(pf86, "Microsoft", "Edge", "Application", "msedge.exe"),
+                os.path.join(pf, "Microsoft", "Edge", "Application", "msedge.exe")],
+    }
+    for browser in search_order:
+        for path in fallback_paths[browser]:
+            if path and os.path.isfile(path):
+                return path
     return None
 
 
-def find_browser(env: dict | None = None) -> Browser | None:
+def find_browser(env: dict | None = None, include_edge: bool = True, only: str | None = None) -> Browser | None:
+    """Locate a Chromium-based browser to open as an app window.
+
+    `only`, when given, restricts the search to that single normalized name
+    (e.g. "chrome", "firefox" candidates are never returned here since this
+    function only knows about Chromium-based browsers). `include_edge` is
+    kept for backward compatibility; passing `only="edge"` is equivalent to
+    the previous include_edge-only search restricted to Edge.
+    """
     override = os.environ.get("TASKIPELAGO_BROWSER", "").strip()
     if override.lower() == "none":
         return None
     env = sanitized_env() if env is None else env
+    if only is not None and not include_edge and only == "edge":
+        return None
 
     if IS_WINDOWS:
-        exe = override if override and os.path.isfile(override) else _find_windows_browser()
+        exe = override if override and os.path.isfile(override) else _find_windows_browser(only)
+        if exe and not include_edge and _is_edge(exe):
+            exe = None
         if not exe:
             return None
         return Browser([exe], os.path.join(_user_dir(), "chromium-profile"), "windows")
@@ -683,12 +804,20 @@ def find_browser(env: dict | None = None) -> Browser | None:
                                    "Taskipelago", "chromium-profile")
         candidates = [override] if override else [
             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
             "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+            "/Applications/Vivaldi.app/Contents/MacOS/Vivaldi",
             "/Applications/Chromium.app/Contents/MacOS/Chromium",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
         ]
         for exe in candidates:
-            if exe and os.path.isfile(exe):
+            if not exe:
+                continue
+            if not override:
+                if not include_edge and _is_edge(exe):
+                    continue
+                if only is not None and _browser_of(exe) != only:
+                    continue
+            if os.path.isfile(exe):
                 return Browser([exe], mac_profile, "mac")
         return None
 
@@ -700,7 +829,11 @@ def find_browser(env: dict | None = None) -> Browser | None:
     search_path = env.get("PATH", os.defpath)
     snap_exe = None
     for name in ("chromium", "chromium-browser", "google-chrome-stable", "google-chrome",
-                 "microsoft-edge-stable", "brave-browser", "brave", "vivaldi-stable"):
+                 "brave-browser", "brave", "vivaldi-stable", "microsoft-edge-stable"):
+        if not include_edge and _is_edge(name):
+            continue
+        if only is not None and _browser_of(name) != only:
+            continue
         exe = shutil.which(name, path=search_path)
         if not exe:
             continue
@@ -711,7 +844,11 @@ def find_browser(env: dict | None = None) -> Browser | None:
 
     if shutil.which("flatpak", path=search_path):
         for app_id in ("org.chromium.Chromium", "com.google.Chrome", "com.brave.Browser",
-                       "com.microsoft.Edge"):
+                       "com.vivaldi.Vivaldi", "com.microsoft.Edge"):
+            if not include_edge and _is_edge(app_id):
+                continue
+            if only is not None and _browser_of(app_id) != only:
+                continue
             try:
                 result = subprocess.run(["flatpak", "info", app_id], env=env,
                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -722,11 +859,12 @@ def find_browser(env: dict | None = None) -> Browser | None:
                 profile = os.path.join(home, ".var", "app", app_id, "data", "taskipelago-profile")
                 return Browser(["flatpak", "run", app_id], profile, "flatpak")
 
-    snap_exe = snap_exe or ("/snap/bin/chromium" if os.path.exists("/snap/bin/chromium") else None)
-    if snap_exe:
-        # Snap confinement blocks hidden dirs in $HOME.
-        profile = os.path.join(home, "snap", "chromium", "common", "taskipelago-profile")
-        return Browser([snap_exe], profile, "snap")
+    if only is None or only == "chromium":
+        snap_exe = snap_exe or ("/snap/bin/chromium" if os.path.exists("/snap/bin/chromium") else None)
+        if snap_exe:
+            # Snap confinement blocks hidden dirs in $HOME.
+            profile = os.path.join(home, "snap", "chromium", "common", "taskipelago-profile")
+            return Browser([snap_exe], profile, "snap")
     return None
 
 
@@ -765,6 +903,20 @@ def open_default_browser(url: str) -> None:
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError as e:
         _log(f"could not open the default browser ({e!r}); open {url} manually")
+
+
+def _app_window_browser() -> Browser | None:
+    """Browser to open as an app window, if any. TASKIPELAGO_BROWSER wins
+    outright; otherwise the OS default browser wins, and is only opened as an
+    app window when it's a Chromium-based browser find_browser() can locate.
+    Anything else (Firefox, Safari, undetectable) returns None so the caller
+    falls back to open_default_browser."""
+    if os.environ.get("TASKIPELAGO_BROWSER", "").strip():
+        return find_browser()
+    name = default_browser_name()
+    if name is None:
+        return None
+    return find_browser(only=name)
 
 
 def ask_use_default_browser() -> bool:
@@ -837,7 +989,7 @@ def launch(*args) -> None:
         _log(f"client already running at {url}; opening another window")
         if launch_info:
             _post_launch(existing, launch_info)
-        browser = find_browser()
+        browser = _app_window_browser()
         if browser:
             spawn_browser(browser, url)
         else:
@@ -877,7 +1029,9 @@ def launch(*args) -> None:
         if os.environ.get("TASKIPELAGO_NO_OPEN"):
             wait_for_heartbeats(app)
             return
-        browser = find_browser()
+        # The default browser always wins; it only gets the nicer app window
+        # presentation when it's a Chromium-based browser we can locate.
+        browser = _app_window_browser()
         if browser is not None:
             _log(f"opening app window with {browser.command[-1]} ({browser.kind})")
             try:
@@ -887,8 +1041,6 @@ def launch(*args) -> None:
                 proc = None
             if proc is not None and wait_for_app_window(app, browser, proc):
                 return
-        if not ask_use_default_browser():
-            return
         _log(f"opening {url} in the default browser")
         open_default_browser(url)
         wait_for_heartbeats(app)
