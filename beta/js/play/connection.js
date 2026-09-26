@@ -172,6 +172,8 @@ function applySlotData(sd) {
   state.regionParent        = (sd.region_parent && typeof sd.region_parent === 'object'
     && !Array.isArray(sd.region_parent)) ? sd.region_parent : {};
   state.regionRollup        = !!sd.region_rollup;
+  state.regionRefsInline    = !!sd.region_refs_inline;
+  state.taskInheritedRegionReqs = sd.task_inherited_region_reqs || [];
   state.taskRegion          = sd.task_region || [];
   state.taskRegionReqs      = sd.task_region_reqs || [];
   state.regionPrereqExprs   = sd.region_prereq_exprs || {};
@@ -307,6 +309,8 @@ function clearPlayState() {
   state.regionColors = [];
   state.regionParent = {};
   state.regionRollup = false;
+  state.regionRefsInline = false;
+  state.taskInheritedRegionReqs = [];
   state.taskRegion = [];
   state.taskRegionReqs = [];
   state.regionPrereqExprs = {};

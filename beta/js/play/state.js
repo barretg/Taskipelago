@@ -49,6 +49,8 @@ export const state = {
   regionRollup: false,         // region refs to a parent also count its subregions' tasks
   taskRegion: [],
   taskRegionReqs: [],
+  regionRefsInline: false,     // newer seeds: region refs evaluated inside prereq/goal text
+  taskInheritedRegionReqs: [], // with regionRefsInline: reqs inherited from the task's region
   // Region name -> resolved "Depends on" expression, only for regions that use
   // a task(...) / item(...) scope; plain region deps still ride taskRegionReqs.
   regionPrereqExprs: {},

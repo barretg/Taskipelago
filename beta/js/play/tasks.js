@@ -230,7 +230,10 @@ export function taskAvailability(i, checked = allChecked(), effectiveLock = stat
   }
 
   // Region requirements
-  const regionReqs = (Array.isArray(state.taskRegionReqs[i]) ? state.taskRegionReqs[i] : []);
+  // With inline region refs only the region's inherited reqs gate separately;
+  // the task's own refs are part of its prereq expression.
+  const regionSrc = state.regionRefsInline ? state.taskInheritedRegionReqs : state.taskRegionReqs;
+  const regionReqs = (Array.isArray(regionSrc[i]) ? regionSrc[i] : []);
   let regionOk = true;
   const regionHints = [];
   for (const req of regionReqs) {
