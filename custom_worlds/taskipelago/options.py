@@ -350,6 +350,17 @@ class GroupRandomPick(OptionList):
     default: List[str] = []
 
 
+class GroupEarly(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with progressive_groups.
+    Each entry is 'true' or 'false' (default 'false'). Every item in an early group is
+    treated as if item_early were 'true' for it (see item_early).
+    """
+    display_name = "Group Early"
+    default: List[str] = []
+
+
 class GroupDefaultPcts(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -405,6 +416,19 @@ class ItemConsumable(OptionList):
     All copies of a consumable item with the same name are interchangeable as currency.
     """
     display_name = "Item Consumable"
+    default: List[str] = []
+
+
+class ItemEarly(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with items.
+    Each entry is 'true' or 'false' (default 'false').
+    Early items are registered with Archipelago's early_items, so the fill places them in
+    sphere 1 (locations reachable with no items) in any world. If there are not enough
+    sphere 1 locations, the rest are placed normally and a warning is logged.
+    """
+    display_name = "Item Early"
     default: List[str] = []
 
 
@@ -754,6 +778,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     item_fillers: ItemFillers
     item_consumable: ItemConsumable
     item_count: ItemCount
+    item_early: ItemEarly
     task_count: TaskCount
     task_cost: TaskCost
     task_prereqs: TaskPrereqs
@@ -774,6 +799,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     group_types: GroupTypes
     group_random_pick: GroupRandomPick
     group_default_pcts: GroupDefaultPcts
+    group_early: GroupEarly
     regions: Regions
     region_default_pcts: RegionDefaultPcts
     region_colors: RegionColors

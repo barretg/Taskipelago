@@ -135,6 +135,7 @@ class TaskipelagoWorld(World):
         item_fillers_raw = [str(x).strip() for x in (self.options.item_fillers.value or [])]
         item_consumable_raw = [str(x).strip() for x in (self.options.item_consumable.value or [])]
         item_count_raw = [str(x).strip() for x in (self.options.item_count.value or [])]
+        item_early_raw = [str(x).strip() for x in (self.options.item_early.value or [])]
         task_count_raw = [str(x).strip() for x in (self.options.task_count.value or [])]
         task_cost_raw = [str(x).strip() for x in (self.options.task_cost.value or [])]
 
@@ -328,11 +329,17 @@ class TaskipelagoWorld(World):
         item_types = expand_rows(item_types_editor, item_counts_editor)
         item_consumable = expand_rows(item_consumable_editor, item_counts_editor)
         item_fillers = expand_rows(item_fillers_editor, item_counts_editor)
+        item_early_editor = [
+            i < len(item_early_raw) and item_early_raw[i].lower() == "true"
+            for i in range(len(item_counts_editor))
+        ]
+        item_early = expand_rows(item_early_editor, item_counts_editor)
         # Unpadded copies: randomized selection draws from these and pads afterwards.
         items_full = list(items_raw)
         item_types_full = list(item_types)
         item_consumable_full = list(item_consumable)
         item_fillers_full = list(item_fillers)
+        item_early_full = list(item_early)
 
         # Pad/trim items to n_yaml_tasks
         items_raw = pad_or_trim_names(items_raw, n_yaml_tasks)
@@ -346,6 +353,7 @@ class TaskipelagoWorld(World):
         if len(item_fillers) < n_yaml_tasks:
             item_fillers += [True] * (n_yaml_tasks - len(item_fillers))
         item_fillers = item_fillers[:n_yaml_tasks]
+        item_early = (item_early + [False] * n_yaml_tasks)[:n_yaml_tasks]
         rewards = list(items_raw)
 
         n = n_yaml_tasks
@@ -857,6 +865,7 @@ class TaskipelagoWorld(World):
             item_types = [item_types_full[k] for k in item_order]
             item_consumable = [item_consumable_full[k] for k in item_order]
             item_fillers = [item_fillers_full[k] for k in item_order]
+            item_early = [item_early_full[k] for k in item_order]
             item_group_selected = [item_group_full[k] for k in item_order]
             clicker_production_full = [clicker_production_full[k] for k in item_order]
             clicker_offline_mult_full = [clicker_offline_mult_full[k] for k in item_order]
@@ -872,6 +881,7 @@ class TaskipelagoWorld(World):
             item_types = (item_types + ["junk"] * n)[:n]
             item_consumable = (item_consumable + [False] * n)[:n]
             item_fillers = (item_fillers + [True] * n)[:n]
+            item_early = (item_early + [False] * n)[:n]
             rewards = list(items_raw)
 
         # Pad/trim the clicker per-item lists to the final item count, the same way
@@ -1922,6 +1932,17 @@ class TaskipelagoWorld(World):
         self._reward_types = item_types
         self._item_consumable = item_consumable
         self._item_fillers = item_fillers
+        # Early items: own item_early flag, or membership in a group flagged group_early.
+        raw_group_early = [str(x).strip() for x in (self.options.group_early.value or [])]
+        early_groups = {
+            g for gi, g in enumerate(raw_prog_groups)
+            if gi < len(raw_group_early) and raw_group_early[gi].lower() == "true"
+        }
+        self._item_early = [
+            (i < len(item_early) and bool(item_early[i]))
+            or (i < len(reward_to_group) and reward_to_group[i] in early_groups)
+            for i in range(len(rewards))
+        ]
 
         # Filler Scout / Filler Hint: each filler item in the pool reveals one task's
         # reward. Tasks are dealt out without repeats until every task has one, then
@@ -2085,6 +2106,10 @@ class TaskipelagoWorld(World):
                     self.player,
                 )
             )
+            # Archipelago's early_items: Fill.distribute_early_items places these in
+            # sphere 1 locations (any world) before the main fill.
+            if i < len(self._item_early) and self._item_early[i]:
+                self.multiworld.early_items[self.player][name] = 1
 
     def set_rules(self) -> None:
         _set_rules(self)

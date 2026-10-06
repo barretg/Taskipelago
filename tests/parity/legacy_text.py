@@ -205,6 +205,17 @@ V11_NEW_TIPS = {
         "For random-choice and aesthetic, grp-N means any N% of the items and grp*N\n"
         "means any N items."
     ),
+    "group_early": (
+        "Place every item in this group early (see the Early item column)."
+    ),
+    "item_early": (
+        "Place this item early.\n\n"
+        "Uses Archipelago's early_items: at generation the item is placed in a\n"
+        "sphere 1 location (one reachable with no items, in any world) before\n"
+        "the main fill. Each copy (Count) is placed early.\n\n"
+        "If there are not enough sphere 1 locations, the rest are placed\n"
+        "normally and a warning is logged."
+    ),
     "group_pick": (
         "Random-choice groups only: how many items to keep per seed.\n\n"
         "  2      ->  keep 2 items, chosen at random\n"

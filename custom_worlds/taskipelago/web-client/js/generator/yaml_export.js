@@ -124,6 +124,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   const itemFillers = [];
   const itemProgGroups = [];
   const itemConsumables = [];
+  const itemEarly = [];
   const itemCounts = [];
   // Parallel to `items`, so an expanded filler row repeats its (empty) spec.
   const itemSpecs = [];
@@ -144,6 +145,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
         itemFillers.push(true);
         itemProgGroups.push('');
         itemConsumables.push(false);
+        itemEarly.push(it.early);
         itemCounts.push(1);
         itemSpecs.push(noSpec);
       }
@@ -153,6 +155,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       itemFillers.push(isFillerRow);
       itemProgGroups.push(isFillerRow ? '' : it.progGroup);
       itemConsumables.push(isFillerRow ? false : it.consumable);
+      itemEarly.push(it.early);
       itemCounts.push(it.count);
       itemSpecs.push(isFillerRow ? noSpec : specOf(it));
     }
@@ -409,6 +412,9 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
         }),
         group_default_pcts: model.progGroups.map(g => groupSetting(model, g).pct),
       } : {}),
+      ...(model.progGroups.some(g => groupSetting(model, g).early) ? {
+        group_early: model.progGroups.map(g => (groupSetting(model, g).early ? 'true' : 'false')),
+      } : {}),
 
       regions: regionNames,
       region_default_pcts: regionNames.map(n => regionByName.get(n).pct ?? 100),
@@ -437,6 +443,8 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       item_fillers: itemFillers,
       item_consumable: itemConsumables.map(c => (c ? 'true' : 'false')),
       item_count: itemCounts.map(String),
+      // Emitted only when used, so existing exports stay byte-identical.
+      ...(itemEarly.some(Boolean) ? { item_early: itemEarly.map(e => (e ? 'true' : 'false')) } : {}),
       task_prereqs: taskPrereqs,
       item_prereqs: itemPrereqsRaw,
       task_cost: taskCosts,

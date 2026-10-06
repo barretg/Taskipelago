@@ -39,7 +39,7 @@ def task(name, **kw):
 
 def item(name, **kw):
     it = {"name": name, "filler": False, "type": "useful", "progGroup": "", "consumable": False,
-          "count": 1, "clickerKind": "none", "clickerTarget": "*", "clickerValue": ""}
+          "count": 1, "clickerKind": "none", "clickerTarget": "*", "clickerValue": "", "early": False}
     it.update(kw)
     return it
 
@@ -427,6 +427,8 @@ def apply_v11_import(doc, result: dict) -> dict:
         it["clickerKind"] = "none"
         it["clickerTarget"] = "*"
         it["clickerValue"] = ""
+        # Early items are a post-legacy extension too.
+        it["early"] = False
     for r in m["regions"]:
         # Subregions are a post-legacy extension; the legacy corpus has no parents.
         r["parent"] = ""

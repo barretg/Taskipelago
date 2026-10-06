@@ -42,10 +42,16 @@ function settingCells(group, ctx) {
     },
   }, GROUP_TYPES.map(t => h('option', { value: t }, t)));
   type.value = s.type;
+  const early = h('input', {
+    type: 'checkbox', checked: s.early, 'aria-label': `Place ${group} items early`,
+    onchange: e => update({ early: e.target.checked }),
+  });
   return [
     h('span', { className: 'hint-with-tip' }, type, tipMarker(TIPS.group_type)),
     h('span', { className: 'hint-with-tip' }, pick, tipMarker(TIPS.group_pick)),
     h('span', { className: 'hint-with-tip' }, pct, tipMarker(TIPS.group_pct)),
+    h('span', { className: 'hint-with-tip' },
+      h('label', { className: 'check-label' }, early, 'Early'), tipMarker(TIPS.group_early)),
   ];
 }
 

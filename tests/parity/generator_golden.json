@@ -93,7 +93,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -104,7 +105,8 @@
        "count": 2,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Ticket",
@@ -115,7 +117,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [
@@ -227,7 +230,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -238,7 +242,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Nap",
@@ -249,7 +254,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [],
@@ -350,7 +356,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -361,7 +368,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Nap",
@@ -372,7 +380,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [
@@ -478,7 +487,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -489,7 +499,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Nap",
@@ -500,7 +511,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [
@@ -610,7 +622,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -621,7 +634,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Nap",
@@ -632,7 +646,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [],
@@ -733,7 +748,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -744,7 +760,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Nap",
@@ -755,7 +772,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [],
@@ -856,7 +874,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -867,7 +886,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Nap",
@@ -878,7 +898,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [],
@@ -981,7 +1002,8 @@
        "count": 2,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Snack",
@@ -992,7 +1014,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Book",
@@ -1003,7 +1026,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [],
@@ -1129,7 +1153,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -1140,7 +1165,8 @@
        "count": 2,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Ticket",
@@ -1151,7 +1177,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [
@@ -1286,7 +1313,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -1297,7 +1325,8 @@
        "count": 2,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Ticket",
@@ -1308,7 +1337,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [
@@ -1443,7 +1473,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -1454,7 +1485,8 @@
        "count": 2,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Ticket",
@@ -1465,7 +1497,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [
@@ -1600,7 +1633,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -1611,7 +1645,8 @@
        "count": 2,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Ticket",
@@ -1622,7 +1657,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [
@@ -1757,7 +1793,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -1768,7 +1805,8 @@
        "count": 2,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Ticket",
@@ -1779,7 +1817,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Nap",
@@ -1790,7 +1829,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [
@@ -1891,7 +1931,8 @@
        "count": 2,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -1902,7 +1943,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Gold",
@@ -1913,7 +1955,8 @@
        "count": 3,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Crisp",
@@ -1924,7 +1967,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -1935,7 +1979,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Sword",
@@ -1946,7 +1991,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [],
@@ -2182,7 +2228,8 @@
        "count": 2,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -2193,7 +2240,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -2204,7 +2252,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Key",
@@ -2215,7 +2264,8 @@
        "count": 2,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [
@@ -2516,7 +2566,8 @@
        "count": 3,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Ruby",
@@ -2527,7 +2578,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Sapphire",
@@ -2538,7 +2590,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Emerald",
@@ -2549,7 +2602,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Topaz",
@@ -2560,7 +2614,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Chips",
@@ -2571,7 +2626,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Cookie",
@@ -2582,7 +2638,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Candy",
@@ -2593,7 +2650,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Gold",
@@ -2604,7 +2662,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [],
@@ -2735,7 +2794,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Sword",
@@ -2746,7 +2806,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Ruby",
@@ -2757,7 +2818,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [
@@ -2943,7 +3005,8 @@
        "count": 2,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "Gold",
@@ -2954,7 +3017,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       },
       {
        "name": "<random filler>",
@@ -2965,7 +3029,8 @@
        "count": 1,
        "clickerKind": "none",
        "clickerTarget": "*",
-       "clickerValue": ""
+       "clickerValue": "",
+       "early": false
       }
      ],
      "deathLink": [
@@ -3073,7 +3138,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y",
@@ -3084,7 +3150,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -3154,7 +3221,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y",
@@ -3165,7 +3233,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -3274,7 +3343,8 @@
       "count": 5,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -3344,7 +3414,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "X ",
@@ -3355,7 +3426,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -3425,7 +3497,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -3436,7 +3509,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -3637,7 +3711,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y",
@@ -3648,7 +3723,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -3740,7 +3816,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y",
@@ -3751,7 +3828,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -3920,7 +3998,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y",
@@ -3931,7 +4010,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -4011,7 +4091,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y",
@@ -4022,7 +4103,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -4095,7 +4177,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y",
@@ -4106,7 +4189,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -4176,7 +4260,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -4246,7 +4331,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -4392,7 +4478,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y\"",
@@ -4403,7 +4490,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -4473,7 +4561,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y",
@@ -4484,7 +4573,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -4554,7 +4644,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y",
@@ -4565,7 +4656,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [
@@ -4674,7 +4766,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y",
@@ -4685,7 +4778,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -4755,7 +4849,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y",
@@ -4766,7 +4861,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -4896,7 +4992,8 @@
       "count": "2",
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -4907,7 +5004,8 @@
       "count": 3,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Key",
@@ -4918,7 +5016,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": " Sword ",
@@ -4929,7 +5028,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "",
@@ -4940,7 +5040,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "on",
@@ -4951,7 +5052,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [
@@ -5218,7 +5320,8 @@
       "count": "",
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y",
@@ -5229,7 +5332,8 @@
       "count": "1_0",
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Z",
@@ -5240,7 +5344,8 @@
       "count": "+2",
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -5455,7 +5560,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -5466,7 +5572,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Key",
@@ -5477,7 +5584,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -5488,7 +5596,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Sword",
@@ -5499,7 +5608,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -5703,7 +5813,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -5714,7 +5825,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -5812,7 +5924,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Y",
@@ -5823,7 +5936,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -6076,7 +6190,8 @@
       "count": 4,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "NO",
@@ -6087,7 +6202,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "12:30:45",
@@ -6098,7 +6214,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "2001-12-14",
@@ -6109,7 +6226,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<<",
@@ -6120,7 +6238,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": []
@@ -6376,7 +6495,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -6387,7 +6507,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Ticket",
@@ -6398,7 +6519,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [
@@ -6636,7 +6758,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -6647,7 +6770,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Nap",
@@ -6658,7 +6782,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [],
@@ -6855,7 +6980,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -6866,7 +6992,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Nap",
@@ -6877,7 +7004,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [
@@ -7083,7 +7211,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -7094,7 +7223,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Nap",
@@ -7105,7 +7235,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [
@@ -7317,7 +7448,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -7328,7 +7460,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Nap",
@@ -7339,7 +7472,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [],
@@ -7536,7 +7670,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -7547,7 +7682,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Nap",
@@ -7558,7 +7694,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [],
@@ -7757,7 +7894,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -7768,7 +7906,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Nap",
@@ -7779,7 +7918,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [],
@@ -7980,7 +8120,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Snack",
@@ -7991,7 +8132,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Book",
@@ -8002,7 +8144,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [],
@@ -8228,7 +8371,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -8239,7 +8383,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Ticket",
@@ -8250,7 +8395,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [
@@ -8511,7 +8657,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -8522,7 +8669,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Ticket",
@@ -8533,7 +8681,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [
@@ -8794,7 +8943,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -8805,7 +8955,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Ticket",
@@ -8816,7 +8967,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [
@@ -9077,7 +9229,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -9088,7 +9241,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Ticket",
@@ -9099,7 +9253,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [
@@ -9360,7 +9515,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -9371,7 +9527,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Ticket",
@@ -9382,7 +9539,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Nap",
@@ -9393,7 +9551,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [
@@ -9626,7 +9785,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -9637,7 +9797,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Gold",
@@ -9648,7 +9809,8 @@
       "count": 3,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Crisp",
@@ -9659,7 +9821,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -9670,7 +9833,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Sword",
@@ -9681,7 +9845,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [],
@@ -9922,7 +10087,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -9933,7 +10099,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -9944,7 +10111,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Key",
@@ -9955,7 +10123,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [
@@ -10253,7 +10422,8 @@
       "count": 3,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Ruby",
@@ -10264,7 +10434,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Sapphire",
@@ -10275,7 +10446,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Emerald",
@@ -10286,7 +10458,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Topaz",
@@ -10297,7 +10470,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Chips",
@@ -10308,7 +10482,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Cookie",
@@ -10319,7 +10494,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Candy",
@@ -10330,7 +10506,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Gold",
@@ -10341,7 +10518,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [],
@@ -10743,7 +10921,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Sword",
@@ -10754,7 +10933,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Ruby",
@@ -10765,7 +10945,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [
@@ -11053,7 +11234,8 @@
       "count": 2,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "Gold",
@@ -11064,7 +11246,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      },
      {
       "name": "<random filler>",
@@ -11075,7 +11258,8 @@
       "count": 1,
       "clickerKind": "none",
       "clickerTarget": "*",
-      "clickerValue": ""
+      "clickerValue": "",
+      "early": false
      }
     ],
     "deathLink": [

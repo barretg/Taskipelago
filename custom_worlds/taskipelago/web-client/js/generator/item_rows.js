@@ -22,6 +22,10 @@ function itemRow(it, i, ctx, container) {
   const type = h('select', { onchange: e => { it.type = e.target.value; ctx.changed(); } });
   const filler = h('input', { type: 'checkbox', 'aria-label': 'Filler' });
   const consumable = h('input', { type: 'checkbox', 'aria-label': 'Consumable' });
+  const early = h('input', {
+    type: 'checkbox', 'aria-label': 'Early',
+    onchange: e => { it.early = e.target.checked; ctx.changed(); },
+  });
   const group = h('select', {});
 
   const sync = () => {
@@ -35,6 +39,7 @@ function itemRow(it, i, ctx, container) {
     filler.disabled = it.ui.fillerDisabled;
     consumable.checked = !!it.consumable;
     consumable.disabled = it.ui.consumableDisabled;
+    early.checked = !!it.early;
     group.replaceChildren(h('option', { value: '' }, ''), ...model.progGroups.map(g => h('option', { value: g }, g)));
     group.value = it.progGroup;
     group.disabled = it.ui.groupDisabled;
@@ -64,6 +69,7 @@ function itemRow(it, i, ctx, container) {
     cell(name), cell(type),
     cell(h('label', { className: 'check-label' }, filler, 'Filler')),
     cell(h('label', { className: 'check-label' }, consumable, 'Consumable')),
+    cell(h('label', { className: 'check-label' }, early, 'Early')),
     cell(group),
     cell(h('input', {
       type: 'number', min: 1, max: 999, step: 1, value: it.count, className: 'count-input',
@@ -87,12 +93,13 @@ export function renderItemTable(container, ctx) {
       cell(tipHeader('Type', TIPS.type)),
       cell(tipHeader('Filler', TIPS.filler)),
       cell(tipHeader('Consumable', TIPS.consumable)),
+      cell(tipHeader('Early', TIPS.item_early)),
       cell(tipHeader('Item Group', TIPS.prog_group)),
       cell(tipHeader('Count', TIPS.count_item)),
       ...extraHead,
       cell('')),
     h('div', { className: 'gt-row gt-hint muted-text' },
-      cell(''), cell('Multiworld item name (blank = filler)'), cell(''), cell(''), cell(''), cell(''), cell(''),
+      cell(''), cell('Multiworld item name (blank = filler)'), cell(''), cell(''), cell(''), cell(''), cell(''), cell(''),
       ...extraHint, cell('')),
     ...ctx.model.items.map((it, i) => itemRow(it, i, ctx, container)),
   );
