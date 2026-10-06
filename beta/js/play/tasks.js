@@ -101,6 +101,7 @@ function regionProgressRow(rname, { color, done, total, sub, kids, onToggle, exp
     const mark = document.createElement('div');
     mark.className = 'region-progress-threshold';
     mark.style.left = `calc(${thresh}% - 1px)`;
+    mark.style.backgroundColor = color;
     mark.title = `Default requirement: ${thresh}%`;
     barWrap.appendChild(mark);
   }
