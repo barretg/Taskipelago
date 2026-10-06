@@ -141,10 +141,13 @@ V11_NEW_TIPS = {
         "myregion*5), which counts only the kept tasks."
     ),
     "rg_order": (
-        "Shuffle the order of the tasks kept from this randomized region.\n\n"
-        "Off (default): the kept tasks stay in their original list order.\n"
+        "Shuffle the order of this region's tasks.\n\n"
+        "Off (default): the tasks stay in their original list order.\n"
         "On: their order is shuffled per seed.\n\n"
-        "Only applies when Randomize is checked for this region."
+        "Works with or without Randomize. With Randomize, only the kept tasks are\n"
+        "shuffled. Without it, every task is kept and shuffled, and its tasks can still\n"
+        "be referenced individually ('prev' and 'sequential' keep their original targets).\n"
+        "A shuffle-only region may also be a parent."
     ),
     "rg_prereq": (
         "Gate every task in this region behind other regions, tasks or items.\n\n"

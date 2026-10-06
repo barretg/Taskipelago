@@ -166,7 +166,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     const pick = i < rawRegionPicks.length ? pyStrip(pyStr(rawRegionPicks[i])) : '';
     const order = i < rawRegionOrders.length
       && pyStrip(pyStr(rawRegionOrders[i])).toLowerCase() === 'true';
-    if (pick) model.regionRandom[name] = { on: true, pick, order };
+    if (pick || order) model.regionRandom[name] = { on: !!pick, pick, order };
   });
   // Drops parent links a hand-written YAML got wrong (missing, nested or randomized).
   normalizeRegionParents(model);

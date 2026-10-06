@@ -347,7 +347,7 @@ export function addRegion(model, rawName, pct) {
  * Nesting is one level deep and randomized regions may not be parents.
  */
 
-/** True when this region is randomized (parents may not be). */
+/** True when this region is randomized (parents may not be; shuffle-only is fine). */
 export function isRegionRandomized(model, name) {
   const s = model.regionRandom && model.regionRandom[name];
   return !!(s && s.on);

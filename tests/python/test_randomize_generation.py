@@ -31,6 +31,14 @@ def _region_world(pick, seed=1, goal=None, **extra):
     return _quiet(seed=seed, **opts)[0]
 
 
+_SHUFFLE_ONLY = dict(
+    tasks=["Free", "P1", "P2", "P3", "P4", "P5", "P6", "After"],
+    items=[f"I{i}" for i in range(8)],
+    regions=["pool"], region_random_order=["true"],
+    task_region=["", "pool", "pool", "pool", "pool", "pool", "pool", ""],
+)
+
+
 def _assert_refs_valid(tc, w):
     n = len(w._tasks)
     for ast in w._parsed_prereqs + w._parsed_reward_prereqs:
@@ -70,6 +78,47 @@ class RegionSelectionTest(unittest.TestCase):
             for s in range(30)
         }
         self.assertTrue(any(list(p) != sorted(p) for p in picks))
+
+    def test_shuffle_only_keeps_all_and_shuffles(self):
+        orders = set()
+        for s in range(30):
+            w, err = _quiet(seed=s, **{**_SHUFFLE_ONLY})
+            self.assertEqual(w._tasks[0], "Free")
+            self.assertEqual(w._tasks[-1], "After")
+            self.assertEqual(sorted(w._tasks[1:7]), ["P1", "P2", "P3", "P4", "P5", "P6"])
+            self.assertNotIn("keeps all", err)
+            _assert_refs_valid(self, w)
+            orders.add(tuple(w._tasks[1:7]))
+        self.assertGreater(len(orders), 5)
+
+    def test_shuffle_only_resolves_refs_before_shuffling(self):
+        # P2 needs P1 by number, P3 needs prev (P2), After needs P6 by number.
+        prereqs = ["", "", "2", "prev", "", "", "", "7"]
+        for s in range(30):
+            w, _ = _quiet(seed=s, **{**_SHUFFLE_ONLY, "task_prereqs": prereqs})
+            pos = {name: i for i, name in enumerate(w._tasks)}
+            _assert_refs_valid(self, w)
+            for task, needs in (("P2", "P1"), ("P3", "P2"), ("After", "P6")):
+                leaves = set(collect_leaves(w._parsed_prereqs[pos[task]], "task"))
+                self.assertEqual(leaves, {pos[needs]}, (s, task))
+
+    def test_shuffle_only_sequential_chains_original_copies(self):
+        for s in range(20):
+            w, _ = _quiet(seed=s, tasks=["Free", "Dup", "Other"], items=[f"I{i}" for i in range(6)],
+                          task_count=["1", "4", "1"], task_prereqs=["", "sequential && 1", ""],
+                          regions=["r"], region_random_order=["true"], task_region=["", "r", "r"])
+            dups = [i for i, name in enumerate(w._tasks) if name.startswith("Dup")]
+            self.assertEqual(len(dups), 4)
+            _assert_refs_valid(self, w)
+            # Every copy but one chains to another copy; the chain covers all four.
+            chained = {i: set(collect_leaves(w._parsed_prereqs[i], "task")) - {0} for i in dups}
+            self.assertEqual(sum(1 for v in chained.values() if not v), 1)
+            for v in chained.values():
+                self.assertTrue(v <= set(dups))
+
+    def test_order_without_pick_absent_is_unchanged(self):
+        w, _ = _quiet(**{**_SHUFFLE_ONLY, "region_random_order": ["false"]})
+        self.assertEqual(w._tasks, _SHUFFLE_ONLY["tasks"])
 
     def test_equal_count_warns_and_keeps_all(self):
         w, err = _quiet(

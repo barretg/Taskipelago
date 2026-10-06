@@ -93,6 +93,12 @@ class InheritedParentRequirementsTest(unittest.TestCase):
         w = world(task_prereqs=["", "", "Hall*2", ""])
         self.assertEqual(w._task_region_reqs[2], [{"region": "Hall", "abs_count": 2}])
 
+    def test_a_shuffle_only_region_may_be_a_parent(self):
+        w = _quiet(**{**BASE, "region_random_order": ["true", ""]})
+        self.assertEqual(sorted(w._tasks), sorted(BASE["tasks"]))
+        self.assertEqual(w._region_to_task_indices["Hall"], [0, 1, 2, 3])
+        self.assertEqual(w.fill_slot_data()["region_parent"], {"Kitchen": "Hall"})
+
     def test_slot_data_carries_the_parent_map(self):
         w = world()
         sd = w.fill_slot_data()

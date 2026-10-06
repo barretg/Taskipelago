@@ -317,7 +317,10 @@ class RegionRandomOrder(OptionList):
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
     Parallel list aligned with regions. "true" shuffles the order of the tasks kept from
     that randomized region; anything else (including missing or empty entries) keeps them
-    in their original YAML order. Only used by regions that have a region_random_pick.
+    in their original YAML order. Works with or without a region_random_pick; a region with
+    "true" and no pick keeps all its tasks in shuffled order. Its tasks may still be referenced
+    individually ('prev' and 'sequential' resolve to their original targets before shuffling),
+    and it may be a parent region.
     """
     display_name = "Region Random Order"
     default: List[str] = []

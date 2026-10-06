@@ -423,7 +423,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
         }),
         region_random_order: regionNames.map(n => {
           const rr = regionRandom(model, n);
-          return rr.on && rr.order ? 'true' : 'false';
+          return rr.order ? 'true' : 'false';
         }),
       } : {}),
       task_region: taskRegions,

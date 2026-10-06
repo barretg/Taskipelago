@@ -172,6 +172,10 @@ class TaskipelagoWorld(World):
             _rname: (_rro[_ri].lower() == "true" if _ri < len(_rro) else False)
             for _ri, _rname in enumerate(_opt_regions)
         }
+        # Shuffle-only regions (order on, no pick) are randomized regions that keep everything.
+        _shuffle_only = {r for r, on in region_random_order.items() if on and r not in region_picks}
+        for _rname in _shuffle_only:
+            region_picks[_rname] = (100, True)
         _gt_raw = [str(x).strip() for x in (self.options.group_types.value or [])]
         group_types: Dict[str, str] = {
             g: normalize_group_type(_gt_raw[gi] if gi < len(_gt_raw) else "")
@@ -586,6 +590,12 @@ class TaskipelagoWorld(World):
                 r = raw_task_region[j]
                 return r if r in region_picks else ""
 
+            def _drop_region(j: int) -> str:
+                # Regions that may drop tasks; shuffle-only regions keep every task, so their
+                # tasks stay individually referenceable ('prev'/'sequential' resolve before the shuffle).
+                r = _rand_region(j)
+                return "" if r in _shuffle_only else r
+
             _n_item_range = max(n, len(items_full))
             # task(...) / item(...) scopes inside task prereqs, item prereqs and the goal.
             _field_scopes_pre = _prereq_scopes(n, _n_item_range, _region_names_set, _group_names_set)
@@ -610,16 +620,16 @@ class TaskipelagoWorld(World):
                 if _ast is None:
                     continue
                 _check_scoped_items(_ast, "task", f"task {_j + 1} task prereq")
-                if has_seq_flag(_ast) and _rand_region(_j):
+                if has_seq_flag(_ast) and _drop_region(_j):
                     raise Exception(
                         f"Taskipelago: task {_j + 1} uses 'sequential' inside randomized region "
-                        f"'{_rand_region(_j)}'."
+                        f"'{_drop_region(_j)}'."
                     )
                 for _leaf in collect_leaves(_ast, "task"):
-                    if _rand_region(_leaf):
+                    if _drop_region(_leaf):
                         raise Exception(
                             f"Taskipelago: task {_j + 1} references task {_leaf + 1} inside randomized "
-                            f"region '{_rand_region(_leaf)}'. Reference the region as a whole instead."
+                            f"region '{_drop_region(_leaf)}'. Reference the region as a whole instead."
                         )
             for _j, _txt in enumerate(raw_reward_prereqs_input):
                 if not _txt:
@@ -627,10 +637,10 @@ class TaskipelagoWorld(World):
                 _ast = parse_prereq(_txt, _n_item_range, _j, "reward prereq", known_groups=_group_names_set,
                                     n_tasks_const=n, scoped_domains=_field_scopes_pre)
                 for _leaf in collect_leaves(_ast, "task", "item"):
-                    if _rand_region(_leaf):
+                    if _drop_region(_leaf):
                         raise Exception(
                             f"Taskipelago: task {_j + 1} item prereq references task {_leaf + 1} inside "
-                            f"randomized region '{_rand_region(_leaf)}'. Reference the region as a whole instead."
+                            f"randomized region '{_drop_region(_leaf)}'. Reference the region as a whole instead."
                         )
                 for _leaf in collect_leaves(_ast, "item"):
                     _g = item_group_full[_leaf] if _leaf < len(item_group_full) else ""
@@ -655,10 +665,10 @@ class TaskipelagoWorld(World):
                     n_tasks_const=n, scoped_domains=_region_scopes_pre,
                 )
                 for _leaf in collect_leaves(_ast, "task"):
-                    if _rand_region(_leaf):
+                    if _drop_region(_leaf):
                         raise Exception(
                             f"Taskipelago: region '{_rname}' depends on task {_leaf + 1} inside "
-                            f"randomized region '{_rand_region(_leaf)}'. Reference the region as "
+                            f"randomized region '{_drop_region(_leaf)}'. Reference the region as "
                             f"a whole instead."
                         )
                 for _leaf in collect_leaves(_ast, "item"):
@@ -679,7 +689,7 @@ class TaskipelagoWorld(World):
                     continue
                 _cnt = len(region_members[_rname])
                 region_keep_n[_rname] = resolve_pick(region_picks[_rname], _cnt, f"region '{_rname}'")
-                if region_keep_n[_rname] == _cnt:
+                if region_keep_n[_rname] == _cnt and _rname not in _shuffle_only:
                     print(
                         f"[Taskipelago] WARNING: randomized region '{_rname}' keeps all {_cnt} task(s).",
                         file=_sys.stderr,
@@ -985,7 +995,7 @@ class TaskipelagoWorld(World):
                     f"Taskipelago: region '{rname}' has parent '{pname}', which is itself a "
                     "subregion; region nesting is only one level deep."
                 )
-            if pname in region_picks:
+            if pname in region_picks and pname not in _shuffle_only:
                 raise Exception(
                     f"Taskipelago: region '{pname}' is randomized and cannot be a parent region."
                 )

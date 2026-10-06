@@ -15,7 +15,7 @@ export function groupSetting(model, name) {
   return { type: normalizeGroupType(s.type), pick: String(s.pick ?? '').trim(), pct: String(s.pct ?? '').trim() };
 }
 
-/** Randomize state for a region: { on, pick, order }. */
+/** Randomize state for a region: { on, pick, order }. order works with or without on. */
 export function regionRandom(model, name) {
   const s = (model.regionRandom && model.regionRandom[name]) || {};
   return { on: !!s.on, pick: String(s.pick ?? '').trim(), order: !!s.order };
@@ -23,7 +23,10 @@ export function regionRandom(model, name) {
 
 /** True when any region or group setting differs from the defaults (new YAML keys needed). */
 export function usesRandomization(model) {
-  const regions = (model.regions || []).some(r => regionRandom(model, r.name).on);
+  const regions = (model.regions || []).some(r => {
+    const rr = regionRandom(model, r.name);
+    return rr.on || rr.order;
+  });
   const groups = (model.progGroups || []).some(g => {
     const s = groupSetting(model, g);
     return s.type !== 'progressive' || s.pct !== '';
@@ -165,11 +168,14 @@ export function checkRandomization(o) {
 
   // Region picks
   const regionKeep = new Map();
+  const shuffleOnly = new Set();
   let finalTasks = o.taskCounts.reduce((a, b) => a + b, 0);
   for (const name of o.regionNames) {
     const rr = regionRandom(model, name);
-    if (!rr.on) continue;
+    if (!rr.on && !rr.order) continue;
     const count = o.tasks.reduce((a, _t, i) => a + (o.taskRegions[i] === name ? o.taskCounts[i] : 0), 0);
+    // Shuffle-only: keeps every task, so its tasks stay individually referenceable.
+    if (!rr.on) { regionKeep.set(name, count); shuffleOnly.add(name); continue; }
     tryIt('', () => {
       const pick = parsePick(rr.pick, `Region '${name}'`);
       if (!pick) throw new Error(`Region '${name}' is randomized but has no pick. Enter N or N%.`);
@@ -178,7 +184,10 @@ export function checkRandomization(o) {
       finalTasks -= count - n;
     });
   }
-  const randomOf = i => (regionKeep.has(o.taskRegions[i]) ? o.taskRegions[i] : '');
+  const randomOf = i => {
+    const r = o.taskRegions[i];
+    return regionKeep.has(r) && !shuffleOnly.has(r) ? r : '';
+  };
   const nItemRows = o.itemRows.length;
   // task(...) / item(...) scopes in task prereqs, item prereqs and the goal.
   const fieldScopes = prereqScopes(o.tasks.length, nItemRows, regionSet, groupSet);
