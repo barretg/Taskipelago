@@ -337,6 +337,24 @@ button:disabled {
   white-space: nowrap;
 }
 
+.region-progress-bar-wrap {
+  flex: 1;
+  align-self: stretch;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Default-% marker. The row has 2px top / 3px bottom padding, so these insets
+   stop it 2px short of each row edge: markers on adjacent rows sit 4px apart. */
+.region-progress-threshold {
+  position: absolute;
+  top: 0;
+  bottom: -1px;
+  width: 2px;
+  background: var(--fg);
+}
+
 .region-progress-bar-outer {
   flex: 1;
   height: 10px;

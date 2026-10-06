@@ -45,6 +45,7 @@ export const state = {
   itemConsumable: [],
   regions: [],
   regionColors: [],
+  regionDefaultPcts: {},       // region name -> default completion % (100 when absent)
   regionParent: {},            // subregion name -> parent region name
   regionRollup: false,         // region refs to a parent also count its subregions' tasks
   taskRegion: [],
