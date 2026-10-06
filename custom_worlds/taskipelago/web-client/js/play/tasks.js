@@ -91,7 +91,20 @@ function regionProgressRow(rname, { color, done, total, sub, kids, onToggle, exp
   barInner.style.width = `${Math.round(pct * 100)}%`;
   barInner.style.backgroundColor = color;
   barOuter.appendChild(barInner);
-  row.appendChild(barOuter);
+  // The bar clips its fill, so the threshold marker sits in a wrapper that
+  // spans the row's height instead.
+  const barWrap = document.createElement('div');
+  barWrap.className = 'region-progress-bar-wrap';
+  barWrap.appendChild(barOuter);
+  const thresh = Number((state.regionDefaultPcts || {})[rname]);
+  if (Number.isFinite(thresh) && thresh >= 0 && thresh < 100) {
+    const mark = document.createElement('div');
+    mark.className = 'region-progress-threshold';
+    mark.style.left = `calc(${thresh}% - 1px)`;
+    mark.title = `Default requirement: ${thresh}%`;
+    barWrap.appendChild(mark);
+  }
+  row.appendChild(barWrap);
 
   const countEl = document.createElement('span');
   countEl.className = 'region-progress-count';
