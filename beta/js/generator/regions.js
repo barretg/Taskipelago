@@ -12,6 +12,7 @@ import {
 import { regionCells } from './clicker_cells.js';
 import { rowNumberCell } from './reorder.js';
 import { commitNameChange, confirmNameRemoval } from './rename_refs.js';
+import { trackCommit } from './grid_nav.js';
 import { regionRandom } from './randomize_check.js';
 
 const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -83,7 +84,7 @@ function parentCell(region, ctx) {
   return sel;
 }
 
-/** Randomize checkbox, pick field (N or N%), and shuffle-order checkbox for one region. */
+/** Randomize checkbox, pick field (N or N%), and shuffle-order checkbox (independent of Randomize). */
 function randomizeCells(region, ctx) {
   const rr = regionRandom(ctx.model, region.name);
   const isParent = regionChildren(ctx.model, region.name).length > 0;
@@ -97,7 +98,7 @@ function randomizeCells(region, ctx) {
     },
   });
   const orderBox = h('input', {
-    type: 'checkbox', checked: rr.order, disabled: !rr.on,
+    type: 'checkbox', checked: rr.order,
     'aria-label': `Shuffle task order in ${region.name}`,
     onchange: e => {
       ctx.model.regionRandom[region.name] = { ...regionRandom(ctx.model, region.name), order: e.target.checked };
@@ -111,7 +112,6 @@ function randomizeCells(region, ctx) {
     onchange: e => {
       ctx.model.regionRandom[region.name] = { ...regionRandom(ctx.model, region.name), on: e.target.checked };
       pick.disabled = !e.target.checked;
-      orderBox.disabled = !e.target.checked;
       // Randomizing a region drops any child that pointed at it.
       normalizeRegionParents(ctx.model);
       ctx.changed({ regions: true });
@@ -142,7 +142,7 @@ function regionRow(region, i, ctx, container) {
     }
   };
   name.addEventListener('keydown', e => { if (e.key === 'Enter') name.blur(); });
-  name.addEventListener('blur', commitName);
+  name.addEventListener('blur', () => trackCommit(commitName()));
 
   const pct = h('input', {
     type: 'number', min: 0, max: 100, value: region.pct, className: 'count-input region-pct', 'aria-label': 'Default %',
