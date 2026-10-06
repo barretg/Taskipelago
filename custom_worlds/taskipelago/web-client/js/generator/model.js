@@ -522,6 +522,77 @@ export function rewriteNameRefs(model, kind, oldName, newName) {
   return fields;
 }
 
+// ---------------------------------------------------------------------------
+// Quoted "Name" references to task / item rows. kind is 'tasks' or 'items'.
+// ---------------------------------------------------------------------------
+
+/**
+ * [object, key, map] for every field that can hold a quoted name of `kind`.
+ * map(text, fn) applies fn to the parts of text in that name domain, the way
+ * export resolves them (yaml_export resolveScopedNameRefs, clicker targets).
+ */
+function quotedRefFields(model, kind) {
+  const scoped = home => kind === 'tasks'
+    ? (text, fn) => mapScopedText(text, fn, null, home)
+    : (text, fn) => mapScopedText(text, null, fn, home);
+  const whole = (text, fn) => (text ? fn(text) : text);
+  const out = [];
+  for (const t of model.tasks) out.push([t, 'prereq', scoped('task')], [t, 'itemPrereq', scoped('item')]);
+  out.push([model, 'goalTasks', scoped('task')]);
+  for (const r of model.regions) out.push([r, 'prereq', scoped(null)]);
+  if (kind === 'items') for (const t of model.tasks) out.push([t, 'cost', whole]);
+  else for (const it of model.items) out.push([it, 'clickerTarget', whole]);
+  return out;
+}
+
+function renameQuoted(text, fn, oldName, newName) {
+  let count = 0;
+  const out = fn(text, t => t.replace(/"([^"]*)"/g, (w, name) => {
+    if (name !== oldName) return w;
+    count++;
+    return `"${newName}"`;
+  }));
+  return { text: out, count };
+}
+
+/**
+ * Old and new reference names when renaming row i from oldRaw is a rename that
+ * quoted references follow, else null: the row was the one "oldName" resolves
+ * to (first match) and no other row already answers to the new name.
+ */
+function rowRenameNames(model, kind, i, oldRaw) {
+  const rows = model[kind];
+  const oldName = pyStrip(oldRaw);
+  const newName = pyStrip(rows[i]?.name ?? '');
+  if (!oldName || !newName || oldName === newName || newName.includes('"')) return null;
+  if (rows.some((r, k) => k < i && pyStrip(r.name) === oldName)) return null;
+  if (rows.some((r, k) => k !== i && pyStrip(r.name) === newName)) return null;
+  return { oldName, newName };
+}
+
+/** Number of fields with quoted references that renaming row i from oldRaw would update. */
+export function countRowRenameRefs(model, kind, i, oldRaw) {
+  const names = rowRenameNames(model, kind, i, oldRaw);
+  if (!names) return 0;
+  return quotedRefFields(model, kind)
+    .filter(([obj, key, fn]) => renameQuoted(obj[key], fn, names.oldName, names.oldName).count > 0).length;
+}
+
+/** Point quoted references at row i's new name; returns the number of fields changed. */
+export function rewriteRowRenameRefs(model, kind, i, oldRaw) {
+  const names = rowRenameNames(model, kind, i, oldRaw);
+  if (!names) return 0;
+  let fields = 0;
+  for (const [obj, key, fn] of quotedRefFields(model, kind)) {
+    const { text, count } = renameQuoted(obj[key], fn, names.oldName, names.newName);
+    if (count) {
+      obj[key] = text;
+      fields++;
+    }
+  }
+  return fields;
+}
+
 /**
  * v1.1 F10: swap editor rows i and j of model.tasks, model.items or
  * model.regions (row state

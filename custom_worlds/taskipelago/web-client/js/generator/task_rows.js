@@ -7,6 +7,7 @@ import { MAX_TASK_DESCRIPTION_LEN, newTask } from './model.js';
 import { TIPS } from './legacy_text.js';
 import { removeRowWithRefs, rowNumberCell } from './reorder.js';
 import { taskCells, taskHeadCells } from './clicker_cells.js';
+import { watchRowRename } from './rename_refs.js';
 
 /** Code-point length and truncation for the description editor. */
 const cpLen = s => Array.from(s).length;
@@ -91,9 +92,12 @@ export function renderTaskTable(container, ctx) {
     }, h('option', { value: '' }, ''), model.regions.map(r => h('option', { value: r.name }, r.name)));
     region.value = task.region;
 
+    const name = textInput(task, 'name', ctx, `tasks.${i}.name`);
+    watchRowRename(name, ctx, 'tasks', i);
+
     container.appendChild(h('div', { className: 'gt-row gt-task' },
       cell(rowNumberCell(ctx, 'tasks', i, container)),
-      cell(h('div', { className: 'task-name-cell' }, textInput(task, 'name', ctx, `tasks.${i}.name`), descBtn)),
+      cell(h('div', { className: 'task-name-cell' }, name, descBtn)),
       cell(textInput(task, 'prereq', ctx, `tasks.${i}.prereq`)),
       cell(textInput(task, 'itemPrereq', ctx, `tasks.${i}.itemPrereq`)),
       cell(textInput(task, 'cost', ctx, `tasks.${i}.cost`)),

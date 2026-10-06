@@ -12,6 +12,7 @@ import {
 import { regionCells } from './clicker_cells.js';
 import { rowNumberCell } from './reorder.js';
 import { commitNameChange, confirmNameRemoval } from './rename_refs.js';
+import { trackCommit } from './grid_nav.js';
 import { regionRandom } from './randomize_check.js';
 
 const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -141,7 +142,7 @@ function regionRow(region, i, ctx, container) {
     }
   };
   name.addEventListener('keydown', e => { if (e.key === 'Enter') name.blur(); });
-  name.addEventListener('blur', commitName);
+  name.addEventListener('blur', () => trackCommit(commitName()));
 
   const pct = h('input', {
     type: 'number', min: 0, max: 100, value: region.pct, className: 'count-input region-pct', 'aria-label': 'Default %',

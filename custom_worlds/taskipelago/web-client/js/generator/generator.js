@@ -24,6 +24,7 @@ import { openTutorial } from './tutorial.js';
 import { openCommunityYamls } from './community.js';
 import { reorderUpdatesRefs, setReorderUpdatesRefs } from './reorder.js';
 import { openFindReplace } from './find_replace.js';
+import { gridNavKeydown } from './grid_nav.js';
 import { STYLE_SECTION_TIP, renderStyleColors, resetStyleColors } from './style_section.js';
 import { curveFill, offlineExample } from './clicker_fields.js';
 import { TIPS as CLICKER_TIPS } from './clicker_cells.js';
@@ -254,7 +255,7 @@ function build(root) {
     h('span', { className: 'spacer' }),
     h('label', {
       className: 'check-label',
-      title: 'When on, moving a task or item with the up/down carets, or removing one, also updates index references to it and to the rows after it.',
+      title: 'When on, moving a task or item with the up/down carets, or removing one, also updates index references to it and to the rows after it. Renaming a task or item also offers to update "Quoted" references to its old name.',
     }, h('input', {
       type: 'checkbox', checked: reorderUpdatesRefs(), id: 'gen-reorder-refs',
       onchange: e => setReorderUpdatesRefs(e.target.checked),
@@ -384,6 +385,7 @@ export function initGenerator(root = $('generator-root')) {
   if (!root) return;
   ctx.root = root;
   build(root);
+  root.addEventListener('keydown', gridNavKeydown);
   document.addEventListener('keydown', e => {
     const key = e.key.toLowerCase();
     if (!(e.ctrlKey || e.metaKey) || e.altKey || (key !== 'f' && key !== 'h')) return;

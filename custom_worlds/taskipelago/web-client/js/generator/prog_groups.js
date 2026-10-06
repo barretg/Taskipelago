@@ -9,6 +9,7 @@ import {
   addProgGroup, checkGroupRename, refreshItemGroupLocks, removeProgGroup, renameProgGroup,
 } from './model.js';
 import { commitNameChange, confirmNameRemoval } from './rename_refs.js';
+import { trackCommit } from './grid_nav.js';
 import { openColorPicker } from './regions.js';
 import { GROUP_TYPES, groupSetting } from './randomize_check.js';
 
@@ -68,7 +69,7 @@ function groupRow(group, ctx) {
     }
   };
   name.addEventListener('keydown', e => { if (e.key === 'Enter') name.blur(); });
-  name.addEventListener('blur', commitName);
+  name.addEventListener('blur', () => trackCommit(commitName()));
   const color = ctx.model.progGroupColors?.[group] || '';
   return h('div', { className: 'region-row gen-group-row' },
     h('button', {

@@ -147,6 +147,8 @@ const V11_STEPS = [
     + 'the removed row itself become 0 and fail export until fixed, so you are asked first. '
     + 'Quoted names never need updating. Uncheck it to move or remove rows without touching any '
     + 'expression.\n\n'
+    + 'With it checked, renaming a task or item in its name field also offers to update "Quoted" '
+    + 'references to the old name (Update, Rename only or Cancel) when any exist.\n\n'
     + "'prev' always means the task directly above, so moving a task changes what 'prev' refers to.\n\n"
     + 'Regions are only ever referenced by name, so moving a region row just changes the order '
     + 'they are listed in.',

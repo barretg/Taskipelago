@@ -5,6 +5,7 @@ import { tipHeader } from '../shared/tooltip.js';
 import { TIPS } from './legacy_text.js';
 import { removeRowWithRefs, rowNumberCell } from './reorder.js';
 import { itemCells, itemHeadCells } from './clicker_cells.js';
+import { watchRowRename } from './rename_refs.js';
 import {
   REWARD_TYPE_VALUES, newItem, onConsumableToggle, onFillerToggle, setItemProgGroup,
 } from './model.js';
@@ -17,6 +18,7 @@ function itemRow(it, i, ctx, container) {
     type: 'text', spellcheck: false, dataset: { field: `items.${i}.name` },
     oninput: e => { it.name = e.target.value; ctx.changed(); },
   });
+  watchRowRename(name, ctx, 'items', i);
   const type = h('select', { onchange: e => { it.type = e.target.value; ctx.changed(); } });
   const filler = h('input', { type: 'checkbox', 'aria-label': 'Filler' });
   const consumable = h('input', { type: 'checkbox', 'aria-label': 'Consumable' });
