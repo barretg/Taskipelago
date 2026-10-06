@@ -1056,7 +1056,7 @@ button.primary { border-color: var(--accent); }
 }
 
 .gen-item-table .gt-row {
-  grid-template-columns: 70px minmax(220px, 3fr) 120px 76px 112px minmax(120px, 1fr) 64px 76px;
+  grid-template-columns: 70px minmax(220px, 3fr) 120px 76px 112px 70px minmax(120px, 1fr) 64px 76px;
 }
 
 /* Clicker mode grows both tables by its own columns. */
@@ -1065,7 +1065,7 @@ button.primary { border-color: var(--accent); }
 }
 
 .gen-item-table.clicker .gt-row {
-  grid-template-columns: 70px minmax(180px, 2.4fr) 110px 76px 112px minmax(110px, 1fr) 64px minmax(170px, 1.4fr) minmax(90px, 1fr) minmax(150px, 1.6fr) 76px;
+  grid-template-columns: 70px minmax(180px, 2.4fr) 110px 76px 112px 70px minmax(110px, 1fr) 64px minmax(170px, 1.4fr) minmax(90px, 1fr) minmax(150px, 1.6fr) 76px;
 }
 
 .region-row .region-offline { width: 72px; }

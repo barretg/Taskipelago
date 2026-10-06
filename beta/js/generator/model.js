@@ -59,6 +59,7 @@ export function newItem() {
   return {
     name: '', filler: false, type: DEFAULT_REWARD_TYPE, progGroup: '', consumable: false, count: 1,
     clickerKind: 'none', clickerTarget: '*', clickerValue: '',   // clicker mode
+    early: false,
     ui: {
       savedType: DEFAULT_REWARD_TYPE, savedItem: '', savedGroup: '',
       nameDisabled: false, typeDisabled: false, fillerDisabled: false,
@@ -172,7 +173,7 @@ export function itemData(it) {
   return {
     name: pyStrip(it.name), filler: !!it.filler,
     type: pyStrip(it.type).toLowerCase() || 'useful',
-    progGroup: pyStrip(it.progGroup), consumable: !!it.consumable, count: rowCount(it.count),
+    progGroup: pyStrip(it.progGroup), consumable: !!it.consumable, early: !!it.early, count: rowCount(it.count),
     clickerKind: UPGRADE_KINDS.includes(it.clickerKind) ? it.clickerKind : 'none',
     clickerTarget: pyStrip(it.clickerTarget) || '*', clickerValue: pyStrip(it.clickerValue),
   };

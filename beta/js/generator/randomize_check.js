@@ -12,7 +12,10 @@ export function normalizeGroupType(t) {
 /** Settings for a group with defaults applied: { type, pick, pct }. */
 export function groupSetting(model, name) {
   const s = (model.groupSettings && model.groupSettings[name]) || {};
-  return { type: normalizeGroupType(s.type), pick: String(s.pick ?? '').trim(), pct: String(s.pct ?? '').trim() };
+  return {
+    type: normalizeGroupType(s.type), pick: String(s.pick ?? '').trim(), pct: String(s.pct ?? '').trim(),
+    early: !!s.early,
+  };
 }
 
 /** Randomize state for a region: { on, pick, order }. order works with or without on. */
