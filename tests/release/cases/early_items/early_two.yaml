@@ -1,0 +1,15 @@
+# Release case: a second slot, so early items can land in either world.
+# Pool (1-based): 1 Torch (early), 2-10 filler.
+name: EarlyTwo
+game: Taskipelago
+Taskipelago:
+  progression_balancing: 50
+  accessibility: full
+  tasks: [A, B, C, D, E, F, G, H, I, J]
+  items: [Torch, '']
+  item_types: [progression, junk]
+  item_count: ['1', '9']
+  item_fillers: ['false', 'true']
+  item_early: ['true', 'false']
+  task_prereqs: ['', '', '', '', '', '', '', '', '', '']
+  item_prereqs: ['', '', '', '', '', '', '', '', '', '1']

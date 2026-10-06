@@ -43,19 +43,14 @@ def _set_rules_builder(world: "TaskipelagoWorld", player: int, n: int) -> None:
         req_rewards = [world._reward_display_names[j] for j in collect_leaves(reward_ast)]
         all_prereqs = req_tokens + req_rewards
 
+        # Both locations share one rule; see _set_rules_lambda for why the reward
+        # location does not require the task's own token.
         if all_prereqs:
-            complete_loc = world.multiworld.get_location(world._complete_location_names[i], player)
-            rb = _RuleBuilder(player)
-            for name in all_prereqs:
-                rb.has(name)
-            complete_loc.access_rule = rb.build()
-
-        reward_loc = world.multiworld.get_location(world._reward_location_names[i], player)
-        rb = _RuleBuilder(player)
-        rb.has(world._token_item_names[i])
-        for name in all_prereqs:
-            rb.has(name)
-        reward_loc.access_rule = rb.build()
+            for loc_name in (world._complete_location_names[i], world._reward_location_names[i]):
+                rb = _RuleBuilder(player)
+                for name in all_prereqs:
+                    rb.has(name)
+                world.multiworld.get_location(loc_name, player).access_rule = rb.build()
 
 
 def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
@@ -76,8 +71,15 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
         has_prereqs = token_ast is not None or reward_ast is not None
         has_cost = bool(cost_reqs)
 
+        # The reward location uses the same rule as the complete location instead of
+        # requiring the task's own token. That is logically the same (the token is
+        # locked at the complete location, so it is held exactly when this rule
+        # passes) and matches play, where completing a task sends both checks. It
+        # also lets Fill.distribute_early_items, whose start state only collects
+        # address-less events, see no-prereq tasks as sphere 1 early locations.
         if has_prereqs or has_cost:
             complete_loc = world.multiworld.get_location(world._complete_location_names[i], player)
+            reward_loc = world.multiworld.get_location(world._reward_location_names[i], player)
 
             def complete_rule(state, ta=token_ast, ra=reward_ast, cr=cost_reqs,
                               p=player, tn=token_names, rn=reward_names,
@@ -95,25 +97,4 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
                 return True
 
             complete_loc.access_rule = complete_rule
-
-        reward_loc = world.multiworld.get_location(world._reward_location_names[i], player)
-        my_token = world._token_item_names[i]
-
-        def reward_rule(state, mt=my_token, ta=token_ast, ra=reward_ast, cr=cost_reqs,
-                        p=player, tn=token_names, rn=reward_names,
-                        gi=group_items, rt=region_tokens,
-                        cd=consumable_display, sn=scoped_names) -> bool:
-            if not state.has(mt, p):
-                return False
-            if not eval_node(ta, state, p, tn, gi, rt, sn):
-                return False
-            if not eval_node(ra, state, p, rn, gi, rt, sn):
-                return False
-            if cr and not any(
-                all(state.has_from_list(cd.get(cname, []), p, thr) for cname, thr in branch)
-                for branch in cr
-            ):
-                return False
-            return True
-
-        reward_loc.access_rule = reward_rule
+            reward_loc.access_rule = complete_rule

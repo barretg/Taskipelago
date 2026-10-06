@@ -1,0 +1,29 @@
+# Release case: item_early and group_early through real Archipelago generation.
+# Pool (1-based): 1 Key, 2-3 Map, 4-5 Gem (group gems), 6 Coin, 7 Lamp, 8-9 Rope, 10 Bell.
+# Early: Key and Map by item_early, both Gems by group_early.
+name: EarlyOne
+game: Taskipelago
+Taskipelago:
+  progression_balancing: 50
+  accessibility: full
+  tasks:
+    - Sweep
+    - Dust
+    - Water Plants
+    - Feed Cat
+    - Open Chest
+    - Polish Gems
+    - Light Lamp
+    - Climb
+    - Explore
+    - Finish
+  task_prereqs: ['', '', '', '', '', '', '', '5', '6 && 7', '8 || 9']
+  item_prereqs: ['', '', '', '', '1', 'gems', '7', '', '', '']
+  items: [Key, Map, Gem, Coin, Lamp, Rope, Bell]
+  item_types: [progression, useful, progression, junk, progression, useful, junk]
+  item_count: ['1', '2', '2', '1', '1', '2', '1']
+  item_early: ['true', 'true', 'false', 'false', 'false', 'false', 'false']
+  progressive_groups: [gems]
+  item_progressive_group: ['', '', gems, '', '', '', '']
+  group_early: ['true']
+  goal_tasks: ['10']
