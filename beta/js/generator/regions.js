@@ -118,9 +118,9 @@ function randomizeCells(region, ctx) {
     },
   });
   return [
-    h('label', { className: 'check-label region-random' }, box, 'Randomize', tipMarker(TIPS.rg_random)),
+    h('label', { className: 'check-label region-random col-random' }, box, 'Randomize', tipMarker(TIPS.rg_random)),
     pick,
-    h('label', { className: 'check-label region-random' }, orderBox, 'Shuffle order', tipMarker(TIPS.rg_order)),
+    h('label', { className: 'check-label region-random col-order' }, orderBox, 'Shuffle order', tipMarker(TIPS.rg_order)),
   ];
 }
 
@@ -130,10 +130,10 @@ function disabledCell(region, ctx) {
     type: 'checkbox', checked: !!region.disabled, 'aria-label': `Disable ${region.name}`,
     onchange: e => {
       region.disabled = e.target.checked;
-      ctx.changed({ regions: true });
+      ctx.changed({ regions: true, tasks: true });
     },
   });
-  return h('label', { className: 'check-label region-random' }, box, 'Disabled', tipMarker(TIPS.rg_disabled));
+  return h('label', { className: 'check-label region-random col-disabled' }, box, 'Disabled', tipMarker(TIPS.rg_disabled));
 }
 
 function regionRow(region, i, ctx, container) {
@@ -212,7 +212,12 @@ export function renderRegions(container, ctx) {
       h('span', { className: 'col-parent' }, 'Parent', tipMarker(TIPS.rg_parent)),
       h('span', { className: 'col-random' }, 'Randomize'), h('span', { className: 'col-pick' }, 'Keep'),
       h('span', { className: 'col-order' }, 'Shuffle order'),
-      h('span', { className: 'col-disabled' }, 'Disabled')),
+      h('span', { className: 'col-disabled' }, 'Disabled'),
+      ...(model.clickerMode ? [
+        h('span', { className: 'col-distributed' }, 'Distributed'),
+        h('span', { className: 'col-manual' }, 'Manual'),
+        h('span', { className: 'col-offline' }, 'Offline rate'),
+      ] : [])),
     ...model.regions.map((r, i) => regionRow(r, i, ctx, container)),
   );
 }

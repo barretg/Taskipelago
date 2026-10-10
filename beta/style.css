@@ -1151,11 +1151,16 @@ button.primary { border-color: var(--accent); }
 .region-head .col-prereq { width: 200px; }
 .region-head .col-parent { width: 140px; }
 .region-parent { width: 140px; }
-.region-head .col-random { width: 110px; }
+.region-head .col-random, .region-row > .col-random { width: 110px; flex-shrink: 0; }
 .region-head .col-pick { width: 64px; }
-.region-head .col-order { width: 130px; }
-.region-head .col-disabled { width: 90px; }
-.row-disabled > :not(.remove-btn):not(.check-label):not(.hint-with-tip) { opacity: 0.5; }
+.region-head .col-order, .region-row > .col-order { width: 130px; flex-shrink: 0; }
+.region-head .col-disabled, .region-row > .col-disabled { width: 90px; flex-shrink: 0; }
+.region-head .col-distributed, .region-row > .col-distributed { width: 110px; flex-shrink: 0; }
+.region-head .col-manual, .region-row > .col-manual { width: 90px; flex-shrink: 0; }
+.region-head .col-offline, .region-row > .col-offline { width: 150px; flex-shrink: 0; }
+.row-disabled > :not(.col-disabled):not(.disabled-toggle):not(.remove-btn) { opacity: 0.5; }
+/* Tasks / items in a disabled region / group: still editable, just greyed out. */
+.gt-row.row-off > .gt-cell { opacity: 0.5; }
 .region-random { gap: 4px; }
 .region-pick, .group-pick, .group-pct { width: 64px; }
 .empty-note { font-size: 13px; }

@@ -6,6 +6,7 @@ import { TIPS } from './legacy_text.js';
 import { removeRowWithRefs, rowNumberCell } from './reorder.js';
 import { itemCells, itemHeadCells } from './clicker_cells.js';
 import { watchRowRename } from './rename_refs.js';
+import { isGroupDisabled } from './randomize_check.js';
 import {
   REWARD_TYPE_VALUES, newItem, onConsumableToggle, onFillerToggle, setItemProgGroup,
 } from './model.js';
@@ -49,6 +50,7 @@ function itemRow(it, i, ctx, container) {
     it.filler = filler.checked;
     onFillerToggle(it, undefined, model);
     sync();
+    syncOff();
     ctx.changed();
   });
   consumable.addEventListener('change', () => {
@@ -57,14 +59,17 @@ function itemRow(it, i, ctx, container) {
     sync();
     ctx.changed();
   });
+  // Items in a disabled group stay editable but are greyed out.
+  const syncOff = () => row.classList.toggle('row-off', !it.filler && isGroupDisabled(model, it.progGroup));
   group.addEventListener('change', () => {
     setItemProgGroup(it, group.value, model);
     sync();
+    syncOff();
     ctx.changed();
   });
   sync();
 
-  return h('div', { className: 'gt-row gt-item' },
+  const row = h('div', { className: 'gt-row gt-item' },
     cell(rowNumberCell(ctx, 'items', i, container)),
     cell(name), cell(type),
     cell(h('label', { className: 'check-label' }, filler, 'Filler')),
@@ -80,6 +85,8 @@ function itemRow(it, i, ctx, container) {
       type: 'button', className: 'remove-btn',
       onclick: () => removeRowWithRefs(ctx, 'items', i),
     }, 'Remove')));
+  syncOff();
+  return row;
 }
 
 export function renderItemTable(container, ctx) {

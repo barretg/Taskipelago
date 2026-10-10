@@ -160,8 +160,8 @@ export function regionCells(region, ctx) {
   });
   manual.checked = !!region.manual;
   return [
-    h('label', { className: 'check-label' }, distributed, tipHeader('Distributed', TIPS.distributed)),
-    h('label', { className: 'check-label' }, manual, tipHeader('Manual', TIPS.regionManual)),
-    h('label', { className: 'inline-label' }, tipHeader('Offline rate:', TIPS.offlineRate), rate),
+    h('label', { className: 'check-label col-distributed' }, distributed, tipHeader('Distributed', TIPS.distributed)),
+    h('label', { className: 'check-label col-manual' }, manual, tipHeader('Manual', TIPS.regionManual)),
+    h('label', { className: 'inline-label col-offline' }, tipHeader('Offline rate:', TIPS.offlineRate), rate),
   ];
 }

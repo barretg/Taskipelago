@@ -13,7 +13,9 @@ import {
   MAX_TASK_DESCRIPTION_LEN, isReservedWord, taskData, itemData,
 } from './model.js';
 import { clickerExportKeys, validateClicker } from './clicker_fields.js';
-import { checkRandomization, groupSetting, regionRandom, scopedLeaves, usesRandomization } from './randomize_check.js';
+import {
+  checkRandomization, disabledRegions, groupSetting, isGroupDisabled, regionRandom, scopedLeaves, usesRandomization,
+} from './randomize_check.js';
 
 /** _resolve_name_refs: "Quoted Name" -> first matching 1-based index. */
 export function resolveNameRefs(text, names) {
@@ -107,7 +109,23 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   }
   if (!tasks.length) return fail('Error', 'No tasks defined.');
 
-  const dupTasks = duplicates(tasks);
+  // Disabled regions and groups are resolved out first at generation, so problems
+  // that are only in their tasks / items are warnings here, never export blockers.
+  const warnings = [];
+  const offRegions = disabledRegions(model);
+  const offTask = i => offRegions.has(taskRegions[i]);
+  const offGroup = g => isGroupDisabled(model, g);
+  // Errors in disabled content become warnings; returns the errors that still block.
+  const sortOut = (list, isOff) => list.filter((e, k) => {
+    if (!isOff(k)) return true;
+    warnings.push(e);
+    return false;
+  });
+
+  const enabledDupTasks = duplicates(tasks.filter((_, i) => !offTask(i)));
+  warnings.push(...duplicates(tasks).filter(n => !enabledDupTasks.includes(n))
+    .map(n => `Duplicate task name '${n}' (in a disabled region).`));
+  const dupTasks = enabledDupTasks;
   if (dupTasks.length) {
     return fail('Duplicate Task Names',
       'Duplicate task names are not allowed - use the Count field for multiple copies:\n' + dupTasks.join('\n'));
@@ -164,7 +182,13 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     itemRowExportIdxs.push(idxs);
   }
 
-  const dupItems = duplicates(items.filter((name, i) => !itemFillers[i] && name));
+  const offItem = k => !itemFillers[k] && offGroup(itemProgGroups[k]);
+  const offItemRow = r => !itemRows[r].filler && offGroup(itemRows[r].group);
+  const enabledDupItems = duplicates(items.filter((name, i) => !itemFillers[i] && name && !offItem(i)));
+  warnings.push(...duplicates(items.filter((name, i) => !itemFillers[i] && name))
+    .filter(n => !enabledDupItems.includes(n))
+    .map(n => `Duplicate item name '${n}' (in a disabled item group).`));
+  const dupItems = enabledDupItems;
   if (dupItems.length) {
     return fail('Duplicate Item Names',
       'Duplicate item names are not allowed - use the Count field for multiple copies:\n' + dupItems.join('\n'));
@@ -176,22 +200,27 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   // v1.1 F8: unified name rule; reserved words keep their own message below.
   const badNames = names => names.filter(n => !isReservedWord(n) && validateRefName(n))
     .map(n => `${n} (${validateRefName(n)})`);
-  const badRegions = badNames(regionNames);
+  const offNames = (names, isOff, what) => names.filter(n => {
+    if (!isOff(n)) return true;
+    warnings.push(`Invalid ${what} name ${n} (disabled).`);
+    return false;
+  });
+  const badRegions = offNames(badNames(regionNames), n => offRegions.has(n.split(' (')[0]), 'region');
   if (badRegions.length) {
     return fail('Invalid Region Names',
       'The following region names are invalid and cannot be exported:\n\n' + badRegions.join('\n'));
   }
-  const reservedRegions = regionNames.filter(isReservedWord);
+  const reservedRegions = offNames(regionNames.filter(isReservedWord), n => offRegions.has(n), 'region');
   if (reservedRegions.length) {
     return fail('Invalid Region Names',
       'The following region names are reserved words and cannot be exported:\n\n' + reservedRegions.join('\n'));
   }
-  const badGroups = badNames(model.progGroups);
+  const badGroups = offNames(badNames(model.progGroups), n => offGroup(n.split(' (')[0]), 'item group');
   if (badGroups.length) {
     return fail('Invalid Progressive Group Names',
       'The following progressive group names are invalid and cannot be exported:\n\n' + badGroups.join('\n'));
   }
-  const reservedGroups = model.progGroups.filter(isReservedWord);
+  const reservedGroups = offNames(model.progGroups.filter(isReservedWord), offGroup, 'item group');
   if (reservedGroups.length) {
     return fail('Invalid Progressive Group Names',
       'The following progressive group names are reserved words and cannot be exported:\n\n'
@@ -202,7 +231,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   const parentErrors = [];
   const usesParents = model.regions.some(r => r.parent);
   for (const r of model.regions) {
-    if (!r.parent) continue;
+    if (!r.parent || offRegions.has(r.name)) continue;
     const p = regionByName.get(r.parent);
     if (!p) parentErrors.push(`${r.name}: parent region '${r.parent}' does not exist.`);
     else if (p.name === r.name) parentErrors.push(`${r.name}: a region cannot be its own parent.`);
@@ -234,10 +263,8 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     totalItemSlots = finalItems;
   } else {
     // Disabled regions (and their subregions) and groups are left out of the seed.
-    const off = new Set(regionNames.filter(n => regionByName.get(n).disabled));
-    for (const n of regionNames) if (off.has(regionByName.get(n).parent)) off.add(n);
-    taskRegions.forEach((r, i) => { if (off.has(r)) totalTaskSlots -= taskCounts[i]; });
-    itemRows.forEach(row => { if (row.group && groupSetting(model, row.group).disabled) totalItemSlots -= row.count; });
+    taskCounts.forEach((c, i) => { if (offTask(i)) totalTaskSlots -= c; });
+    itemRows.forEach((row, r) => { if (offItemRow(r)) totalItemSlots -= row.count; });
   }
   if (totalTaskSlots !== totalItemSlots) {
     const proceed = await confirm('Unbalanced Counts',
@@ -247,24 +274,31 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   }
 
   const quoteErrors = [];
-  tasks.forEach((t, i) => { if (t.includes('"')) quoteErrors.push(`Task ${i + 1} name contains a quotation mark.`); });
-  rawItemNames.forEach((n, i) => { if (n && n.includes('"')) quoteErrors.push(`Item ${i + 1} name contains a quotation mark.`); });
+  tasks.forEach((t, i) => {
+    if (t.includes('"')) (offTask(i) ? warnings : quoteErrors).push(`Task ${i + 1} name contains a quotation mark.`);
+  });
+  rawItemNames.forEach((n, i) => {
+    if (n && n.includes('"')) {
+      (offItemRow(i) ? warnings : quoteErrors).push(`Item ${i + 1} name contains a quotation mark.`);
+    }
+  });
   if (quoteErrors.length) return fail('Invalid Names', quoteErrors.join('\n'));
 
   const nameErrors = [];
   taskPrereqs.forEach((tpr, i) => {
-    nameErrors.push(...resolveScopedNameRefs(tpr, 'task', tasks, rawItemNames)[1]
+    (offTask(i) ? warnings : nameErrors).push(...resolveScopedNameRefs(tpr, 'task', tasks, rawItemNames)[1]
       .map(e => `Task ${i + 1} task prereqs: ${e}`));
   });
   itemPrereqsRaw.forEach((ipr, i) => {
-    nameErrors.push(...resolveScopedNameRefs(ipr, 'item', tasks, rawItemNames)[1]
+    (offTask(i) ? warnings : nameErrors).push(...resolveScopedNameRefs(ipr, 'item', tasks, rawItemNames)[1]
       .map(e => `Task ${i + 1} item prereqs: ${e}`));
   });
   // Quoted names inside a region's task(...) / item(...) scopes.
   regionNames.forEach(name => {
+    const sink = offRegions.has(name) ? warnings : nameErrors;
     mapScopedText(regionByName.get(name).prereq,
-      t => { nameErrors.push(...resolveNameRefs(t, tasks)[1].map(e => `Region '${name}' depends on: ${e}`)); return t; },
-      t => { nameErrors.push(...resolveNameRefs(t, rawItemNames)[1].map(e => `Region '${name}' depends on: ${e}`)); return t; });
+      t => { sink.push(...resolveNameRefs(t, tasks)[1].map(e => `Region '${name}' depends on: ${e}`)); return t; },
+      t => { sink.push(...resolveNameRefs(t, rawItemNames)[1].map(e => `Region '${name}' depends on: ${e}`)); return t; });
   });
   if (nameErrors.length) return fail('Unresolved Names', 'Unresolved name references:\n\n' + nameErrors.join('\n'));
 
@@ -305,11 +339,11 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       }
     }
   };
-  const attempt = (fn, prefix = '') => {
+  const attempt = (fn, prefix = '', off = false) => {
     try {
       fn();
     } catch (e) {
-      exprErrors.push(prefix + e.message);
+      (off ? warnings : exprErrors).push(prefix + e.message);
     }
   };
   taskPrereqs.forEach((tpr, i) => {
@@ -317,17 +351,33 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     const [resolved] = resolveScopedNameRefs(tpr, 'task', tasks, rawItemNames);
     attempt(() => checkItemCopies(
       parsePrereq(resolved, nTasks, i, 'task prereq', groupSet, regionSet, null, null, fieldScopes),
-      'task prereq', `task ${i + 1}`));
+      'task prereq', `task ${i + 1}`), '', offTask(i));
   });
   itemPrereqsRaw.forEach((ipr, i) => {
     if (!ipr) return;
     const [resolved] = resolveScopedNameRefs(ipr, 'item', tasks, rawItemNames);
     attempt(() => checkItemCopies(
       parsePrereq(resolved, nItems, i, 'item prereq', groupSet, null, null, null, fieldScopes),
-      'item prereq', `task ${i + 1}`));
+      'item prereq', `task ${i + 1}`), '', offTask(i));
   });
+  // Disabled currency is unavailable: a cost branch paid in it cannot be used, and a
+  // cost with no usable branch is dropped at generation.
+  const offCurrency = new Set(rawItemNames.filter((n, r) => n && offItemRow(r)));
+  const payable = node => {
+    if (!Array.isArray(node)) return true;
+    if (node[0] === 'and') return node[1].every(payable);
+    if (node[0] === 'or') return node[1].some(payable);
+    return !offCurrency.has(node[1]);
+  };
   taskCosts.forEach((cost, i) => {
-    if (cost) attempt(() => parseCostExpr(cost, consumableSet, rawItemNames), `Task ${i + 1} cost: `);
+    if (!cost) return;
+    attempt(() => {
+      const ast = parseCostExpr(cost, consumableSet, rawItemNames);
+      if (!offTask(i) && offCurrency.size && ast && !payable(ast)) {
+        warnings.push(`Task ${i + 1} cost can only be paid with currency from a disabled item group, `
+          + 'so the cost is dropped.');
+      }
+    }, `Task ${i + 1} cost: `, offTask(i));
   });
   if (goalTasksRaw) {
     const [resolvedGoal, goalNameErrors] = resolveScopedNameRefs(goalTasksRaw, 'task', tasks, rawItemNames);
@@ -355,13 +405,13 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       // Consumables are spent on task costs, so "received" is not a stable gate:
       // the region would lock itself again on the next purchase.
       for (const leaf of scopedLeaves(ast, 'item')) {
-        if (rawItemConsumables[leaf]) {
+        if (rawItemConsumables[leaf] && !offItemRow(leaf)) {
           throw new Error(`Taskipelago: region '${name}' depends on item ${leaf + 1} `
             + `('${rawItemNames[leaf]}'), which is a consumable currency. A region cannot `
             + 'depend on a currency item.');
         }
       }
-    });
+    }, '', offRegions.has(name));
   }
   if (exprErrors.length) {
     return fail('Invalid Expressions',
@@ -388,11 +438,28 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       mapScopedText(t, null, inner => remapPrereqIndices(inner, itemRowExportIdxs)));
   }
 
-  const clickerError = validateClicker(model, {
-    taskNames: tasks, taskActivations, items, itemSpecs, regionNames,
-    taskManual, taskRegions,
-  });
-  if (clickerError) return { error: clickerError };
+  const clickerArgs = {
+    taskNames: tasks, taskActivations, items, itemSpecs, regionNames, taskManual, taskRegions,
+  };
+  const clickerError = validateClicker(model, clickerArgs);
+  if (clickerError) {
+    // Retry without the disabled tasks' and items' own fields: if that passes, the
+    // problem is only in disabled content.
+    const enabledError = validateClicker(model, {
+      ...clickerArgs,
+      taskActivations: taskActivations.map((v, i) => (offTask(i) ? '' : v)),
+      itemSpecs: itemSpecs.map((v, k) => (offItem(k) ? noSpec : v)),
+    });
+    if (enabledError) return { error: enabledError };
+    warnings.push(clickerError[1]);
+  }
+  if (warnings.length) {
+    const proceed = await confirm('Problems In Disabled Content',
+      'These problems are only in disabled regions or item groups (or in costs paid with their '
+      + 'currency). Disabled content is left out of the seed, so the export still generates:\n\n'
+      + warnings.join('\n') + '\n\nExport anyway?');
+    if (!proceed) return { cancelled: true };
+  }
 
   const styleColors = encodeThemeColors(model.styleColors);
 

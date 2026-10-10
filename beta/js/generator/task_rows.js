@@ -8,6 +8,7 @@ import { TIPS } from './legacy_text.js';
 import { removeRowWithRefs, rowNumberCell } from './reorder.js';
 import { taskCells, taskHeadCells } from './clicker_cells.js';
 import { watchRowRename } from './rename_refs.js';
+import { disabledRegions } from './randomize_check.js';
 
 /** Code-point length and truncation for the description editor. */
 const cpLen = s => Array.from(s).length;
@@ -81,6 +82,8 @@ export function renderTaskTable(container, ctx) {
       ...extraHint, cell('')),
   );
 
+  // Tasks in a disabled region stay editable but are greyed out.
+  const offRegions = disabledRegions(model);
   model.tasks.forEach((task, i) => {
     const descBtn = h('button', { type: 'button', className: 'desc-btn', dataset: { field: `tasks.${i}.desc` } });
     const refreshDesc = () => { descBtn.textContent = pyStrip(task.desc) ? 'Description*' : 'Description'; };
@@ -88,14 +91,18 @@ export function renderTaskTable(container, ctx) {
     descBtn.onclick = () => editDescription(task, () => { refreshDesc(); ctx.changed(); });
 
     const region = h('select', {
-      onchange: e => { task.region = e.target.value; ctx.changed(); },
+      onchange: e => {
+        task.region = e.target.value;
+        row.classList.toggle('row-off', offRegions.has(task.region));
+        ctx.changed();
+      },
     }, h('option', { value: '' }, ''), model.regions.map(r => h('option', { value: r.name }, r.name)));
     region.value = task.region;
 
     const name = textInput(task, 'name', ctx, `tasks.${i}.name`);
     watchRowRename(name, ctx, 'tasks', i);
 
-    container.appendChild(h('div', { className: 'gt-row gt-task' },
+    const row = h('div', { className: `gt-row gt-task${offRegions.has(task.region) ? ' row-off' : ''}` },
       cell(rowNumberCell(ctx, 'tasks', i, container)),
       cell(h('div', { className: 'task-name-cell' }, name, descBtn)),
       cell(textInput(task, 'prereq', ctx, `tasks.${i}.prereq`)),
@@ -111,7 +118,8 @@ export function renderTaskTable(container, ctx) {
       cell(h('button', {
         type: 'button', className: 'remove-btn',
         onclick: () => removeRowWithRefs(ctx, 'tasks', i),
-      }, 'Remove'))));
+      }, 'Remove')));
+    container.appendChild(row);
   });
 }
 
