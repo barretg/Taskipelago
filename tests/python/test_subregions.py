@@ -99,6 +99,20 @@ class InheritedParentRequirementsTest(unittest.TestCase):
         self.assertEqual(w._region_to_task_indices["Hall"], [0, 1, 2, 3])
         self.assertEqual(w.fill_slot_data()["region_parent"], {"Kitchen": "Hall"})
 
+    def test_subregion_inherits_shuffle_order(self):
+        # Hall shuffles; Kitchen's own box is off, so it inherits and its two tasks swap on some seed.
+        kitchen = {
+            tuple(t for t in _quiet(seed=s, **{**BASE, "region_random_order": ["true", ""]})._tasks
+                  if t in ("Bake Bread", "Knead"))
+            for s in range(30)
+        }
+        self.assertEqual(kitchen, {("Bake Bread", "Knead"), ("Knead", "Bake Bread")})
+
+    def test_subregion_shuffle_does_not_reach_the_parent(self):
+        for s in range(20):
+            w = _quiet(seed=s, **{**BASE, "region_random_order": ["", "true"]})
+            self.assertEqual(w._tasks[:2], ["Sweep Hall", "Mop Hall"])
+
     def test_slot_data_carries_the_parent_map(self):
         w = world()
         sd = w.fill_slot_data()

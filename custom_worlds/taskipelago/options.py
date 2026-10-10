@@ -320,7 +320,8 @@ class RegionRandomOrder(OptionList):
     in their original YAML order. Works with or without a region_random_pick; a region with
     "true" and no pick keeps all its tasks in shuffled order. Its tasks may still be referenced
     individually ('prev' and 'sequential' resolve to their original targets before shuffling),
-    and it may be a parent region.
+    and it may be a parent region. A subregion of a region with "true" is shuffled too
+    (each subregion's tasks among themselves).
     """
     display_name = "Region Random Order"
     default: List[str] = []
@@ -399,6 +400,24 @@ class GroupDisabled(OptionList):
     Missing or empty entries mean enabled.
     """
     display_name = "Group Disabled"
+    default: List[str] = []
+
+
+class GroupParent(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with progressive_groups.
+    Each entry names another item group that this group is a subgroup of, or is empty
+    (the default) for a top-level group. A subgroup behaves exactly like any other group
+    for items, prereqs, types and colors; the difference is that every reference to the
+    parent group (in prereqs, goal_tasks and AP logic) counts the parent's own items plus
+    every item in its subgroups, and the client's Items tab lists subgroups under their
+    parent. A subgroup inherits its parent's group_early and group_disabled: when the
+    parent sets one, the subgroup has it too, whatever its own entry says.
+    Nesting is one level deep: a group named here as a parent may not itself have a
+    parent. A random-choice group may not be a parent, but a subgroup may be random-choice.
+    """
+    display_name = "Group Parent"
     default: List[str] = []
 
 
@@ -619,6 +638,7 @@ class RegionManual(OptionList):
     Parallel list aligned with regions. 'true' makes every task in that region a
     manual (non-clicker) task, as if each were marked in task_manual. 'false' or
     blank (the default) leaves the region's tasks clickable.
+    A subregion of a manual parent (region_parent) is manual too.
     """
     display_name = "Region Manual"
     default: List[str] = []
@@ -706,6 +726,7 @@ class RegionDistributedProduction(OptionList):
     rate evenly among that region's eligible (unlocked, incomplete) tasks, keeping
     the region's total throughput constant. 'false' (the default) applies the rate
     in full to each eligible task.
+    A subregion of a distributed parent (region_parent) is distributed too.
     """
     display_name = "Region Distributed Production"
     default: List[str] = []
@@ -746,7 +767,8 @@ class RegionOfflineRate(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
     Parallel list aligned with regions. Overrides clicker_offline_rate for that
-    region; blank inherits the global rate.
+    region; blank inherits the parent region's rate for a subregion (region_parent),
+    otherwise the global rate.
     """
     display_name = "Region Offline Rate"
     default: List[str] = []
@@ -830,6 +852,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     group_default_pcts: GroupDefaultPcts
     group_early: GroupEarly
     group_disabled: GroupDisabled
+    group_parent: GroupParent
     regions: Regions
     region_default_pcts: RegionDefaultPcts
     region_colors: RegionColors

@@ -383,9 +383,6 @@ class SlotDataTest(unittest.TestCase):
         self.assertEqual(sd["clicker_offline_cap_hours"], 12)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class CpsConstantTest(unittest.TestCase):
     def test_cps_is_allowed_in_production_fields(self):
@@ -404,3 +401,35 @@ class CpsConstantTest(unittest.TestCase):
         with self.assertRaises(Exception) as cm:
             world(task_activations=["CPS", "1", "1"])
         self.assertIn("changes during play", str(cm.exception))
+
+
+class SubregionInheritanceTest(unittest.TestCase):
+    """A subregion inherits Manual and Distributed from its parent, and a blank
+    offline rate falls back to the parent's rate."""
+
+    SUB = dict(regions=["Kitchen", "Pantry"], task_region=["Kitchen", "Pantry", ""],
+               region_parent=["", "Kitchen"])
+
+    def test_manual_inherited(self):
+        w = world(**self.SUB, region_manual=["true", ""])
+        self.assertEqual(w._clicker_manual, [True, True, False])
+
+    def test_child_manual_alone(self):
+        w = world(**self.SUB, region_manual=["", "true"])
+        self.assertEqual(w._clicker_manual, [False, True, False])
+
+    def test_distributed_inherited(self):
+        w = world(**self.SUB, region_distributed_production=["true", ""])
+        self.assertEqual(w._clicker_distributed, {"Kitchen": True, "Pantry": True})
+
+    def test_offline_rate_falls_back_to_parent(self):
+        w = world(**self.SUB, region_offline_rate=["0.5", ""])
+        self.assertEqual(w._clicker_region_offline_rate, {"Kitchen": 0.5, "Pantry": 0.5})
+
+    def test_own_offline_rate_wins(self):
+        w = world(**self.SUB, region_offline_rate=["0.5", "0"])
+        self.assertEqual(w._clicker_region_offline_rate, {"Kitchen": 0.5, "Pantry": 0})
+
+
+if __name__ == "__main__":
+    unittest.main()

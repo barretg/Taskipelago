@@ -14,7 +14,7 @@ import {
 import { decodeThemeColors, normalizeStyleColors } from '../shared/theme.js';
 import {
   REGION_COLOR_PALETTE, REWARD_TYPE_VALUES, limitPlayerName,
-  newItem, newTask, newDeathLink, normalizeRegionParents, onFillerToggle, onConsumableToggle,
+  newItem, newTask, newDeathLink, normalizeGroupParents, normalizeRegionParents, onFillerToggle, onConsumableToggle,
   setItemProgGroup,
 } from './model.js';
 import { clickerImportSettings, clickerItemFields, clickerTaskFields } from './clicker_fields.js';
@@ -179,14 +179,20 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
   const rawGroupPcts = pyListOr(block, 'group_default_pcts');
   const rawGroupEarly = pyListOr(block, 'group_early');
   const rawGroupDisabled = pyListOr(block, 'group_disabled');
+  const rawGroupParents = pyListOr(block, 'group_parent');
   model.groupSettings = {};
   model.progGroups.forEach((g, i) => {
     const at = list => (i < list.length ? pyStrip(pyStr(list[i])) : '');
     const s = { type: normalizeGroupType(at(rawTypes)), pick: at(rawGroupPicks), pct: at(rawGroupPcts) };
     if (at(rawGroupEarly).toLowerCase() === 'true') s.early = true;
     if (at(rawGroupDisabled).toLowerCase() === 'true') s.disabled = true;
-    if (s.type !== 'progressive' || s.pick || s.pct || s.early || s.disabled) model.groupSettings[g] = s;
+    if (at(rawGroupParents)) s.parent = at(rawGroupParents);
+    if (s.type !== 'progressive' || s.pick || s.pct || s.early || s.disabled || s.parent) {
+      model.groupSettings[g] = s;
+    }
   });
+  // Drops group parent links a hand-written YAML got wrong (missing, nested or random-choice).
+  normalizeGroupParents(model);
 
   // --------- Tasks ---------
   const tasksRaw = pyListOr(block, 'tasks');

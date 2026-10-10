@@ -147,7 +147,10 @@ V11_NEW_TIPS = {
         "Works with or without Randomize. With Randomize, only the kept tasks are\n"
         "shuffled. Without it, every task is kept and shuffled, and its tasks can still\n"
         "be referenced individually ('prev' and 'sequential' keep their original targets).\n"
-        "A shuffle-only region may also be a parent."
+        "A shuffle-only region may also be a parent.\n\n"
+        "A subregion inherits this from its parent: when the parent shuffles, the\n"
+        "subregion's box is shown on and locked, and each subregion's tasks are\n"
+        "shuffled among themselves."
     ),
     "rg_prereq": (
         "Gate every task in this region behind other regions, tasks or items.\n\n"
@@ -198,7 +201,8 @@ V11_NEW_TIPS = {
         "Leave this region out of the seed without deleting it.\n\n"
         "None of its tasks are generated, and every reference to the region or to one\n"
         "of its tasks (prereqs, Depends on, goal, clicker targets, DeathLink pool)\n"
-        "counts as already satisfied. Disabling a parent also disables its subregions.\n"
+        "counts as already satisfied. Disabling a parent also disables its subregions\n"
+        "(their Disabled box is shown on and locked).\n"
         "Disabled takes priority over Randomize: its tasks are never randomized in.\n"
         "A goal that only references disabled content falls back to every task.\n\n"
         "Its tasks stay editable but are greyed out. Problems in them are warnings at\n"
@@ -216,7 +220,9 @@ V11_NEW_TIPS = {
         "means any N items."
     ),
     "group_early": (
-        "Place every item in this group early (see the Early item column)."
+        "Place every item in this group early (see the Early item column).\n\n"
+        "A subgroup inherits this from its parent: when the parent is Early, the\n"
+        "subgroup's box is shown on and locked."
     ),
     "group_disabled": (
         "Leave this group's items out of the seed without deleting them.\n\n"
@@ -227,6 +233,21 @@ V11_NEW_TIPS = {
         "a cost with no other branch is dropped (with a warning at export).\n\n"
         "Its items stay editable but are greyed out. Problems in them are warnings at\n"
         "export, not errors."
+    ),
+    "group_parent": (
+        "Make this group a subgroup of another item group.\n\n"
+        "Blank (the default) leaves it as a top-level group.\n\n"
+        "A subgroup behaves exactly like any other group: items are assigned to it,\n"
+        "prereqs reference it by name, it has its own type and color.\n"
+        "A subgroup's items count toward its parent, so a reference to the parent\n"
+        "group (Parent, Parent-50, Parent*5) counts them too. The client's Items tab\n"
+        "lists subgroups under their parent.\n\n"
+        "A subgroup inherits its parent's Early and Disabled: when the parent has one\n"
+        "on, the subgroup's box is shown on and locked. When the parent has it off,\n"
+        "the subgroup can still turn it on for itself.\n\n"
+        "Nesting is one level deep, so a group that already has subgroups cannot be\n"
+        "given a parent. A random-choice group cannot be a parent, but a subgroup may\n"
+        "be random-choice."
     ),
     "item_early": (
         "Place this item early.\n\n"

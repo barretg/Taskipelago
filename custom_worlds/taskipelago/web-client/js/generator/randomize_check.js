@@ -9,12 +9,12 @@ export function normalizeGroupType(t) {
   return GROUP_TYPES.includes(v) ? v : 'progressive';
 }
 
-/** Settings for a group with defaults applied: { type, pick, pct }. */
+/** Settings for a group with defaults applied: { type, pick, pct, early, disabled, parent }. */
 export function groupSetting(model, name) {
   const s = (model.groupSettings && model.groupSettings[name]) || {};
   return {
     type: normalizeGroupType(s.type), pick: String(s.pick ?? '').trim(), pct: String(s.pct ?? '').trim(),
-    early: !!s.early, disabled: !!s.disabled,
+    early: !!s.early, disabled: !!s.disabled, parent: String(s.parent ?? '').trim(),
   };
 }
 
@@ -25,15 +25,27 @@ export function disabledRegions(model) {
   return off;
 }
 
-/** True when the group is disabled. Filler rows never belong to a group on export. */
+/**
+ * True when the group, or the parent group it sits under, is disabled. Filler
+ * rows never belong to a group on export.
+ */
 export function isGroupDisabled(model, name) {
-  return !!name && groupSetting(model, name).disabled;
+  if (!name) return false;
+  const s = groupSetting(model, name);
+  return s.disabled || (!!s.parent && groupSetting(model, s.parent).disabled);
 }
 
 /** Randomize state for a region: { on, pick, order }. order works with or without on. */
 export function regionRandom(model, name) {
   const s = (model.regionRandom && model.regionRandom[name]) || {};
   return { on: !!s.on, pick: String(s.pick ?? '').trim(), order: !!s.order };
+}
+
+/** Parent region whose Shuffle order a subregion inherits, or '' when none applies. */
+export function inheritedOrderFrom(model, name) {
+  const r = (model.regions || []).find(x => x.name === name);
+  const p = r && r.parent;
+  return p && regionRandom(model, p).order ? p : '';
 }
 
 /** True when any region or group setting differs from the defaults (new YAML keys needed). */
@@ -95,7 +107,7 @@ export function finalCounts(model, taskRows, itemRows) {
   let items = itemRows.reduce((a, r) => a + r.count, 0);
   for (const g of model.progGroups) {
     const s = groupSetting(model, g);
-    if (s.disabled || s.type !== 'random-choice' || !s.pick) continue;
+    if (isGroupDisabled(model, g) || s.type !== 'random-choice' || !s.pick) continue;
     const count = itemRows.reduce((a, r) => a + (!r.filler && r.group === g ? r.count : 0), 0);
     items -= count - keep(s.pick, count);
   }
@@ -199,7 +211,7 @@ export function checkRandomization(o) {
   for (const name of o.regionNames) {
     if (offRegions.has(name)) continue;
     const rr = regionRandom(model, name);
-    if (!rr.on && !rr.order) continue;
+    if (!rr.on && !rr.order && !inheritedOrderFrom(model, name)) continue;
     const count = o.tasks.reduce((a, _t, i) => a + (o.taskRegions[i] === name ? o.taskCounts[i] : 0), 0);
     // Shuffle-only: keeps every task, so its tasks stay individually referenceable.
     if (!rr.on) { regionKeep.set(name, count); shuffleOnly.add(name); continue; }
@@ -331,6 +343,11 @@ export function checkRandomization(o) {
         finalItems -= count - n;
       });
     }
+  }
+  // A parent group also counts every item its subgroups keep.
+  for (const g of model.progGroups) {
+    const p = groupSetting(model, g).parent;
+    if (p && groupSize.has(g) && groupSize.has(p)) groupSize.set(p, groupSize.get(p) + groupSize.get(g));
   }
   o.itemPrereqs.forEach((text, i) => {
     if (!text || offTask(i)) return;

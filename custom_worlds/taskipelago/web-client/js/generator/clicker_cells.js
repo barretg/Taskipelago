@@ -38,12 +38,14 @@ export const TIPS = {
     + 'A task is also manual when its region is marked manual.',
   autoComplete: 'On: this task completes itself the moment it reaches its activations.\n\n'
     + 'Off (the default): a full task stops accruing and waits for you to press its Complete button.',
-  regionManual: 'On: every task in this region is a normal (non-clicker) task, as if each were marked Manual in the task table.',
+  regionManual: 'On: every task in this region is a normal (non-clicker) task, as if each were marked Manual in the task table.\n\n'
+    + 'Subregions inherit it: when the parent is Manual, the subregion\'s box is shown on and locked.',
   distributed: 'Off: the rate applies in full to each eligible task in the region.\n\n'
     + 'On: the rate is split evenly among them, so the region\'s total throughput stays constant '
-    + 'and each share rises as siblings complete.',
+    + 'and each share rises as siblings complete.\n\n'
+    + 'Subregions inherit it: when the parent is Distributed, the subregion\'s box is shown on and locked.',
   offlineRate: 'The fraction of live production that accrues while away, for tasks in this region. '
-    + 'Blank inherits the global away rate.',
+    + 'Blank inherits the parent region\'s rate for a subregion, otherwise the global away rate.',
 };
 
 /** Live task count, for the expression previews. Counts expand with Count > 1. */
@@ -144,24 +146,36 @@ export function itemCells(it, i, ctx) {
 
 /** The region controls appended to a region row in clicker mode. */
 export function regionCells(region, ctx) {
-  const distributed = h('input', {
-    type: 'checkbox', 'aria-label': 'Distributed production',
-    onchange: e => { region.distributed = e.target.checked; ctx.changed(); },
-  });
-  distributed.checked = !!region.distributed;
+  // A subregion inherits Distributed and Manual when its parent sets them (the
+  // box is then shown on and locked; its own value is kept for when the parent
+  // clears it), and a blank offline rate falls back to the parent's rate.
+  const parent = region.parent ? (ctx.model.regions || []).find(r => r.name === region.parent) : null;
+  const flag = (key, label, tip) => {
+    const inherited = !!(parent && parent[key]);
+    const box = h('input', {
+      type: 'checkbox', 'aria-label': label === 'Manual' ? 'Manual region' : 'Distributed production',
+      disabled: inherited,
+      // Re-render so subregions pick up the parent's change.
+      onchange: e => { region[key] = e.target.checked; ctx.changed({ regions: true }); },
+    });
+    box.checked = inherited || !!region[key];
+    return h('label', {
+      className: `check-label col-${key === 'manual' ? 'manual' : 'distributed'}${inherited ? ' inherited' : ''}`,
+      title: inherited ? `Inherited: parent region '${parent.name}' has ${label} on.` : '',
+    }, box, tipHeader(label, tip));
+  };
+  const parentRate = parent ? String(parent.offlineRate ?? '').trim() : '';
   const rate = h('input', {
     type: 'text', className: 'region-offline', value: region.offlineRate ?? '',
-    spellcheck: false, placeholder: 'inherit', 'aria-label': 'Offline rate',
+    spellcheck: false, placeholder: parentRate || 'inherit', 'aria-label': 'Offline rate',
+    title: parentRate ? `Blank uses parent region '${parent.name}' rate (${parentRate}).` : '',
     oninput: e => { region.offlineRate = e.target.value; ctx.changed(); },
+    // Re-render on commit so subregions show the parent's new rate.
+    onchange: () => ctx.changed({ regions: true }),
   });
-  const manual = h('input', {
-    type: 'checkbox', 'aria-label': 'Manual region',
-    onchange: e => { region.manual = e.target.checked; ctx.changed(); },
-  });
-  manual.checked = !!region.manual;
   return [
-    h('label', { className: 'check-label col-distributed' }, distributed, tipHeader('Distributed', TIPS.distributed)),
-    h('label', { className: 'check-label col-manual' }, manual, tipHeader('Manual', TIPS.regionManual)),
+    flag('distributed', 'Distributed', TIPS.distributed),
+    flag('manual', 'Manual', TIPS.regionManual),
     h('label', { className: 'inline-label col-offline' }, tipHeader('Offline rate:', TIPS.offlineRate), rate),
   ];
 }

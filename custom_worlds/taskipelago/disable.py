@@ -18,7 +18,7 @@ never sees it:
   - a task cost branch paid in disabled currency cannot be used (the currency
     is unavailable); a cost with no branch left is dropped with a warning;
   - a goal made only of disabled content falls back to every task, with a warning;
-  - a disabled parent region disables its subregions too;
+  - a disabled parent region (or item group) disables its subregions (subgroups) too;
   - clicker production targets aimed only at removed content are dropped;
   - death_link_pool entries naming a removed task are dropped.
 
@@ -52,7 +52,7 @@ REGION_LISTS = (
 )
 GROUP_LISTS = (
     "progressive_groups", "progressive_group_colors", "group_types", "group_random_pick",
-    "group_early", "group_default_pcts", "group_disabled",
+    "group_early", "group_default_pcts", "group_disabled", "group_parent",
 )
 #: Every option list this module reads or rewrites.
 OPTION_LISTS = ("tasks", "goal_tasks", "death_link_pool", "death_link_weights") + TASK_LISTS \
@@ -288,6 +288,12 @@ def apply_disabled(opts: Dict[str, List[str]], warn: Callable[[str], None] = _wa
     dis_regions |= {
         r for i, r in enumerate(region_names)
         if i < len(parents) and parents[i].strip() in dis_regions
+    }
+    # Likewise a disabled parent group takes its subgroups.
+    g_parents = get("group_parent")
+    dis_groups |= {
+        g for i, g in enumerate(group_names)
+        if i < len(g_parents) and g_parents[i].strip() in dis_groups
     }
 
     # Task rows (blank names are skipped by the generator, and the parallel

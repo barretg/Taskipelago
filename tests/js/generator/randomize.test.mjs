@@ -9,7 +9,8 @@ const { defaultModel, normalizeModel, renameRegion, renameProgGroup, removeRegio
   await importModule('generator/model.js');
 const { importDoc } = await importModule('generator/yaml_import.js');
 const { buildExport } = await importModule('generator/yaml_export.js');
-const { parsePick, resolvePick, goalMinimalSets } = await importModule('generator/randomize_check.js');
+const { parsePick, resolvePick, goalMinimalSets, isGroupDisabled } = await importModule('generator/randomize_check.js');
+const { normalizeGroupParents } = await importModule('generator/model.js');
 
 const randomFiller = () => 'RANDOM FILLER';
 
@@ -207,4 +208,44 @@ test('disabled content: warnings instead of errors, never randomized, currency u
   const warn = c.confirms.find(t => /disabled content/i.test(t) || /currency/.test(t));
   assert.match(warn, /Task 1 cost/);
   assert.doesNotMatch(warn, /Task 2 cost/);
+});
+
+test('group_parent: export only when used, round trip, rollup sizes and parent rules', async () => {
+  const plain = await run(base({ regionRandom: {} }));
+  assert.equal('group_parent' in plain.data.Taskipelago, false);
+  const m = base({
+    regionRandom: {},
+    progGroups: ['tools', 'cleaning'],
+    groupSettings: { tools: { type: 'aesthetic' }, cleaning: { type: 'aesthetic', parent: 'tools' } },
+  });
+  ['tools', 'cleaning', 'cleaning'].forEach((g, i) => { m.items[i].progGroup = g; });
+  // tools owns 1 item but counts its subgroup's 2.
+  m.tasks[0].itemPrereq = 'tools*3';
+  const r = await run(m);
+  assert.equal(r.ok ?? true, true);
+  assert.deepEqual(r.data.Taskipelago.group_parent, ['', 'tools']);
+  const back = normalizeModel(importDoc(defaultModel(), loadYaml(dumpYaml(r.data)), { randomFiller }).model);
+  assert.equal(back.groupSettings.cleaning.parent, 'tools');
+
+  // Disabling the parent disables the subgroup.
+  m.groupSettings.tools.disabled = true;
+  assert.equal(isGroupDisabled(m, 'cleaning'), true);
+  delete m.groupSettings.tools.disabled;
+
+  // Rename and remove carry the link.
+  renameProgGroup(m, 'tools', 'gear');
+  assert.equal(m.groupSettings.cleaning.parent, 'gear');
+  removeProgGroup(m, 'gear');
+  assert.equal(m.groupSettings.cleaning.parent, '');
+
+  // A random-choice parent, a nested parent and a missing parent are dropped.
+  const n = base({
+    regionRandom: {},
+    progGroups: ['a', 'b', 'c', 'e', 'f', 'g'],
+    groupSettings: {
+      a: { type: 'random-choice' }, b: { parent: 'a' }, c: { parent: 'zzz' }, f: { parent: 'e' }, g: { parent: 'f' },
+    },
+  });
+  normalizeGroupParents(n);
+  assert.deepEqual(['b', 'c', 'f', 'g'].map(g => n.groupSettings[g].parent), ['', '', 'e', '']);
 });

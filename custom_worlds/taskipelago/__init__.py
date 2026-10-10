@@ -94,6 +94,7 @@ class TaskipelagoWorld(World):
     _group_to_reward_indices: Dict[str, List[int]]
     _task_progressive_reqs: List[List[Tuple[str, int]]]
     _group_item_display_names: Dict[str, List[str]]
+    _group_parent: Dict[str, str]
     _regions: List[str]
     _region_default_pcts: Dict[str, int]
     _region_parent: Dict[str, str]
@@ -183,6 +184,13 @@ class TaskipelagoWorld(World):
             _rname: (_rro[_ri].lower() == "true" if _ri < len(_rro) else False)
             for _ri, _rname in enumerate(_opt_regions)
         }
+        # A subregion inherits Shuffle order from its parent. region_parent is validated
+        # in section 7; here only a valid parent with order on matters.
+        _rpar = [str(x).strip() for x in (self.options.region_parent.value or [])]
+        for _ri, _rname in enumerate(_opt_regions):
+            _p = _rpar[_ri] if _ri < len(_rpar) else ""
+            if _p and _p != _rname and region_random_order.get(_p):
+                region_random_order[_rname] = True
         # Shuffle-only regions (order on, no pick) are randomized regions that keep everything.
         _shuffle_only = {r for r, on in region_random_order.items() if on and r not in region_picks}
         for _rname in _shuffle_only:
@@ -1036,6 +1044,15 @@ class TaskipelagoWorld(World):
             [str(x).strip() for x in (self.options.region_offline_rate.value or [])],
             raw_regions, "region_offline_rate", n, _clicker_warn,
         )
+        # A subregion inherits Manual and Distributed when its parent sets them,
+        # and a blank offline rate falls back to the parent's before the slot's.
+        for _rname, _pname in region_parent.items():
+            if clicker_distributed.get(_pname):
+                clicker_distributed[_rname] = True
+            if clicker_region_manual.get(_pname):
+                clicker_region_manual[_rname] = True
+            if _rname not in clicker_region_offline_rate and _pname in clicker_region_offline_rate:
+                clicker_region_offline_rate[_rname] = clicker_region_offline_rate[_pname]
         _cor_raw = [str(x).strip() for x in (self.options.clicker_offline_rate.value or []) if str(x).strip()]
         if len(_cor_raw) > 1:
             _clicker_warn(
@@ -1220,6 +1237,40 @@ class TaskipelagoWorld(World):
                     )
                 group_to_reward_indices[gname].append(i)
             reward_to_group.append(gname)
+
+        # Subgroups: group_parent names the group this one sits under. A parent
+        # group counts its own items plus every item in its subgroups, for prereqs,
+        # goals and AP logic alike; reward_to_group keeps each item's own group.
+        raw_gparent = [str(x).strip() for x in (self.options.group_parent.value or [])]
+        if len(raw_gparent) < len(raw_prog_groups):
+            raw_gparent += [""] * (len(raw_prog_groups) - len(raw_gparent))
+        group_parent: Dict[str, str] = {}
+        for gname, pname in zip(raw_prog_groups, raw_gparent):
+            if not pname:
+                continue
+            if pname == gname:
+                raise Exception(
+                    f"Taskipelago: item group '{gname}' cannot be its own parent."
+                )
+            if pname not in prog_group_set:
+                raise Exception(
+                    f"Taskipelago: item group '{gname}' names unknown parent group '{pname}'."
+                )
+            group_parent[gname] = pname
+        for gname, pname in group_parent.items():
+            if group_parent.get(pname):
+                raise Exception(
+                    f"Taskipelago: item group '{gname}' has parent '{pname}', which is itself a "
+                    "subgroup; group nesting is only one level deep."
+                )
+            if group_types.get(pname) == "random-choice":
+                raise Exception(
+                    f"Taskipelago: item group '{pname}' is random-choice and cannot be a parent group."
+                )
+        for _gname, _pname in group_parent.items():
+            group_to_reward_indices[_pname].extend(group_to_reward_indices[_gname])
+        for _idxs in group_to_reward_indices.values():
+            _idxs.sort()
 
         # Item group types and default percentages (blank progressive default = legacy).
         raw_gdp = [str(x).strip() for x in (self.options.group_default_pcts.value or [])]
@@ -1948,6 +1999,8 @@ class TaskipelagoWorld(World):
             g for gi, g in enumerate(raw_prog_groups)
             if gi < len(raw_group_early) and raw_group_early[gi].lower() == "true"
         }
+        # A subgroup inherits its parent's Early flag.
+        early_groups |= {g for g, p in group_parent.items() if p in early_groups}
         self._item_early = [
             (i < len(item_early) and bool(item_early[i]))
             or (i < len(reward_to_group) and reward_to_group[i] in early_groups)
@@ -1993,6 +2046,7 @@ class TaskipelagoWorld(World):
         self._group_default_pcts = [group_default_pcts.get(g) for g in raw_prog_groups]
         self._reward_to_group = reward_to_group
         self._group_to_reward_indices = group_to_reward_indices
+        self._group_parent = group_parent
         self._task_progressive_reqs = task_progressive_reqs
         self._regions = raw_regions
         self._clicker_mode = clicker_mode
@@ -2236,6 +2290,10 @@ class TaskipelagoWorld(World):
             # Region refs to a parent count its subregions' tasks too; older seeds
             # lack the key and keep counting only a region's own tasks.
             "region_rollup": True,
+            # Group refs to a parent count its subgroups' items too; older clients
+            # lack group_rollup and count only a group's own items.
+            "group_parent": dict(self._group_parent),
+            "group_rollup": True,
             # Newer clients evaluate region refs inside task prereqs and the goal
             # expression (OR-aware); task_region_reqs / goal_region_reqs stay for
             # older clients, which AND every entry.

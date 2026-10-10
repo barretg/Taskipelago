@@ -791,6 +791,8 @@ button:disabled {
 
 /* v1.1 F6 / F7: grouped item list, filter popover, hidden footer */
 .item-group-header { padding: 6px 8px 2px; font-size: 12px; font-weight: bold; }
+.item-group-header.item-group-sub { padding-left: 20px; }
+.group-row.group-row-sub { padding-left: 20px; }
 .items-toolbar { position: relative; }
 .items-filter-popover {
   position: absolute;
@@ -1159,6 +1161,9 @@ button.primary { border-color: var(--accent); }
 .region-head .col-manual, .region-row > .col-manual { width: 90px; flex-shrink: 0; }
 .region-head .col-offline, .region-row > .col-offline { width: 150px; flex-shrink: 0; }
 .row-disabled > :not(.col-disabled):not(.disabled-toggle):not(.remove-btn) { opacity: 0.5; }
+/* A setting inherited from the parent region / group: shown on, locked. */
+.inherited { opacity: 0.5; }
+.inherited .check-label { cursor: default; }
 /* Tasks / items in a disabled region / group: still editable, just greyed out. */
 .gt-row.row-off > .gt-cell { opacity: 0.5; }
 .region-random { gap: 4px; }
