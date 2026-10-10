@@ -1265,7 +1265,6 @@ button.primary { border-color: var(--accent); }
   font-family: Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', monospace;
   font-size: 12px;
   white-space: pre-wrap;
-  pointer-events: none;
 }
 
 /* =============================================================
