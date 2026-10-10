@@ -71,7 +71,7 @@ function duplicates(names) {
 
 /**
  * Build the export document from the editor model.
- *   confirm(title, message) -> Promise<boolean>  (unbalanced-count prompt)
+ *   confirm(title, message) -> Promise<boolean>  (unbalanced-count and no-goal prompts)
  * Resolves to { data } on success, { error: [title, message] } on a validation
  * failure, or { cancelled: true } when the confirm is declined.
  */
@@ -289,6 +289,11 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     const proceed = await confirm('Unbalanced Counts',
       'Warning: Unbalanced item and task slot counts will cause generation failures.\n\n'
       + `Task slots: ${totalTaskSlots}  |  Item slots: ${totalItemSlots}\n\nExport anyway?`);
+    if (!proceed) return { cancelled: true };
+  }
+  if (!pyStrip(model.goalTasks)) {
+    const proceed = await confirm('No Goal Set',
+      'No goal tasks condition is set, so the goal will be to complete all tasks.\n\nExport anyway?');
     if (!proceed) return { cancelled: true };
   }
 
