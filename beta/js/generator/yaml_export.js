@@ -1,18 +1,23 @@
 // Port of export_yaml (legacy_client/client.py:2947-3292), UNIFY 5.3.
 // Every validation, its order and its message text match the legacy client;
 // tests/parity/export_golden.json holds the reference results.
-import {
-  parsePrereq, parseCostExpr, mapScopedText, prereqScopes, validateRefName,
-} from '../shared/prereq_parser.js';
+import { remapCostIndices, remapPrereqIndices } from '../shared/expr_rewrite.js';
 import { randomFiller as defaultRandomFiller } from '../shared/filler.js';
-import { remapPrereqIndices, remapCostIndices } from '../shared/expr_rewrite.js';
-import { pyInt, pySlice, pyStrip } from '../shared/pyish.js';
-import { dumpYaml } from '../shared/yaml11.js';
-import { encodeThemeColors } from '../shared/theme.js';
 import {
-  MAX_TASK_DESCRIPTION_LEN, isReservedWord, taskData, itemData,
-} from './model.js';
+  mapScopedText,
+  parseCostExpr,
+  parsePrereq,
+  prereqScopes, validateRefName,
+} from '../shared/prereq_parser.js';
+import { pyInt, pySlice, pyStrip } from '../shared/pyish.js';
+import { encodeThemeColors } from '../shared/theme.js';
+import { dumpYaml } from '../shared/yaml11.js';
 import { clickerExportKeys, validateClicker } from './clicker_fields.js';
+import {
+  MAX_TASK_DESCRIPTION_LEN, isReservedWord,
+  itemData,
+  taskData,
+} from './model.js';
 import {
   checkRandomization, disabledRegions, groupSetting, isGroupDisabled, regionRandom, scopedLeaves, usesRandomization,
 } from './randomize_check.js';
@@ -293,7 +298,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   }
   if (!pyStrip(model.goalTasks)) {
     const proceed = await confirm('No Goal Set',
-      'No goal tasks condition is set, so the goal will be to complete all tasks.\n\nExport anyway?');
+      'No goal task condition is set, so the goal will be to complete all tasks.\n\nExport anyway?');
     if (!proceed) return { cancelled: true };
   }
 
