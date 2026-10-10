@@ -30,7 +30,7 @@ function base(extra = {}) {
 
 async function run(m) {
   const confirms = [];
-  const r = await buildExport(m, { confirm: async (t, msg) => { confirms.push(msg); return true; }, randomFiller });
+  const r = await buildExport(m, { confirm: async (t, msg) => { if (t !== 'No Goal Set') confirms.push(msg); return true; }, randomFiller });
   return { ...r, confirms };
 }
 

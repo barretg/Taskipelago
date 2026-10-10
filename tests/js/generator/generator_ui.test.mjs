@@ -175,6 +175,8 @@ test('export shows legacy validation errors, then downloads YAML PyYAML-compatib
   assert.equal(topDialog(), undefined);
   button(root(), 'Export YAML').click();
   await answer('Yes');
+  assert.match(dialogText(), /No Goal Set.*goal will be to complete all tasks/s);
+  await answer('Yes');
   assert.match(dialogText(), /YAML exported as:\nTester\.yaml/);
   await answer('OK');
 

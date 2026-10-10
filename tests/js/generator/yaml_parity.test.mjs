@@ -69,6 +69,7 @@ test('every export case matches the legacy generator after a PyYAML round trip',
   for (const c of golden.exports) {
     const messages = [];
     const confirm = async (title, text) => {
+      if (title === 'No Goal Set') return true; // JS-only prompt, not in the legacy generator
       messages.push(['confirm', title, text]);
       return c.confirm;
     };
