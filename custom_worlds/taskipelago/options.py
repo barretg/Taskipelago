@@ -326,6 +326,20 @@ class RegionRandomOrder(OptionList):
     default: List[str] = []
 
 
+class RegionDisabled(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with regions. "true" disables the region: it stays in the YAML
+    but none of its tasks are in the seed, and every reference to the region or to one of
+    its tasks (in task prereqs, item prereqs, region prereqs, goal_tasks, clicker targets
+    and the DeathLink pool) counts as already satisfied. Disabling a parent region also
+    disables its subregions. A goal made up only of disabled content is an error.
+    Missing or empty entries mean enabled.
+    """
+    display_name = "Region Disabled"
+    default: List[str] = []
+
+
 class GroupTypes(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -370,6 +384,18 @@ class GroupDefaultPcts(OptionList):
     progressive groups and means 100 for random-choice and aesthetic groups.
     """
     display_name = "Group Default Percentages"
+    default: List[str] = []
+
+
+class GroupDisabled(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with progressive_groups. "true" disables the item group: it stays
+    in the YAML but none of its items are in the seed, and every reference to the group or
+    to one of its items (in prereqs, goal_tasks and task costs) counts as already satisfied.
+    Missing or empty entries mean enabled.
+    """
+    display_name = "Group Disabled"
     default: List[str] = []
 
 
@@ -800,6 +826,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     group_random_pick: GroupRandomPick
     group_default_pcts: GroupDefaultPcts
     group_early: GroupEarly
+    group_disabled: GroupDisabled
     regions: Regions
     region_default_pcts: RegionDefaultPcts
     region_colors: RegionColors
@@ -807,6 +834,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     region_parent: RegionParent
     region_random_pick: RegionRandomPick
     region_random_order: RegionRandomOrder
+    region_disabled: RegionDisabled
     task_region: TaskRegion
     bingo_mode: BingoMode
     bingo_dimension_x: BingoDimensionX

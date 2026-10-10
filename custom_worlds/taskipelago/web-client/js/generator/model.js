@@ -131,7 +131,7 @@ export function normalizeModel(raw) {
   model.regions = (Array.isArray(model.regions) ? model.regions : [])
     .map(r => ({
       name: '', pct: 100, color: '', prereq: '', parent: '',
-      distributed: false, offlineRate: '', manual: false, ...r,
+      distributed: false, offlineRate: '', manual: false, disabled: false, ...r,
     }));
   normalizeRegionParents(model);
   model.progGroups = Array.isArray(model.progGroups) ? model.progGroups : [];

@@ -155,3 +155,22 @@ test('rename and remove carry the settings', () => {
   removeProgGroup(m, 'jewel');
   assert.deepEqual([m.regionRandom, m.groupSettings], [{}, {}]);
 });
+
+test('region_disabled and group_disabled export only when used and round trip', async () => {
+  const plain = await run(base({ regionRandom: {} }));
+  assert.equal('region_disabled' in plain.data.Taskipelago, false);
+  assert.equal('group_disabled' in plain.data.Taskipelago, false);
+  const m = base({
+    regionRandom: {},
+    regions: [{ name: 'pool', pct: 100, color: '', prereq: '', disabled: true }, { name: 'other' }],
+    progGroups: ['keys', 'coins'],
+    groupSettings: { coins: { disabled: true } },
+  });
+  const r = await run(m);
+  assert.deepEqual(r.data.Taskipelago.region_disabled, ['true', 'false']);
+  assert.deepEqual(r.data.Taskipelago.group_disabled, ['false', 'true']);
+  const back = normalizeModel(importDoc(defaultModel(), loadYaml(dumpYaml(r.data)), { randomFiller }).model);
+  assert.deepEqual(back.regions.map(x => x.disabled), [true, false]);
+  assert.equal(back.groupSettings.coins.disabled, true);
+  assert.equal(back.groupSettings.keys, undefined);
+});

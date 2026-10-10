@@ -42,6 +42,7 @@ from .prereq_parser import (
     has_scoped, map_scoped_text,
 )
 from .rules import set_rules as _set_rules
+from .disable import OPTION_LISTS as _DISABLE_LISTS, apply_disabled
 from .randomize import (
     parse_pick, resolve_pick, normalize_group_type, goal_minimal_sets,
     remap_int_tokens, remap_goal_ast, cost_indices_to_names,
@@ -124,6 +125,15 @@ class TaskipelagoWorld(World):
 
     def generate_early(self) -> None:
         import sys as _sys
+
+        # Disabled regions / item groups: rewrite the option lists as if their
+        # content had never been written, before anything else reads them.
+        _pruned = apply_disabled({
+            _k: list(getattr(self.options, _k).value or []) for _k in _DISABLE_LISTS
+        })
+        if _pruned is not None:
+            for _k, _v in _pruned.items():
+                getattr(self.options, _k).value = _v
 
         # ------------------------------------------------------------------ #
         # 1. Read raw option lists (pre-expansion, editor-indexed)            #

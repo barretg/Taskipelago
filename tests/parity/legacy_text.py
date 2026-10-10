@@ -194,6 +194,13 @@ V11_NEW_TIPS = {
         "given a parent of its own. A randomized region cannot be a parent, but a\n"
         "subregion may be randomized."
     ),
+    "rg_disabled": (
+        "Leave this region out of the seed without deleting it.\n\n"
+        "None of its tasks are generated, and every reference to the region or to one\n"
+        "of its tasks (prereqs, Depends on, goal, clicker targets, DeathLink pool)\n"
+        "counts as already satisfied. Disabling a parent also disables its subregions.\n"
+        "A goal that only references disabled content is an error."
+    ),
     "group_type": (
         "How the group behaves:\n\n"
         "  progressive    ->  items are interchangeable; grp-N is the Nth position,\n"
@@ -207,6 +214,12 @@ V11_NEW_TIPS = {
     ),
     "group_early": (
         "Place every item in this group early (see the Early item column)."
+    ),
+    "group_disabled": (
+        "Leave this group's items out of the seed without deleting them.\n\n"
+        "None of its items are generated, and every reference to the group or to one\n"
+        "of its items (prereqs, Depends on, goal, task costs) counts as already\n"
+        "satisfied."
     ),
     "item_early": (
         "Place this item early.\n\n"
