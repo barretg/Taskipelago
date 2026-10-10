@@ -68,6 +68,7 @@ class RewriteTest(unittest.TestCase):
                     item_prereqs=["2 || 4", "keys*2 && 1", '"Key A"', "item(4)", "5*1"],
                     task_prereqs=["item(3) && 1", "", "", "", ""],
                     task_cost=["", "", "", "5*3", '"Gold"*2'])
+
         self.assertEqual(out["items"], ["Broom", "Oven", "Gold"])
         self.assertEqual(out["item_prereqs"], ["", "1", "", "item(2)", "3*1"])
         self.assertEqual(out["task_prereqs"][0], "1")
@@ -84,8 +85,21 @@ class RewriteTest(unittest.TestCase):
     def test_goal(self):
         out = prune(region_disabled=["true"], goal_tasks=["2", "5"])
         self.assertEqual(out["goal_tasks"], ["3"])
-        with self.assertRaises(Exception):
-            prune(region_disabled=["true"], goal_tasks=["Attic || 2"])
+        warnings = []
+        out = disable.apply_disabled({**BASE, "region_disabled": ["true"], "goal_tasks": ["Attic || 2"]},
+                                     warn=warnings.append)
+        self.assertEqual(out["goal_tasks"], [])
+        self.assertEqual(len(warnings), 1)
+
+    def test_disabled_currency_is_unavailable(self):
+        warnings = []
+        out = disable.apply_disabled({
+            **BASE, "group_disabled": ["true"],
+            "item_consumable": ["false", "true", "false", "false", "true"],
+            "task_cost": ['"Key A"*2 || "Gold"*1', '2*1 && "Gold"*1', '"Gold"*3', "", ""],
+        }, warn=warnings.append)
+        self.assertEqual(out["task_cost"], ['"Gold"*1', "", '"Gold"*3', "", ""])
+        self.assertEqual(len(warnings), 1)
 
     def test_clicker_targets_and_deathlink(self):
         out = prune(region_disabled=["true"],
@@ -105,6 +119,17 @@ class GenerateTest(unittest.TestCase):
         self.assertNotIn("Key A", w._rewards)
         self.assertEqual(w._raw_prereqs[1], "1")
         self.assertEqual(w._raw_reward_prereqs[1], "")
+
+    def test_broken_and_randomized_disabled_content_still_generates(self):
+        w = _quiet(**BASE, region_disabled=["true", ""],
+                   region_random_pick=["1", ""],
+                   task_prereqs=["", "((", "nonsense-region", "", ""],
+                   region_prereqs=["also broken ((", ""])
+        self.assertEqual(w._tasks, ["Sweep", "Bake", "Knead"])
+
+    def test_goal_falls_back_to_all_tasks(self):
+        w = _quiet(**BASE, region_disabled=["true", ""], goal_tasks=["Attic"])
+        self.assertIsNone(w._goal_ast)
 
 
 if __name__ == "__main__":

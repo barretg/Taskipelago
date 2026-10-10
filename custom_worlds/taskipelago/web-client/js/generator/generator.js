@@ -12,7 +12,7 @@ import { TIPS } from './legacy_text.js';
 import {
   DEATHLINK_LOCK_TIP, PREVIEWS_PURCHASABLE_TIP, MAX_PLAYER_NAME_LEN, TASK_REWARD_PREVIEW_LABELS, defaultModel, limitPlayerName, normalizeModel, slotCounts,
 } from './model.js';
-import { finalCounts, usesRandomization } from './randomize_check.js';
+import { finalCounts, isGroupDisabled, usesRandomization } from './randomize_check.js';
 import { buildExport } from './yaml_export.js';
 import { importDoc } from './yaml_import.js';
 import { addTask, renderTaskTable } from './task_rows.js';
@@ -83,12 +83,13 @@ function updateCounter() {
 /** Slot counts for the header; per-seed final counts when regions or groups are randomized. */
 function counterCounts(model) {
   const used = usesRandomization(model);
-  if (!used.regions && !used.groups) return slotCounts(model);
+  const anyOff = model.regions.some(r => r.disabled) || model.progGroups.some(g => isGroupDisabled(model, g));
+  if (!used.regions && !used.groups && !anyOff) return slotCounts(model);
   const count = r => { try { return Math.max(1, pyInt(r.count)); } catch (_) { return 1; } };
   return finalCounts(
     model,
     model.tasks.map(t => ({ count: count(t), region: t.region })),
-    model.items.map(it => ({ count: count(it), group: it.progGroup, filler: !!it.filler })),
+    model.items.map(it => ({ count: count(it), group: it.progGroup, filler: !!it.filler || !it.name })),
   );
 }
 

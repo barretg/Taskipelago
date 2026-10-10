@@ -15,6 +15,9 @@ never sees it:
     makes anything harder);
   - 'prev' pointing at a removed row becomes 'sequential' (the same thing for
     every copy after the first) or nothing at all for a single-copy row;
+  - a task cost branch paid in disabled currency cannot be used (the currency
+    is unavailable); a cost with no branch left is dropped with a warning;
+  - a goal made only of disabled content falls back to every task, with a warning;
   - a disabled parent region disables its subregions too;
   - clicker production targets aimed only at removed content are dropped;
   - death_link_pool entries naming a removed task are dropped.
@@ -56,6 +59,7 @@ OPTION_LISTS = ("tasks", "goal_tasks", "death_link_pool", "death_link_weights") 
     + ITEM_LISTS + REGION_LISTS + GROUP_LISTS
 
 TRUE = None  # a rewritten atom that is always satisfied
+FALSE = False  # a rewritten atom that can never be satisfied (a cost in disabled currency)
 
 
 def _is_true(text: str) -> bool:
@@ -191,24 +195,33 @@ def _parse(toks: list, home: Optional[str]):
 
 
 def _emit(node, atom_fn) -> Tuple[str, str, bool]:
-    """(kind, text, changed); kind 'true' means the node is always satisfied."""
+    """(kind, text, changed); kind 'true' / 'false' means the node is always / never satisfied."""
     tag = node[0]
     if tag == "atom":
         new = atom_fn(node[1], node[2])
         if new is TRUE:
             return "true", "", True
+        if new is FALSE:
+            return "false", "", True
         return "atom", new, new != node[1]
     if tag == "scope":
         kind, text, changed = _emit(node[2], atom_fn)
-        if kind == "true":
-            return "true", "", True
+        if kind in ("true", "false"):
+            return kind, "", True
         return "atom", f"{node[1]}({text})", changed
     parts = [_emit(k, atom_fn) for k in node[1]]
     changed = any(p[2] for p in parts)
     if tag == "or":
         if any(p[0] == "true" for p in parts):
             return "true", "", True
+        parts = [p for p in parts if p[0] != "false"]
+        if not parts:
+            return "false", "", True
+        if len(parts) == 1:
+            return parts[0][0], parts[0][1], True
         return "or", " || ".join(p[1] for p in parts), changed
+    if any(p[0] == "false" for p in parts):
+        return "false", "", True
     parts = [p for p in parts if p[0] != "true"]
     if not parts:
         return "true", "", True
@@ -217,26 +230,38 @@ def _emit(node, atom_fn) -> Tuple[str, str, bool]:
     return "and", " && ".join(f"({t})" if k == "or" else t for k, t, _ in parts), changed
 
 
-def rewrite_expr(text: str, home: Optional[str], atom_fn: Callable) -> str:
-    """Rewrite one expression. atom_fn(atom, domain) returns the new atom text or TRUE.
-    Text that does not read as an expression is returned unchanged."""
+def rewrite_expr_kind(text: str, home: Optional[str], atom_fn: Callable) -> Tuple[str, str]:
+    """Rewrite one expression: (kind, text) with kind 'true', 'false' or 'expr'.
+    atom_fn(atom, domain) returns the new atom text, TRUE or FALSE. Text that does
+    not read as an expression is returned unchanged."""
     if not text or not text.strip():
-        return text
+        return "expr", text
     toks = _tokenize(text)
     tree = _parse(toks, home) if toks else None
     if tree is None:
-        return text
+        return "expr", text
     kind, out, changed = _emit(tree, atom_fn)
-    if not changed:
-        return text
-    return "" if kind == "true" else out
+    if kind in ("true", "false"):
+        return kind, ""
+    return "expr", out if changed else text
+
+
+def rewrite_expr(text: str, home: Optional[str], atom_fn: Callable) -> str:
+    """rewrite_expr_kind for expressions that never hold FALSE atoms; always-true is ''."""
+    return rewrite_expr_kind(text, home, atom_fn)[1]
 
 
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
 
-def apply_disabled(opts: Dict[str, List[str]]) -> Optional[Dict[str, List[str]]]:
+def _warn_stderr(message: str) -> None:
+    import sys
+    print(f"[Taskipelago] WARNING: {message}", file=sys.stderr)
+
+
+def apply_disabled(opts: Dict[str, List[str]], warn: Callable[[str], None] = _warn_stderr,
+                   ) -> Optional[Dict[str, List[str]]]:
     """
     opts maps each name in OPTION_LISTS to its raw list of strings. Returns the
     rewritten lists, or None when nothing is disabled (generation is then
@@ -297,30 +322,35 @@ def apply_disabled(opts: Dict[str, List[str]]) -> Optional[Dict[str, List[str]]]
 
     all_names = set(region_names) | set(group_names)
 
-    def _index(atom: str, mapping: Dict[int, int], dropped: set):
+    def _index(atom: str, mapping: Dict[int, int], dropped: set, gone=TRUE):
         head, star, tail = atom.partition("*")
         old = int(head) - 1
         if old in dropped:
-            return TRUE
+            return gone
         if old not in mapping:
             return atom  # out of range: left for the generator to report
         return f"{mapping[old] + 1}{star}{tail}"
 
-    def _quoted(atom: str, gone: set):
+    def _quoted(atom: str, gone: set, result=TRUE):
         name = atom[1:atom.index('"', 1)] if atom.count('"') >= 2 else ""
-        return TRUE if name in gone else atom
+        return result if name in gone else atom
 
     def make_atom_fn(row: Optional[int] = None):
         def fn(atom: str, dom: Optional[str]):
             if atom[0].isdigit():
                 if dom == "task":
                     return _index(atom, t_map, t_dropped)
-                if dom in ("item", "cost"):
+                if dom == "item":
                     return _index(atom, i_map, i_dropped)
+                if dom == "cost":
+                    # Disabled currency is unavailable: that cost branch cannot be paid.
+                    return _index(atom, i_map, i_dropped, FALSE)
                 return atom
             if atom[0] == '"':
-                if dom in ("item", "cost"):
+                if dom == "item":
                     return _quoted(atom, gone_item_names)
+                if dom == "cost":
+                    return _quoted(atom, gone_item_names, FALSE)
                 return _quoted(atom, gone_task_names)
             if atom == "prev":
                 if row is None or row - 1 not in t_dropped:
@@ -330,7 +360,10 @@ def apply_disabled(opts: Dict[str, List[str]]) -> Optional[Dict[str, List[str]]]
                 return "sequential" if t_counts[row] > 1 else TRUE
             if atom == "sequential":
                 return atom
-            base = split_name_suffix(atom, all_names)[0]
+            try:
+                base = split_name_suffix(atom, all_names)[0]
+            except Exception:
+                return atom  # malformed suffix: left for the generator to report
             if dom in ("item", "cost"):
                 return TRUE if base in dis_groups else atom
             return TRUE if base in dis_regions else atom
@@ -346,7 +379,14 @@ def apply_disabled(opts: Dict[str, List[str]]) -> Optional[Dict[str, List[str]]]
         rewrite_expr(txt, "task", make_atom_fn(t_kept[j])) for j, txt in enumerate(out["task_prereqs"])
     ]
     out["item_prereqs"] = [rewrite_expr(txt, "item", make_atom_fn()) for txt in out["item_prereqs"]]
-    out["task_cost"] = [rewrite_expr(txt, "cost", make_atom_fn()) for txt in out["task_cost"]]
+    costs: List[str] = []
+    for j, txt in enumerate(out["task_cost"]):
+        kind, new = rewrite_expr_kind(txt, "cost", make_atom_fn())
+        if kind == "false":
+            warn(f"task '{out['tasks'][j]}' can only be paid with currency from a disabled item "
+                 f"group, so its cost is dropped.")
+        costs.append(new)
+    out["task_cost"] = costs
 
     # --- item-aligned lists ---
     for key in ITEM_LISTS:
@@ -421,12 +461,11 @@ def apply_disabled(opts: Dict[str, List[str]]) -> Optional[Dict[str, List[str]]]
     if goal:
         new_goal = rewrite_expr(goal, "task", make_atom_fn())
         if not new_goal:
-            raise Exception(
-                "Taskipelago: goal_tasks only references disabled regions, item groups or their "
-                "tasks and items, so nothing would be left to win with. Change the goal or "
-                "re-enable one of them."
-            )
-        out["goal_tasks"] = [new_goal] if new_goal != goal else get("goal_tasks")
+            warn("goal_tasks only references disabled regions, item groups or their tasks and "
+                 "items, so the goal falls back to completing every task.")
+            out["goal_tasks"] = []
+        else:
+            out["goal_tasks"] = [new_goal] if new_goal != goal else get("goal_tasks")
     else:
         out["goal_tasks"] = get("goal_tasks")
 

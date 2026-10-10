@@ -199,7 +199,10 @@ V11_NEW_TIPS = {
         "None of its tasks are generated, and every reference to the region or to one\n"
         "of its tasks (prereqs, Depends on, goal, clicker targets, DeathLink pool)\n"
         "counts as already satisfied. Disabling a parent also disables its subregions.\n"
-        "A goal that only references disabled content is an error."
+        "Disabled takes priority over Randomize: its tasks are never randomized in.\n"
+        "A goal that only references disabled content falls back to every task.\n\n"
+        "Its tasks stay editable but are greyed out. Problems in them are warnings at\n"
+        "export, not errors."
     ),
     "group_type": (
         "How the group behaves:\n\n"
@@ -218,8 +221,12 @@ V11_NEW_TIPS = {
     "group_disabled": (
         "Leave this group's items out of the seed without deleting them.\n\n"
         "None of its items are generated, and every reference to the group or to one\n"
-        "of its items (prereqs, Depends on, goal, task costs) counts as already\n"
-        "satisfied."
+        "of its items (prereqs, Depends on, goal) counts as already satisfied.\n"
+        "Disabled takes priority over random-choice: its items are never drawn.\n\n"
+        "Its currency is unavailable: a task cost branch paid in it cannot be used, and\n"
+        "a cost with no other branch is dropped (with a warning at export).\n\n"
+        "Its items stay editable but are greyed out. Problems in them are warnings at\n"
+        "export, not errors."
     ),
     "item_early": (
         "Place this item early.\n\n"

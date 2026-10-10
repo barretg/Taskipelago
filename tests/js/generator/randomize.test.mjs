@@ -174,3 +174,37 @@ test('region_disabled and group_disabled export only when used and round trip', 
   assert.equal(back.groupSettings.coins.disabled, true);
   assert.equal(back.groupSettings.keys, undefined);
 });
+
+test('disabled content: warnings instead of errors, never randomized, currency unavailable', async () => {
+  // Broken prereq inside a disabled, randomized region: warning only, and the region's
+  // tasks are out of the balance (1 free task == 1 item).
+  const m = base({
+    regions: [{ name: 'pool', pct: 100, color: '', prereq: '', disabled: true }],
+    items: [{ name: 'i1' }],
+  });
+  m.tasks[1].prereq = '((';
+  const r = await run(m);
+  assert.equal(r.error, undefined);
+  assert.ok(r.data);
+  assert.equal(r.confirms.length, 1);
+  assert.match(r.confirms[0], /disabled/);
+  // Same broken prereq on an enabled task still blocks.
+  const bad = base({ regionRandom: {} });
+  bad.tasks[0].prereq = '((';
+  assert.ok((await run(bad)).error);
+  // A cost payable only in disabled currency warns; one with another branch does not.
+  const cur = base({
+    regionRandom: {},
+    progGroups: ['coins'],
+    groupSettings: { coins: { disabled: true } },
+    items: [{ name: 'Gold', consumable: true, progGroup: 'coins' }, { name: 'Silver', consumable: true },
+      { name: 'i3' }, { name: 'i4' }, { name: 'i5' }],
+  });
+  cur.tasks[0].cost = '"Gold"*1';
+  cur.tasks[1].cost = '"Gold"*1 || "Silver"*1';
+  const c = await run(cur);
+  assert.ok(c.data);
+  const warn = c.confirms.find(t => /disabled content/i.test(t) || /currency/.test(t));
+  assert.match(warn, /Task 1 cost/);
+  assert.doesNotMatch(warn, /Task 2 cost/);
+});

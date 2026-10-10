@@ -333,7 +333,8 @@ class RegionDisabled(OptionList):
     but none of its tasks are in the seed, and every reference to the region or to one of
     its tasks (in task prereqs, item prereqs, region prereqs, goal_tasks, clicker targets
     and the DeathLink pool) counts as already satisfied. Disabling a parent region also
-    disables its subregions. A goal made up only of disabled content is an error.
+    disables its subregions. A goal made up only of disabled content falls back to
+    completing every task, with a warning.
     Missing or empty entries mean enabled.
     """
     display_name = "Region Disabled"
@@ -392,7 +393,9 @@ class GroupDisabled(OptionList):
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
     Parallel list aligned with progressive_groups. "true" disables the item group: it stays
     in the YAML but none of its items are in the seed, and every reference to the group or
-    to one of its items (in prereqs, goal_tasks and task costs) counts as already satisfied.
+    to one of its items (in prereqs and goal_tasks) counts as already satisfied. Its
+    currency is unavailable: a task cost branch paid in it cannot be used, and a cost
+    with no other branch is dropped with a warning.
     Missing or empty entries mean enabled.
     """
     display_name = "Group Disabled"

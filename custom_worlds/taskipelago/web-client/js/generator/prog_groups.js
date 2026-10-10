@@ -46,7 +46,7 @@ function settingCells(group, ctx) {
     type: 'checkbox', checked: s.disabled, 'aria-label': `Disable ${group}`,
     onchange: e => {
       ctx.model.groupSettings[group] = { ...groupSetting(ctx.model, group), disabled: e.target.checked };
-      ctx.changed({ groups: true });
+      ctx.changed({ groups: true, items: true });
     },
   });
   const early = h('input', {
@@ -59,7 +59,7 @@ function settingCells(group, ctx) {
     h('span', { className: 'hint-with-tip' }, pct, tipMarker(TIPS.group_pct)),
     h('span', { className: 'hint-with-tip' },
       h('label', { className: 'check-label' }, early, 'Early'), tipMarker(TIPS.group_early)),
-    h('span', { className: 'hint-with-tip' },
+    h('span', { className: 'hint-with-tip disabled-toggle' },
       h('label', { className: 'check-label' }, disabled, 'Disabled'), tipMarker(TIPS.group_disabled)),
   ];
 }
