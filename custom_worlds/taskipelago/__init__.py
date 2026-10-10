@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import math as _math
 import re as _re
 from typing import Any, Dict, List, Tuple
@@ -135,6 +136,9 @@ class TaskipelagoWorld(World):
         if _pruned is not None:
             for _k, _v in _pruned.items():
                 getattr(self.options, _k).value = _v
+
+        if not any(str(x).strip() for x in list(self.options.goal_tasks.value or [])):
+            logging.info("Taskipelago goal_tasks array empty, default goal: Complete All Tasks")
 
         # ------------------------------------------------------------------ #
         # 1. Read raw option lists (pre-expansion, editor-indexed)            #
