@@ -1213,6 +1213,13 @@ button.primary { border-color: var(--accent); }
 .dl-row input { width: 100%; }
 
 .hint-with-tip { font-size: 12px; }
+.region-row > .hint-with-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 /* Bingo generator */
 .bingo-columns {
