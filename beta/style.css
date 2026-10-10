@@ -1154,6 +1154,8 @@ button.primary { border-color: var(--accent); }
 .region-head .col-random { width: 110px; }
 .region-head .col-pick { width: 64px; }
 .region-head .col-order { width: 130px; }
+.region-head .col-disabled { width: 90px; }
+.row-disabled > :not(.remove-btn):not(.check-label):not(.hint-with-tip) { opacity: 0.5; }
 .region-random { gap: 4px; }
 .region-pick, .group-pick, .group-pct { width: 64px; }
 .empty-note { font-size: 13px; }

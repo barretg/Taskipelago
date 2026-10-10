@@ -124,6 +124,18 @@ function randomizeCells(region, ctx) {
   ];
 }
 
+/** Disabled checkbox: the region stays in the YAML but is left out of the seed. */
+function disabledCell(region, ctx) {
+  const box = h('input', {
+    type: 'checkbox', checked: !!region.disabled, 'aria-label': `Disable ${region.name}`,
+    onchange: e => {
+      region.disabled = e.target.checked;
+      ctx.changed({ regions: true });
+    },
+  });
+  return h('label', { className: 'check-label region-random' }, box, 'Disabled', tipMarker(TIPS.rg_disabled));
+}
+
 function regionRow(region, i, ctx, container) {
   const name = h('input', { type: 'text', value: region.name, className: 'region-name', spellcheck: false });
   let committing = false; // blur fires again when the prompt takes focus
@@ -154,7 +166,7 @@ function regionRow(region, i, ctx, container) {
   pct.addEventListener('keydown', e => { if (e.key === 'Enter') pct.blur(); });
   pct.addEventListener('blur', commitPct);
 
-  return h('div', { className: 'region-row' },
+  return h('div', { className: `region-row${region.disabled ? ' row-disabled' : ''}` },
     rowNumberCell(ctx, 'regions', i, container),
     h('button', {
       type: 'button', className: 'color-swatch', style: { background: region.color || '#808080' },
@@ -173,6 +185,7 @@ function regionRow(region, i, ctx, container) {
     }),
     parentCell(region, ctx),
     ...randomizeCells(region, ctx),
+    disabledCell(region, ctx),
     ...(ctx.model.clickerMode ? regionCells(region, ctx) : []),
     h('button', {
       type: 'button', className: 'remove-btn',
@@ -198,7 +211,8 @@ export function renderRegions(container, ctx) {
       h('span', { className: 'col-pct' }, 'Default %'), h('span', { className: 'col-prereq' }, 'Depends on', tipMarker(TIPS.rg_prereq)),
       h('span', { className: 'col-parent' }, 'Parent', tipMarker(TIPS.rg_parent)),
       h('span', { className: 'col-random' }, 'Randomize'), h('span', { className: 'col-pick' }, 'Keep'),
-      h('span', { className: 'col-order' }, 'Shuffle order')),
+      h('span', { className: 'col-order' }, 'Shuffle order'),
+      h('span', { className: 'col-disabled' }, 'Disabled')),
     ...model.regions.map((r, i) => regionRow(r, i, ctx, container)),
   );
 }

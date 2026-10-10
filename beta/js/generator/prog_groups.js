@@ -42,6 +42,13 @@ function settingCells(group, ctx) {
     },
   }, GROUP_TYPES.map(t => h('option', { value: t }, t)));
   type.value = s.type;
+  const disabled = h('input', {
+    type: 'checkbox', checked: s.disabled, 'aria-label': `Disable ${group}`,
+    onchange: e => {
+      ctx.model.groupSettings[group] = { ...groupSetting(ctx.model, group), disabled: e.target.checked };
+      ctx.changed({ groups: true });
+    },
+  });
   const early = h('input', {
     type: 'checkbox', checked: s.early, 'aria-label': `Place ${group} items early`,
     onchange: e => update({ early: e.target.checked }),
@@ -52,6 +59,8 @@ function settingCells(group, ctx) {
     h('span', { className: 'hint-with-tip' }, pct, tipMarker(TIPS.group_pct)),
     h('span', { className: 'hint-with-tip' },
       h('label', { className: 'check-label' }, early, 'Early'), tipMarker(TIPS.group_early)),
+    h('span', { className: 'hint-with-tip' },
+      h('label', { className: 'check-label' }, disabled, 'Disabled'), tipMarker(TIPS.group_disabled)),
   ];
 }
 
@@ -77,7 +86,8 @@ function groupRow(group, ctx) {
   name.addEventListener('keydown', e => { if (e.key === 'Enter') name.blur(); });
   name.addEventListener('blur', () => trackCommit(commitName()));
   const color = ctx.model.progGroupColors?.[group] || '';
-  return h('div', { className: 'region-row gen-group-row' },
+  const off = groupSetting(ctx.model, group).disabled;
+  return h('div', { className: `region-row gen-group-row${off ? ' row-disabled' : ''}` },
     h('button', {
       type: 'button', className: 'color-swatch', style: { background: color || '#808080' },
       'aria-label': `Change color of ${group}`,

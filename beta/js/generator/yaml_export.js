@@ -232,6 +232,12 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     const { finalTasks, finalItems } = randomCheck();
     totalTaskSlots = finalTasks;
     totalItemSlots = finalItems;
+  } else {
+    // Disabled regions (and their subregions) and groups are left out of the seed.
+    const off = new Set(regionNames.filter(n => regionByName.get(n).disabled));
+    for (const n of regionNames) if (off.has(regionByName.get(n).parent)) off.add(n);
+    taskRegions.forEach((r, i) => { if (off.has(r)) totalTaskSlots -= taskCounts[i]; });
+    itemRows.forEach(row => { if (row.group && groupSetting(model, row.group).disabled) totalItemSlots -= row.count; });
   }
   if (totalTaskSlots !== totalItemSlots) {
     const proceed = await confirm('Unbalanced Counts',
@@ -415,6 +421,10 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       ...(model.progGroups.some(g => groupSetting(model, g).early) ? {
         group_early: model.progGroups.map(g => (groupSetting(model, g).early ? 'true' : 'false')),
       } : {}),
+      // Emitted only when used, so existing exports stay byte-identical.
+      ...(model.progGroups.some(g => groupSetting(model, g).disabled) ? {
+        group_disabled: model.progGroups.map(g => (groupSetting(model, g).disabled ? 'true' : 'false')),
+      } : {}),
 
       regions: regionNames,
       region_default_pcts: regionNames.map(n => regionByName.get(n).pct ?? 100),
@@ -431,6 +441,10 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
           const rr = regionRandom(model, n);
           return rr.order ? 'true' : 'false';
         }),
+      } : {}),
+      // Emitted only when used, so existing exports stay byte-identical.
+      ...(regionNames.some(n => regionByName.get(n).disabled) ? {
+        region_disabled: regionNames.map(n => (regionByName.get(n).disabled ? 'true' : 'false')),
       } : {}),
       task_region: taskRegions,
       task_priority: taskPriorities.map(p => (p ? 'true' : 'false')),

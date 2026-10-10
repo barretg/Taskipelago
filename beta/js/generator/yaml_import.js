@@ -143,6 +143,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
   const rawColors = pyListOr(block, 'region_colors');
   const rawRegionPrereqs = pyListOr(block, 'region_prereqs');
   const rawRegionParents = pyListOr(block, 'region_parent');
+  const rawRegionDisabled = pyListOr(block, 'region_disabled');
   const regionNames = rawRegions.map(r => pyStrip(pyStr(r))).filter(Boolean);
   const regionInfo = new Map();
   regionNames.forEach((name, i) => {
@@ -153,6 +154,9 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
       color: color || REGION_COLOR_PALETTE[i % REGION_COLOR_PALETTE.length],
       prereq: i < rawRegionPrereqs.length ? pyStrip(pyStr(rawRegionPrereqs[i])) : '',
       parent: i < rawRegionParents.length ? pyStrip(pyStr(rawRegionParents[i])) : '',
+      // Only when set, so imports of older YAMLs are unchanged.
+      ...(i < rawRegionDisabled.length && pyStrip(pyStr(rawRegionDisabled[i])).toLowerCase() === 'true'
+        ? { disabled: true } : {}),
     });
   });
   model.regions = regionNames.map(name => ({ name, ...regionInfo.get(name) }));
@@ -174,12 +178,14 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
   const rawGroupPicks = pyListOr(block, 'group_random_pick');
   const rawGroupPcts = pyListOr(block, 'group_default_pcts');
   const rawGroupEarly = pyListOr(block, 'group_early');
+  const rawGroupDisabled = pyListOr(block, 'group_disabled');
   model.groupSettings = {};
   model.progGroups.forEach((g, i) => {
     const at = list => (i < list.length ? pyStrip(pyStr(list[i])) : '');
     const s = { type: normalizeGroupType(at(rawTypes)), pick: at(rawGroupPicks), pct: at(rawGroupPcts) };
     if (at(rawGroupEarly).toLowerCase() === 'true') s.early = true;
-    if (s.type !== 'progressive' || s.pick || s.pct || s.early) model.groupSettings[g] = s;
+    if (at(rawGroupDisabled).toLowerCase() === 'true') s.disabled = true;
+    if (s.type !== 'progressive' || s.pick || s.pct || s.early || s.disabled) model.groupSettings[g] = s;
   });
 
   // --------- Tasks ---------

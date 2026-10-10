@@ -14,7 +14,7 @@ export function groupSetting(model, name) {
   const s = (model.groupSettings && model.groupSettings[name]) || {};
   return {
     type: normalizeGroupType(s.type), pick: String(s.pick ?? '').trim(), pct: String(s.pct ?? '').trim(),
-    early: !!s.early,
+    early: !!s.early, disabled: !!s.disabled,
   };
 }
 
