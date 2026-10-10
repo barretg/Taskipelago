@@ -14,6 +14,7 @@ function styleRow(spec, colors, onChange, rerender) {
   const current = normalizeHex(colors[spec.key]) || spec.default;
   const set = color => {
     colors[spec.key] = color;
+    resetBtn.disabled = color === spec.default;
     onChange();
   };
   const native = h('input', {
@@ -34,14 +35,14 @@ function styleRow(spec, colors, onChange, rerender) {
       set(normalizeHex(v));
     },
   });
+  const resetBtn = h('button', {
+    type: 'button', className: 'style-row-default', disabled: current === spec.default,
+    title: `Back to the default ${spec.default}`,
+    onclick: () => { set(spec.default); rerender(); },
+  }, 'Default');
   return h('div', { className: 'style-row' },
     h('span', { className: 'style-row-label' }, spec.label),
-    native, hex,
-    h('button', {
-      type: 'button', className: 'style-row-default', disabled: current === spec.default,
-      title: `Back to the default ${spec.default}`,
-      onclick: () => { set(spec.default); rerender(); },
-    }, 'Default'));
+    native, hex, resetBtn);
 }
 
 /**
