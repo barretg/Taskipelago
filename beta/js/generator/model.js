@@ -316,6 +316,7 @@ export function removeProgGroup(model, name) {
   if (idx >= 0) model.progGroups.splice(idx, 1);
   if (model.progGroupColors) delete model.progGroupColors[name];
   if (model.groupSettings) delete model.groupSettings[name];
+  for (const g of groupChildren(model, name)) setGroupParent(model, g, '');
   for (const it of model.items) if (it.progGroup === name) setItemProgGroup(it, '', model);
   syncItemGroups(model);
 }
@@ -444,6 +445,53 @@ function moveKey(obj, oldName, newName) {
   }
 }
 
+/**
+ * Subgroups: an item group may name another group as its Parent (stored as
+ * groupSettings[name].parent). References to the parent also count its
+ * subgroups' items. Nesting is one level deep and random-choice groups may not
+ * be parents, mirroring subregions.
+ */
+
+function setGroupParent(model, name, parent) {
+  model.groupSettings[name] = { ...groupSetting(model, name), parent };
+}
+
+/** Names of the groups whose parent is `name`. */
+export function groupChildren(model, name) {
+  if (!name) return [];
+  return (model.progGroups || []).filter(g => groupSetting(model, g).parent === name);
+}
+
+/** Group names that may be picked as the parent of `group` (excludes blank). */
+export function groupParentOptions(model, group) {
+  return (model.progGroups || []).filter(g => {
+    const s = groupSetting(model, g);
+    return g !== group && !s.parent && s.type !== 'random-choice';
+  });
+}
+
+/** True when `group` may be given a parent at all (a group with subgroups may not). */
+export function groupCanHaveParent(model, group) {
+  return groupChildren(model, group).length === 0;
+}
+
+/** Drop parent links that no longer point at a legal parent (missing, self, nested, random-choice). */
+export function normalizeGroupParents(model) {
+  const groups = model.progGroups || [];
+  for (const g of groups) {
+    const p = groupSetting(model, g).parent;
+    if (!p) continue;
+    if (p === g || !groups.includes(p) || groupSetting(model, p).type === 'random-choice') {
+      setGroupParent(model, g, '');
+    }
+  }
+  // One level only: a group that is itself a child cannot be a parent.
+  for (const g of groups) {
+    const p = groupSetting(model, g).parent;
+    if (p && groupSetting(model, p).parent) setGroupParent(model, g, '');
+  }
+}
+
 /** Group rename checks, mirroring checkRegionRename. */
 export function checkGroupRename(model, oldName, rawNew) {
   const newName = pyStrip(rawNew);
@@ -465,6 +513,7 @@ export function renameProgGroup(model, oldName, rawNew) {
   model.progGroups[idx] = newName;
   moveKey(model.progGroupColors, oldName, newName);
   moveKey(model.groupSettings, oldName, newName);
+  for (const g of groupChildren(model, oldName)) setGroupParent(model, g, newName);
   for (const it of model.items) {
     if (it.progGroup === oldName) it.progGroup = newName;
     if (it.ui?.savedGroup === oldName) it.ui.savedGroup = newName;

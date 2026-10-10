@@ -48,6 +48,8 @@ export const state = {
   regionDefaultPcts: {},       // region name -> default completion % (100 when absent)
   regionParent: {},            // subregion name -> parent region name
   regionRollup: false,         // region refs to a parent also count its subregions' tasks
+  groupParent: {},             // subgroup name -> parent item group name
+  groupRollup: false,          // group refs to a parent also count its subgroups' items
   taskRegion: [],
   taskRegionReqs: [],
   regionRefsInline: false,     // newer seeds: region refs evaluated inside prereq/goal text

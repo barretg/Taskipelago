@@ -246,6 +246,25 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       'The following region parent settings must be fixed before exporting:\n\n' + parentErrors.join('\n'));
   }
 
+  // Subgroups: the same rules, with random-choice groups never parents.
+  const groupParentErrors = [];
+  const usesGroupParents = model.progGroups.some(g => groupSetting(model, g).parent);
+  for (const g of model.progGroups) {
+    const p = groupSetting(model, g).parent;
+    if (!p || offGroup(g)) continue;
+    if (!model.progGroups.includes(p)) groupParentErrors.push(`${g}: parent group '${p}' does not exist.`);
+    else if (p === g) groupParentErrors.push(`${g}: a group cannot be its own parent.`);
+    else if (groupSetting(model, p).parent) {
+      groupParentErrors.push(`${g}: parent '${p}' is itself a subgroup; nesting is one level deep.`);
+    } else if (groupSetting(model, p).type === 'random-choice') {
+      groupParentErrors.push(`${g}: parent '${p}' is random-choice; random-choice groups cannot be parents.`);
+    }
+  }
+  if (groupParentErrors.length) {
+    return fail('Invalid Subgroups',
+      'The following item group parent settings must be fixed before exporting:\n\n' + groupParentErrors.join('\n'));
+  }
+
   let totalTaskSlots = taskCounts.reduce((a, b) => a + b, 0);
   let totalItemSlots = itemCounts.reduce((a, b) => a + b, 0);
   const randomized = usesRandomization(model);
@@ -492,6 +511,8 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       ...(model.progGroups.some(g => groupSetting(model, g).disabled) ? {
         group_disabled: model.progGroups.map(g => (groupSetting(model, g).disabled ? 'true' : 'false')),
       } : {}),
+      // Emitted only when subgroups are used, so older apworlds are unaffected.
+      ...(usesGroupParents ? { group_parent: model.progGroups.map(g => groupSetting(model, g).parent) } : {}),
 
       regions: regionNames,
       region_default_pcts: regionNames.map(n => regionByName.get(n).pct ?? 100),
