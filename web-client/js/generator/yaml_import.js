@@ -14,7 +14,7 @@ import {
 import { decodeThemeColors, normalizeStyleColors } from '../shared/theme.js';
 import {
   REGION_COLOR_PALETTE, REWARD_TYPE_VALUES, limitPlayerName,
-  newItem, newTask, newDeathLink, normalizeRegionParents, onFillerToggle, onConsumableToggle,
+  newItem, newTask, newDeathLink, normalizeGroupParents, normalizeRegionParents, onFillerToggle, onConsumableToggle,
   setItemProgGroup,
 } from './model.js';
 import { clickerImportSettings, clickerItemFields, clickerTaskFields } from './clicker_fields.js';
@@ -143,6 +143,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
   const rawColors = pyListOr(block, 'region_colors');
   const rawRegionPrereqs = pyListOr(block, 'region_prereqs');
   const rawRegionParents = pyListOr(block, 'region_parent');
+  const rawRegionDisabled = pyListOr(block, 'region_disabled');
   const regionNames = rawRegions.map(r => pyStrip(pyStr(r))).filter(Boolean);
   const regionInfo = new Map();
   regionNames.forEach((name, i) => {
@@ -153,6 +154,9 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
       color: color || REGION_COLOR_PALETTE[i % REGION_COLOR_PALETTE.length],
       prereq: i < rawRegionPrereqs.length ? pyStrip(pyStr(rawRegionPrereqs[i])) : '',
       parent: i < rawRegionParents.length ? pyStrip(pyStr(rawRegionParents[i])) : '',
+      // Only when set, so imports of older YAMLs are unchanged.
+      ...(i < rawRegionDisabled.length && pyStrip(pyStr(rawRegionDisabled[i])).toLowerCase() === 'true'
+        ? { disabled: true } : {}),
     });
   });
   model.regions = regionNames.map(name => ({ name, ...regionInfo.get(name) }));
@@ -166,19 +170,29 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     const pick = i < rawRegionPicks.length ? pyStrip(pyStr(rawRegionPicks[i])) : '';
     const order = i < rawRegionOrders.length
       && pyStrip(pyStr(rawRegionOrders[i])).toLowerCase() === 'true';
-    if (pick) model.regionRandom[name] = { on: true, pick, order };
+    if (pick || order) model.regionRandom[name] = { on: !!pick, pick, order };
   });
   // Drops parent links a hand-written YAML got wrong (missing, nested or randomized).
   normalizeRegionParents(model);
   const rawTypes = pyListOr(block, 'group_types');
   const rawGroupPicks = pyListOr(block, 'group_random_pick');
   const rawGroupPcts = pyListOr(block, 'group_default_pcts');
+  const rawGroupEarly = pyListOr(block, 'group_early');
+  const rawGroupDisabled = pyListOr(block, 'group_disabled');
+  const rawGroupParents = pyListOr(block, 'group_parent');
   model.groupSettings = {};
   model.progGroups.forEach((g, i) => {
     const at = list => (i < list.length ? pyStrip(pyStr(list[i])) : '');
     const s = { type: normalizeGroupType(at(rawTypes)), pick: at(rawGroupPicks), pct: at(rawGroupPcts) };
-    if (s.type !== 'progressive' || s.pick || s.pct) model.groupSettings[g] = s;
+    if (at(rawGroupEarly).toLowerCase() === 'true') s.early = true;
+    if (at(rawGroupDisabled).toLowerCase() === 'true') s.disabled = true;
+    if (at(rawGroupParents)) s.parent = at(rawGroupParents);
+    if (s.type !== 'progressive' || s.pick || s.pct || s.early || s.disabled || s.parent) {
+      model.groupSettings[g] = s;
+    }
   });
+  // Drops group parent links a hand-written YAML got wrong (missing, nested or random-choice).
+  normalizeGroupParents(model);
 
   // --------- Tasks ---------
   const tasksRaw = pyListOr(block, 'tasks');
@@ -226,6 +240,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
   const fillersRaw = pyListOr(block, 'item_fillers');
   const groupsRaw = pyListOr(block, 'item_progressive_group', pyGet(block, 'reward_progressive_group', []));
   const consumableRaw = pyListOr(block, 'item_consumable');
+  const earlyRaw = pyListOr(block, 'item_early');
   const itemCountRaw = pyGet(block, 'item_count', null);
 
   const items = [];
@@ -235,6 +250,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
   const fillerAt = i => (i < fillersRaw.length ? fillersRaw[i] : null);
   const groupAt = i => at(groupsRaw, i, str);
   const consumableAt = i => at(consumableRaw, i, isTrueText, false);
+  const earlyAt = i => at(earlyRaw, i, isTrueText, false);
 
   if (itemCountRaw !== null) {
     const counts = Array.isArray(itemCountRaw) ? itemCountRaw : [itemCountRaw];
@@ -251,7 +267,8 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
         let j = i + 1;
         while (j < names.length && isFlatFiller(j)) total += flatCounts[j++];
         items.push({
-          name: names[i], type: typeAt(i), filler: true, group: '', consumable: false, count: total,
+          name: names[i], type: typeAt(i), filler: true, group: '', consumable: false, early: earlyAt(i),
+          count: total,
           ...clickerItemAt(i),
         });
         for (let k = i; k < j; k++) flatToRow[k] = [items.length];
@@ -259,7 +276,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
       } else {
         items.push({
           name: names[i], type: typeAt(i), filler: fillerAt(i), group: groupAt(i),
-          consumable: consumableAt(i), count: flatCounts[i], ...clickerItemAt(i),
+          consumable: consumableAt(i), early: earlyAt(i), count: flatCounts[i], ...clickerItemAt(i),
         });
         flatToRow[i] = [items.length];
         i++;
@@ -276,7 +293,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
       for (let k = i; k < j; k++) flatToRow[k] = [items.length + 1];
       items.push({
         name, type: typeAt(i), filler: fillerAt(i), group: groupAt(i),
-        consumable: consumableAt(i), count: j - i, ...clickerItemAt(i),
+        consumable: consumableAt(i), early: earlyAt(i), count: j - i, ...clickerItemAt(i),
       });
       i = j;
     }
@@ -320,6 +337,7 @@ export function importDoc(current, doc, { randomFiller = defaultRandomFiller } =
     it.type = type;
     it.ui.savedType = type;
     it.count = src.count;
+    it.early = !!src.early;
     it.clickerKind = src.clickerKind;
     it.clickerTarget = src.clickerTarget;
     it.clickerValue = src.clickerValue;

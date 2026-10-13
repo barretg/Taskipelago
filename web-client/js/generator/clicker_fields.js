@@ -319,6 +319,8 @@ export function validateClicker(model, {
 function manualLookup(model, { taskNames, taskManual, taskRegions }) {
   const regionManual = {};
   for (const r of model.regions || []) regionManual[r.name] = !!r.manual;
+  // A subregion inherits Manual from its parent.
+  for (const r of model.regions || []) if (r.parent && regionManual[r.parent]) regionManual[r.name] = true;
   const isManual = i => !!taskManual[i] || !!regionManual[taskRegions[i]];
   const byName = {};
   taskNames.forEach((name, i) => { byName[name] = isManual(i); });

@@ -105,6 +105,23 @@ function receivedEntries() {
 // ---------------------------------------------------------------------------
 const muted = text => h('div', { className: 'items-empty muted-text' }, text);
 
+/**
+ * Groups in display order: each top-level group followed by its subgroups.
+ * sub marks a subgroup, which is indented under its parent.
+ */
+function groupDisplayOrder() {
+  const groups = state.progressiveGroups;
+  const parent = state.groupParent || {};
+  const isSub = g => !!parent[g] && groups.includes(parent[g]);
+  const out = [];
+  for (const g of groups) {
+    if (isSub(g)) continue;
+    out.push({ g, sub: false });
+    for (const c of groups) if (isSub(c) && parent[c] === g) out.push({ g: c, sub: true });
+  }
+  return out;
+}
+
 function itemRow(entry, color) {
   const row = h('div', { className: 'item-entry' }, entry.name + (entry.sender ? `  (from ${entry.sender})` : ''));
   if (color !== undefined) row.style.borderLeft = `4px solid ${color || 'var(--border)'}`;
@@ -122,8 +139,9 @@ export function renderItems() {
   const hasGroups = Object.keys(progCounts).length > 0 || consNames.length > 0;
 
   if (hasGroups) {
-    for (const [name, { received, total }] of Object.entries(progCounts)) {
-      frag.appendChild(h('div', { className: 'group-row' },
+    for (const { g: name, sub } of groupDisplayOrder()) {
+      const { received, total } = progCounts[name] || { received: 0, total: 0 };
+      frag.appendChild(h('div', { className: `group-row${sub ? ' group-row-sub' : ''}` },
         h('span', { className: 'group-row-name' },
           h('span', { className: 'group-swatch', style: { background: colors[name] || 'var(--border)' } }),
           groupType(name) === 'progressive' ? name : `${name}  (${groupType(name)})`),
@@ -147,11 +165,12 @@ export function renderItems() {
 
   if (state.progressiveGroups.length) {
     const counts = progCounts;
-    for (const g of state.progressiveGroups) {
+    for (const { g, sub } of groupDisplayOrder()) {
       const rows = visible.filter(e => e.group === g);
       if (!rows.length) continue;
       const c = counts[g] || { received: rows.length, total: rows.length };
-      const header = h('div', { className: 'item-group-header' }, `${g}  ${c.received}/${c.total}`);
+      const header = h('div', { className: `item-group-header${sub ? ' item-group-sub' : ''}` },
+        `${g}  ${c.received}/${c.total}`);
       if (colors[g]) header.style.color = colors[g];
       frag.appendChild(header);
       for (const e of rows) frag.appendChild(itemRow(e, colors[g]));

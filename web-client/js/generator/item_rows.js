@@ -5,6 +5,8 @@ import { tipHeader } from '../shared/tooltip.js';
 import { TIPS } from './legacy_text.js';
 import { removeRowWithRefs, rowNumberCell } from './reorder.js';
 import { itemCells, itemHeadCells } from './clicker_cells.js';
+import { watchRowRename } from './rename_refs.js';
+import { isGroupDisabled } from './randomize_check.js';
 import {
   REWARD_TYPE_VALUES, newItem, onConsumableToggle, onFillerToggle, setItemProgGroup,
 } from './model.js';
@@ -17,9 +19,14 @@ function itemRow(it, i, ctx, container) {
     type: 'text', spellcheck: false, dataset: { field: `items.${i}.name` },
     oninput: e => { it.name = e.target.value; ctx.changed(); },
   });
+  watchRowRename(name, ctx, 'items', i);
   const type = h('select', { onchange: e => { it.type = e.target.value; ctx.changed(); } });
   const filler = h('input', { type: 'checkbox', 'aria-label': 'Filler' });
   const consumable = h('input', { type: 'checkbox', 'aria-label': 'Consumable' });
+  const early = h('input', {
+    type: 'checkbox', 'aria-label': 'Early',
+    onchange: e => { it.early = e.target.checked; ctx.changed(); },
+  });
   const group = h('select', {});
 
   const sync = () => {
@@ -33,6 +40,7 @@ function itemRow(it, i, ctx, container) {
     filler.disabled = it.ui.fillerDisabled;
     consumable.checked = !!it.consumable;
     consumable.disabled = it.ui.consumableDisabled;
+    early.checked = !!it.early;
     group.replaceChildren(h('option', { value: '' }, ''), ...model.progGroups.map(g => h('option', { value: g }, g)));
     group.value = it.progGroup;
     group.disabled = it.ui.groupDisabled;
@@ -42,6 +50,7 @@ function itemRow(it, i, ctx, container) {
     it.filler = filler.checked;
     onFillerToggle(it, undefined, model);
     sync();
+    syncOff();
     ctx.changed();
   });
   consumable.addEventListener('change', () => {
@@ -50,18 +59,22 @@ function itemRow(it, i, ctx, container) {
     sync();
     ctx.changed();
   });
+  // Items in a disabled group stay editable but are greyed out.
+  const syncOff = () => row.classList.toggle('row-off', !it.filler && isGroupDisabled(model, it.progGroup));
   group.addEventListener('change', () => {
     setItemProgGroup(it, group.value, model);
     sync();
+    syncOff();
     ctx.changed();
   });
   sync();
 
-  return h('div', { className: 'gt-row gt-item' },
+  const row = h('div', { className: 'gt-row gt-item' },
     cell(rowNumberCell(ctx, 'items', i, container)),
     cell(name), cell(type),
     cell(h('label', { className: 'check-label' }, filler, 'Filler')),
     cell(h('label', { className: 'check-label' }, consumable, 'Consumable')),
+    cell(h('label', { className: 'check-label' }, early, 'Early')),
     cell(group),
     cell(h('input', {
       type: 'number', min: 1, max: 999, step: 1, value: it.count, className: 'count-input',
@@ -72,6 +85,8 @@ function itemRow(it, i, ctx, container) {
       type: 'button', className: 'remove-btn',
       onclick: () => removeRowWithRefs(ctx, 'items', i),
     }, 'Remove')));
+  syncOff();
+  return row;
 }
 
 export function renderItemTable(container, ctx) {
@@ -85,12 +100,13 @@ export function renderItemTable(container, ctx) {
       cell(tipHeader('Type', TIPS.type)),
       cell(tipHeader('Filler', TIPS.filler)),
       cell(tipHeader('Consumable', TIPS.consumable)),
+      cell(tipHeader('Early', TIPS.item_early)),
       cell(tipHeader('Item Group', TIPS.prog_group)),
       cell(tipHeader('Count', TIPS.count_item)),
       ...extraHead,
       cell('')),
     h('div', { className: 'gt-row gt-hint muted-text' },
-      cell(''), cell('Multiworld item name (blank = filler)'), cell(''), cell(''), cell(''), cell(''), cell(''),
+      cell(''), cell('Multiworld item name (blank = filler)'), cell(''), cell(''), cell(''), cell(''), cell(''), cell(''),
       ...extraHint, cell('')),
     ...ctx.model.items.map((it, i) => itemRow(it, i, ctx, container)),
   );

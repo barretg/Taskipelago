@@ -59,6 +59,7 @@ export function newItem() {
   return {
     name: '', filler: false, type: DEFAULT_REWARD_TYPE, progGroup: '', consumable: false, count: 1,
     clickerKind: 'none', clickerTarget: '*', clickerValue: '',   // clicker mode
+    early: false,
     ui: {
       savedType: DEFAULT_REWARD_TYPE, savedItem: '', savedGroup: '',
       nameDisabled: false, typeDisabled: false, fillerDisabled: false,
@@ -130,7 +131,7 @@ export function normalizeModel(raw) {
   model.regions = (Array.isArray(model.regions) ? model.regions : [])
     .map(r => ({
       name: '', pct: 100, color: '', prereq: '', parent: '',
-      distributed: false, offlineRate: '', manual: false, ...r,
+      distributed: false, offlineRate: '', manual: false, disabled: false, ...r,
     }));
   normalizeRegionParents(model);
   model.progGroups = Array.isArray(model.progGroups) ? model.progGroups : [];
@@ -172,7 +173,7 @@ export function itemData(it) {
   return {
     name: pyStrip(it.name), filler: !!it.filler,
     type: pyStrip(it.type).toLowerCase() || 'useful',
-    progGroup: pyStrip(it.progGroup), consumable: !!it.consumable, count: rowCount(it.count),
+    progGroup: pyStrip(it.progGroup), consumable: !!it.consumable, early: !!it.early, count: rowCount(it.count),
     clickerKind: UPGRADE_KINDS.includes(it.clickerKind) ? it.clickerKind : 'none',
     clickerTarget: pyStrip(it.clickerTarget) || '*', clickerValue: pyStrip(it.clickerValue),
   };
@@ -315,6 +316,7 @@ export function removeProgGroup(model, name) {
   if (idx >= 0) model.progGroups.splice(idx, 1);
   if (model.progGroupColors) delete model.progGroupColors[name];
   if (model.groupSettings) delete model.groupSettings[name];
+  for (const g of groupChildren(model, name)) setGroupParent(model, g, '');
   for (const it of model.items) if (it.progGroup === name) setItemProgGroup(it, '', model);
   syncItemGroups(model);
 }
@@ -347,7 +349,7 @@ export function addRegion(model, rawName, pct) {
  * Nesting is one level deep and randomized regions may not be parents.
  */
 
-/** True when this region is randomized (parents may not be). */
+/** True when this region is randomized (parents may not be; shuffle-only is fine). */
 export function isRegionRandomized(model, name) {
   const s = model.regionRandom && model.regionRandom[name];
   return !!(s && s.on);
@@ -443,6 +445,53 @@ function moveKey(obj, oldName, newName) {
   }
 }
 
+/**
+ * Subgroups: an item group may name another group as its Parent (stored as
+ * groupSettings[name].parent). References to the parent also count its
+ * subgroups' items. Nesting is one level deep and random-choice groups may not
+ * be parents, mirroring subregions.
+ */
+
+function setGroupParent(model, name, parent) {
+  model.groupSettings[name] = { ...groupSetting(model, name), parent };
+}
+
+/** Names of the groups whose parent is `name`. */
+export function groupChildren(model, name) {
+  if (!name) return [];
+  return (model.progGroups || []).filter(g => groupSetting(model, g).parent === name);
+}
+
+/** Group names that may be picked as the parent of `group` (excludes blank). */
+export function groupParentOptions(model, group) {
+  return (model.progGroups || []).filter(g => {
+    const s = groupSetting(model, g);
+    return g !== group && !s.parent && s.type !== 'random-choice';
+  });
+}
+
+/** True when `group` may be given a parent at all (a group with subgroups may not). */
+export function groupCanHaveParent(model, group) {
+  return groupChildren(model, group).length === 0;
+}
+
+/** Drop parent links that no longer point at a legal parent (missing, self, nested, random-choice). */
+export function normalizeGroupParents(model) {
+  const groups = model.progGroups || [];
+  for (const g of groups) {
+    const p = groupSetting(model, g).parent;
+    if (!p) continue;
+    if (p === g || !groups.includes(p) || groupSetting(model, p).type === 'random-choice') {
+      setGroupParent(model, g, '');
+    }
+  }
+  // One level only: a group that is itself a child cannot be a parent.
+  for (const g of groups) {
+    const p = groupSetting(model, g).parent;
+    if (p && groupSetting(model, p).parent) setGroupParent(model, g, '');
+  }
+}
+
 /** Group rename checks, mirroring checkRegionRename. */
 export function checkGroupRename(model, oldName, rawNew) {
   const newName = pyStrip(rawNew);
@@ -464,6 +513,7 @@ export function renameProgGroup(model, oldName, rawNew) {
   model.progGroups[idx] = newName;
   moveKey(model.progGroupColors, oldName, newName);
   moveKey(model.groupSettings, oldName, newName);
+  for (const g of groupChildren(model, oldName)) setGroupParent(model, g, newName);
   for (const it of model.items) {
     if (it.progGroup === oldName) it.progGroup = newName;
     if (it.ui?.savedGroup === oldName) it.ui.savedGroup = newName;
@@ -514,6 +564,77 @@ export function rewriteNameRefs(model, kind, oldName, newName) {
   let fields = 0;
   for (const [obj, key, home] of nameRefFields(model, kind)) {
     const { text, count } = renameInDomain(obj[key], kind, home, oldName, newName);
+    if (count) {
+      obj[key] = text;
+      fields++;
+    }
+  }
+  return fields;
+}
+
+// ---------------------------------------------------------------------------
+// Quoted "Name" references to task / item rows. kind is 'tasks' or 'items'.
+// ---------------------------------------------------------------------------
+
+/**
+ * [object, key, map] for every field that can hold a quoted name of `kind`.
+ * map(text, fn) applies fn to the parts of text in that name domain, the way
+ * export resolves them (yaml_export resolveScopedNameRefs, clicker targets).
+ */
+function quotedRefFields(model, kind) {
+  const scoped = home => kind === 'tasks'
+    ? (text, fn) => mapScopedText(text, fn, null, home)
+    : (text, fn) => mapScopedText(text, null, fn, home);
+  const whole = (text, fn) => (text ? fn(text) : text);
+  const out = [];
+  for (const t of model.tasks) out.push([t, 'prereq', scoped('task')], [t, 'itemPrereq', scoped('item')]);
+  out.push([model, 'goalTasks', scoped('task')]);
+  for (const r of model.regions) out.push([r, 'prereq', scoped(null)]);
+  if (kind === 'items') for (const t of model.tasks) out.push([t, 'cost', whole]);
+  else for (const it of model.items) out.push([it, 'clickerTarget', whole]);
+  return out;
+}
+
+function renameQuoted(text, fn, oldName, newName) {
+  let count = 0;
+  const out = fn(text, t => t.replace(/"([^"]*)"/g, (w, name) => {
+    if (name !== oldName) return w;
+    count++;
+    return `"${newName}"`;
+  }));
+  return { text: out, count };
+}
+
+/**
+ * Old and new reference names when renaming row i from oldRaw is a rename that
+ * quoted references follow, else null: the row was the one "oldName" resolves
+ * to (first match) and no other row already answers to the new name.
+ */
+function rowRenameNames(model, kind, i, oldRaw) {
+  const rows = model[kind];
+  const oldName = pyStrip(oldRaw);
+  const newName = pyStrip(rows[i]?.name ?? '');
+  if (!oldName || !newName || oldName === newName || newName.includes('"')) return null;
+  if (rows.some((r, k) => k < i && pyStrip(r.name) === oldName)) return null;
+  if (rows.some((r, k) => k !== i && pyStrip(r.name) === newName)) return null;
+  return { oldName, newName };
+}
+
+/** Number of fields with quoted references that renaming row i from oldRaw would update. */
+export function countRowRenameRefs(model, kind, i, oldRaw) {
+  const names = rowRenameNames(model, kind, i, oldRaw);
+  if (!names) return 0;
+  return quotedRefFields(model, kind)
+    .filter(([obj, key, fn]) => renameQuoted(obj[key], fn, names.oldName, names.oldName).count > 0).length;
+}
+
+/** Point quoted references at row i's new name; returns the number of fields changed. */
+export function rewriteRowRenameRefs(model, kind, i, oldRaw) {
+  const names = rowRenameNames(model, kind, i, oldRaw);
+  if (!names) return 0;
+  let fields = 0;
+  for (const [obj, key, fn] of quotedRefFields(model, kind)) {
+    const { text, count } = renameQuoted(obj[key], fn, names.oldName, names.newName);
     if (count) {
       obj[key] = text;
       fields++;

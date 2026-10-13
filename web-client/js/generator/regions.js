@@ -12,7 +12,8 @@ import {
 import { regionCells } from './clicker_cells.js';
 import { rowNumberCell } from './reorder.js';
 import { commitNameChange, confirmNameRemoval } from './rename_refs.js';
-import { regionRandom } from './randomize_check.js';
+import { trackCommit } from './grid_nav.js';
+import { disabledRegions, inheritedOrderFrom, regionRandom } from './randomize_check.js';
 
 const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
@@ -83,7 +84,7 @@ function parentCell(region, ctx) {
   return sel;
 }
 
-/** Randomize checkbox, pick field (N or N%), and shuffle-order checkbox for one region. */
+/** Randomize checkbox, pick field (N or N%), and shuffle-order checkbox (independent of Randomize). */
 function randomizeCells(region, ctx) {
   const rr = regionRandom(ctx.model, region.name);
   const isParent = regionChildren(ctx.model, region.name).length > 0;
@@ -96,12 +97,16 @@ function randomizeCells(region, ctx) {
       ctx.changed();
     },
   });
+  // A subregion inherits Shuffle order when its parent sets it: the box is then
+  // shown on and locked, and its own value is kept for when the parent clears it.
+  const orderFrom = inheritedOrderFrom(ctx.model, region.name);
   const orderBox = h('input', {
-    type: 'checkbox', checked: rr.order, disabled: !rr.on,
+    type: 'checkbox', checked: !!orderFrom || rr.order, disabled: !!orderFrom,
     'aria-label': `Shuffle task order in ${region.name}`,
     onchange: e => {
       ctx.model.regionRandom[region.name] = { ...regionRandom(ctx.model, region.name), order: e.target.checked };
-      ctx.changed();
+      // Re-render so subregions pick up the parent's change.
+      ctx.changed({ regions: true });
     },
   });
   const box = h('input', {
@@ -111,17 +116,40 @@ function randomizeCells(region, ctx) {
     onchange: e => {
       ctx.model.regionRandom[region.name] = { ...regionRandom(ctx.model, region.name), on: e.target.checked };
       pick.disabled = !e.target.checked;
-      orderBox.disabled = !e.target.checked;
       // Randomizing a region drops any child that pointed at it.
       normalizeRegionParents(ctx.model);
       ctx.changed({ regions: true });
     },
   });
   return [
-    h('label', { className: 'check-label region-random' }, box, 'Randomize', tipMarker(TIPS.rg_random)),
+    h('label', { className: 'check-label region-random col-random' }, box, 'Randomize', tipMarker(TIPS.rg_random)),
     pick,
-    h('label', { className: 'check-label region-random' }, orderBox, 'Shuffle order', tipMarker(TIPS.rg_order)),
+    h('label', {
+      className: `check-label region-random col-order${orderFrom ? ' inherited' : ''}`,
+      title: orderFrom ? `Inherited: parent region '${orderFrom}' has Shuffle order on.` : '',
+    }, orderBox, 'Shuffle order', tipMarker(TIPS.rg_order)),
   ];
+}
+
+/**
+ * Disabled checkbox: the region stays in the YAML but is left out of the seed.
+ * A subregion of a disabled parent is disabled too, so its box is locked on.
+ */
+function disabledCell(region, ctx) {
+  const parent = region.parent && ctx.model.regions.find(r => r.name === region.parent);
+  const inherited = !!(parent && parent.disabled);
+  const box = h('input', {
+    type: 'checkbox', checked: inherited || !!region.disabled, disabled: inherited,
+    'aria-label': `Disable ${region.name}`,
+    onchange: e => {
+      region.disabled = e.target.checked;
+      ctx.changed({ regions: true, tasks: true });
+    },
+  });
+  return h('label', {
+    className: `check-label region-random col-disabled${inherited ? ' inherited' : ''}`,
+    title: inherited ? `Inherited: parent region '${parent.name}' is disabled.` : '',
+  }, box, 'Disabled', tipMarker(TIPS.rg_disabled));
 }
 
 function regionRow(region, i, ctx, container) {
@@ -142,7 +170,7 @@ function regionRow(region, i, ctx, container) {
     }
   };
   name.addEventListener('keydown', e => { if (e.key === 'Enter') name.blur(); });
-  name.addEventListener('blur', commitName);
+  name.addEventListener('blur', () => trackCommit(commitName()));
 
   const pct = h('input', {
     type: 'number', min: 0, max: 100, value: region.pct, className: 'count-input region-pct', 'aria-label': 'Default %',
@@ -154,7 +182,8 @@ function regionRow(region, i, ctx, container) {
   pct.addEventListener('keydown', e => { if (e.key === 'Enter') pct.blur(); });
   pct.addEventListener('blur', commitPct);
 
-  return h('div', { className: 'region-row' },
+  const off = disabledRegions(ctx.model).has(region.name);
+  return h('div', { className: `region-row${off ? ' row-disabled' : ''}` },
     rowNumberCell(ctx, 'regions', i, container),
     h('button', {
       type: 'button', className: 'color-swatch', style: { background: region.color || '#808080' },
@@ -173,6 +202,7 @@ function regionRow(region, i, ctx, container) {
     }),
     parentCell(region, ctx),
     ...randomizeCells(region, ctx),
+    disabledCell(region, ctx),
     ...(ctx.model.clickerMode ? regionCells(region, ctx) : []),
     h('button', {
       type: 'button', className: 'remove-btn',
@@ -198,7 +228,13 @@ export function renderRegions(container, ctx) {
       h('span', { className: 'col-pct' }, 'Default %'), h('span', { className: 'col-prereq' }, 'Depends on', tipMarker(TIPS.rg_prereq)),
       h('span', { className: 'col-parent' }, 'Parent', tipMarker(TIPS.rg_parent)),
       h('span', { className: 'col-random' }, 'Randomize'), h('span', { className: 'col-pick' }, 'Keep'),
-      h('span', { className: 'col-order' }, 'Shuffle order')),
+      h('span', { className: 'col-order' }, 'Shuffle order'),
+      h('span', { className: 'col-disabled' }, 'Disabled'),
+      ...(model.clickerMode ? [
+        h('span', { className: 'col-distributed' }, 'Distributed'),
+        h('span', { className: 'col-manual' }, 'Manual'),
+        h('span', { className: 'col-offline' }, 'Offline rate'),
+      ] : [])),
     ...model.regions.map((r, i) => regionRow(r, i, ctx, container)),
   );
 }

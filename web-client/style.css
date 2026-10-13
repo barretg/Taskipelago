@@ -337,6 +337,23 @@ button:disabled {
   white-space: nowrap;
 }
 
+.region-progress-bar-wrap {
+  flex: 1;
+  align-self: stretch;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Default-% marker. The row has 2px top / 3px bottom padding, so these insets
+   stop it 2px short of each row edge: markers on adjacent rows sit 4px apart. */
+.region-progress-threshold {
+  position: absolute;
+  top: 0;
+  bottom: -1px;
+  width: 2px;
+}
+
 .region-progress-bar-outer {
   flex: 1;
   height: 10px;
@@ -774,6 +791,8 @@ button:disabled {
 
 /* v1.1 F6 / F7: grouped item list, filter popover, hidden footer */
 .item-group-header { padding: 6px 8px 2px; font-size: 12px; font-weight: bold; }
+.item-group-header.item-group-sub { padding-left: 20px; }
+.group-row.group-row-sub { padding-left: 20px; }
 .items-toolbar { position: relative; }
 .items-filter-popover {
   position: absolute;
@@ -1056,7 +1075,7 @@ button.primary { border-color: var(--accent); }
 }
 
 .gen-item-table .gt-row {
-  grid-template-columns: 70px minmax(220px, 3fr) 120px 76px 112px minmax(120px, 1fr) 64px 76px;
+  grid-template-columns: 70px minmax(220px, 3fr) 120px 76px 112px 70px minmax(120px, 1fr) 64px 76px;
 }
 
 /* Clicker mode grows both tables by its own columns. */
@@ -1065,7 +1084,7 @@ button.primary { border-color: var(--accent); }
 }
 
 .gen-item-table.clicker .gt-row {
-  grid-template-columns: 70px minmax(180px, 2.4fr) 110px 76px 112px minmax(110px, 1fr) 64px minmax(170px, 1.4fr) minmax(90px, 1fr) minmax(150px, 1.6fr) 76px;
+  grid-template-columns: 70px minmax(180px, 2.4fr) 110px 76px 112px 70px minmax(110px, 1fr) 64px minmax(170px, 1.4fr) minmax(90px, 1fr) minmax(150px, 1.6fr) 76px;
 }
 
 .region-row .region-offline { width: 72px; }
@@ -1134,9 +1153,19 @@ button.primary { border-color: var(--accent); }
 .region-head .col-prereq { width: 200px; }
 .region-head .col-parent { width: 140px; }
 .region-parent { width: 140px; }
-.region-head .col-random { width: 110px; }
+.region-head .col-random, .region-row > .col-random { width: 110px; flex-shrink: 0; }
 .region-head .col-pick { width: 64px; }
-.region-head .col-order { width: 130px; }
+.region-head .col-order, .region-row > .col-order { width: 130px; flex-shrink: 0; }
+.region-head .col-disabled, .region-row > .col-disabled { width: 90px; flex-shrink: 0; }
+.region-head .col-distributed, .region-row > .col-distributed { width: 110px; flex-shrink: 0; }
+.region-head .col-manual, .region-row > .col-manual { width: 90px; flex-shrink: 0; }
+.region-head .col-offline, .region-row > .col-offline { width: 150px; flex-shrink: 0; }
+.row-disabled > :not(.col-disabled):not(.disabled-toggle):not(.remove-btn) { opacity: 0.5; }
+/* A setting inherited from the parent region / group: shown on, locked. */
+.inherited { opacity: 0.5; }
+.inherited .check-label { cursor: default; }
+/* Tasks / items in a disabled region / group: still editable, just greyed out. */
+.gt-row.row-off > .gt-cell { opacity: 0.5; }
 .region-random { gap: 4px; }
 .region-pick, .group-pick, .group-pct { width: 64px; }
 .empty-note { font-size: 13px; }
@@ -1189,6 +1218,13 @@ button.primary { border-color: var(--accent); }
 .dl-row input { width: 100%; }
 
 .hint-with-tip { font-size: 12px; }
+.region-row > .hint-with-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 /* Bingo generator */
 .bingo-columns {
@@ -1248,7 +1284,6 @@ button.primary { border-color: var(--accent); }
   font-family: Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', monospace;
   font-size: 12px;
   white-space: pre-wrap;
-  pointer-events: none;
 }
 
 /* =============================================================

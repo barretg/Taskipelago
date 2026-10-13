@@ -9,21 +9,51 @@ export function normalizeGroupType(t) {
   return GROUP_TYPES.includes(v) ? v : 'progressive';
 }
 
-/** Settings for a group with defaults applied: { type, pick, pct }. */
+/** Settings for a group with defaults applied: { type, pick, pct, early, disabled, parent }. */
 export function groupSetting(model, name) {
   const s = (model.groupSettings && model.groupSettings[name]) || {};
-  return { type: normalizeGroupType(s.type), pick: String(s.pick ?? '').trim(), pct: String(s.pct ?? '').trim() };
+  return {
+    type: normalizeGroupType(s.type), pick: String(s.pick ?? '').trim(), pct: String(s.pct ?? '').trim(),
+    early: !!s.early, disabled: !!s.disabled, parent: String(s.parent ?? '').trim(),
+  };
 }
 
-/** Randomize state for a region: { on, pick, order }. */
+/** Disabled regions by name, including every subregion of a disabled parent. */
+export function disabledRegions(model) {
+  const off = new Set((model.regions || []).filter(r => r.disabled).map(r => r.name));
+  for (const r of model.regions || []) if (r.parent && off.has(r.parent)) off.add(r.name);
+  return off;
+}
+
+/**
+ * True when the group, or the parent group it sits under, is disabled. Filler
+ * rows never belong to a group on export.
+ */
+export function isGroupDisabled(model, name) {
+  if (!name) return false;
+  const s = groupSetting(model, name);
+  return s.disabled || (!!s.parent && groupSetting(model, s.parent).disabled);
+}
+
+/** Randomize state for a region: { on, pick, order }. order works with or without on. */
 export function regionRandom(model, name) {
   const s = (model.regionRandom && model.regionRandom[name]) || {};
   return { on: !!s.on, pick: String(s.pick ?? '').trim(), order: !!s.order };
 }
 
+/** Parent region whose Shuffle order a subregion inherits, or '' when none applies. */
+export function inheritedOrderFrom(model, name) {
+  const r = (model.regions || []).find(x => x.name === name);
+  const p = r && r.parent;
+  return p && regionRandom(model, p).order ? p : '';
+}
+
 /** True when any region or group setting differs from the defaults (new YAML keys needed). */
 export function usesRandomization(model) {
-  const regions = (model.regions || []).some(r => regionRandom(model, r.name).on);
+  const regions = (model.regions || []).some(r => {
+    const rr = regionRandom(model, r.name);
+    return rr.on || rr.order;
+  });
   const groups = (model.progGroups || []).some(g => {
     const s = groupSetting(model, g);
     return s.type !== 'progressive' || s.pct !== '';
@@ -62,8 +92,13 @@ export function finalCounts(model, taskRows, itemRows) {
       return pick ? Math.min(resolvePick(pick, count, ''), count) : count;
     } catch (_) { return count; }
   };
+  // Disabled content is left out first; it is never randomized in.
+  const off = disabledRegions(model);
+  taskRows = taskRows.filter(t => !off.has(t.region));
+  itemRows = itemRows.filter(r => r.filler || !isGroupDisabled(model, r.group));
   let tasks = taskRows.reduce((a, t) => a + t.count, 0);
   for (const name of model.regions.map(r => r.name)) {
+    if (off.has(name)) continue;
     const rr = regionRandom(model, name);
     if (!rr.on) continue;
     const count = taskRows.reduce((a, t) => a + (t.region === name ? t.count : 0), 0);
@@ -72,7 +107,7 @@ export function finalCounts(model, taskRows, itemRows) {
   let items = itemRows.reduce((a, r) => a + r.count, 0);
   for (const g of model.progGroups) {
     const s = groupSetting(model, g);
-    if (s.type !== 'random-choice' || !s.pick) continue;
+    if (isGroupDisabled(model, g) || s.type !== 'random-choice' || !s.pick) continue;
     const count = itemRows.reduce((a, r) => a + (!r.filler && r.group === g ? r.count : 0), 0);
     items -= count - keep(s.pick, count);
   }
@@ -163,13 +198,23 @@ export function checkRandomization(o) {
     try { fn(); } catch (e) { errors.push(prefix + e.message.replace(/^Taskipelago: /, '')); }
   };
 
+  // Disabled regions, groups and their tasks / items are left out of the seed before
+  // randomization, so they are never randomized and never checked here.
+  const offRegions = disabledRegions(model);
+  const offTask = i => offRegions.has(o.taskRegions[i]);
+  const offGroup = g => isGroupDisabled(model, g);
+
   // Region picks
   const regionKeep = new Map();
-  let finalTasks = o.taskCounts.reduce((a, b) => a + b, 0);
+  const shuffleOnly = new Set();
+  let finalTasks = o.taskCounts.reduce((a, b, i) => a + (offTask(i) ? 0 : b), 0);
   for (const name of o.regionNames) {
+    if (offRegions.has(name)) continue;
     const rr = regionRandom(model, name);
-    if (!rr.on) continue;
+    if (!rr.on && !rr.order && !inheritedOrderFrom(model, name)) continue;
     const count = o.tasks.reduce((a, _t, i) => a + (o.taskRegions[i] === name ? o.taskCounts[i] : 0), 0);
+    // Shuffle-only: keeps every task, so its tasks stay individually referenceable.
+    if (!rr.on) { regionKeep.set(name, count); shuffleOnly.add(name); continue; }
     tryIt('', () => {
       const pick = parsePick(rr.pick, `Region '${name}'`);
       if (!pick) throw new Error(`Region '${name}' is randomized but has no pick. Enter N or N%.`);
@@ -178,19 +223,22 @@ export function checkRandomization(o) {
       finalTasks -= count - n;
     });
   }
-  const randomOf = i => (regionKeep.has(o.taskRegions[i]) ? o.taskRegions[i] : '');
+  const randomOf = i => {
+    const r = o.taskRegions[i];
+    return regionKeep.has(r) && !shuffleOnly.has(r) ? r : '';
+  };
   const nItemRows = o.itemRows.length;
   // task(...) / item(...) scopes in task prereqs, item prereqs and the goal.
   const fieldScopes = prereqScopes(o.tasks.length, nItemRows, regionSet, groupSet);
   const randomChoiceItem = leaf => {
     const row = o.itemRows[leaf];
-    return row && !row.filler && row.group && groupSetting(model, row.group).type === 'random-choice'
-      ? row.group : '';
+    return row && !row.filler && row.group && !offGroup(row.group)
+      && groupSetting(model, row.group).type === 'random-choice' ? row.group : '';
   };
 
   // Task prereqs: no individual refs into randomized regions, no sequential there, no self region refs.
   o.taskPrereqs.forEach((text, i) => {
-    if (!text) return;
+    if (!text || offTask(i)) return;
     let ast;
     try {
       ast = parsePrereq(text, o.tasks.length, i, 'task prereq', null, regionSet, null, null, fieldScopes);
@@ -228,7 +276,7 @@ export function checkRandomization(o) {
   };
   o.regionNames.forEach((name, ri) => {
     const text = o.regionPrereqs[ri];
-    if (!text) return;
+    if (!text || offRegions.has(name)) return;
     let ast;
     try {
       ast = parsePrereq(text, 0, 0, 'region prereq', null, regionSet,
@@ -277,9 +325,10 @@ export function checkRandomization(o) {
   }
 
   // Item groups
-  let finalItems = o.itemRows.reduce((a, r) => a + r.count, 0);
+  let finalItems = o.itemRows.reduce((a, r) => a + (!r.filler && offGroup(r.group) ? 0 : r.count), 0);
   const groupSize = new Map();
   for (const g of model.progGroups) {
+    if (offGroup(g)) continue;
     const s = groupSetting(model, g);
     const count = o.itemRows.reduce((a, r) => a + (!r.filler && r.group === g ? r.count : 0), 0);
     groupSize.set(g, count);
@@ -295,8 +344,13 @@ export function checkRandomization(o) {
       });
     }
   }
+  // A parent group also counts every item its subgroups keep.
+  for (const g of model.progGroups) {
+    const p = groupSetting(model, g).parent;
+    if (p && groupSize.has(g) && groupSize.has(p)) groupSize.set(p, groupSize.get(p) + groupSize.get(g));
+  }
   o.itemPrereqs.forEach((text, i) => {
-    if (!text) return;
+    if (!text || offTask(i)) return;
     let ast;
     try {
       ast = parsePrereq(text, o.itemRows.length, i, 'item prereq', groupSet, null, null, null, fieldScopes);
@@ -310,14 +364,14 @@ export function checkRandomization(o) {
     const refs = scopedLeaves(ast, 'item', 'item');
     for (const leaf of refs) {
       const row = o.itemRows[leaf];
-      if (row && !row.filler && row.group && groupSetting(model, row.group).type === 'random-choice') {
+      if (randomChoiceItem(leaf)) {
         errors.push(`Task ${i + 1} item prereq references item ${leaf + 1} inside random-choice group `
           + `'${row.group}'. Reference the group instead.`);
       }
     }
     for (const [op, g, n] of nodesOf(ast, ['group_ref', 'group_count'])) {
       const s = groupSetting(model, g);
-      if (s.type === 'progressive') continue;
+      if (s.type === 'progressive' || offGroup(g)) continue;
       if (op === 'group_count' && n > (groupSize.get(g) || 0)) {
         errors.push(`Task ${i + 1} uses '${g}*${n}' but group '${g}' keeps ${groupSize.get(g) || 0} item(s).`);
       }
@@ -330,7 +384,7 @@ export function checkRandomization(o) {
   // Region item(...) scopes, once the per-group keep counts are known.
   o.regionNames.forEach((name, ri) => {
     const text = o.regionPrereqs[ri];
-    if (!text) return;
+    if (!text || offRegions.has(name)) return;
     let ast;
     try {
       ast = parsePrereq(text, 0, 0, 'region prereq', null, regionSet,
@@ -338,14 +392,14 @@ export function checkRandomization(o) {
     } catch (_) { return; }
     for (const leaf of scopedLeaves(ast, 'item')) {
       const row = o.itemRows[leaf];
-      if (row && !row.filler && row.group && groupSetting(model, row.group).type === 'random-choice') {
+      if (randomChoiceItem(leaf)) {
         errors.push(`Region '${name}' depends on item ${leaf + 1} inside random-choice group `
           + `'${row.group}'. Reference the group instead.`);
       }
     }
     for (const [op, g, k] of nodesOf(ast, ['group_ref', 'group_count'])) {
       if (op === 'group_ref') continue; // rejected at generation; count mode only
-      if (groupSetting(model, g).type === 'progressive') continue;
+      if (groupSetting(model, g).type === 'progressive' || offGroup(g)) continue;
       if (k > (groupSize.get(g) || 0)) {
         errors.push(`Region '${name}' uses '${g}*${k}' but group '${g}' keeps ${groupSize.get(g) || 0} item(s).`);
       }

@@ -117,6 +117,16 @@ export function itemPrereqsSatisfied(prereqText, progReqs, checked = null) {
   );
 }
 
+/**
+ * True when item i counts toward `group`. With groupRollup (newer seeds) a
+ * parent group also counts every item in its subgroups.
+ */
+export function itemInGroup(i, group) {
+  const own = state.rewardProgressiveGroup[i];
+  if (own === group) return true;
+  return !!own && state.groupRollup && (state.groupParent || {})[own] === group;
+}
+
 export function progressiveReqSatisfied(group, required) {
   const progGroup = state.rewardProgressiveGroup;
   const base = state.baseItemId;
@@ -124,7 +134,7 @@ export function progressiveReqSatisfied(group, required) {
   const have = receivedItemIds();
   let count = 0;
   for (let i = 0; i < progGroup.length; i++) {
-    if (progGroup[i] === group && have.has(base + i)) count++;
+    if (itemInGroup(i, group) && have.has(base + i)) count++;
   }
   return count >= required;
 }
@@ -262,7 +272,7 @@ export function progressiveGroupCounts() {
   for (const g of state.progressiveGroups) {
     let total = 0, received = 0;
     for (let i = 0; i < progGroup.length; i++) {
-      if (progGroup[i] === g) {
+      if (itemInGroup(i, g)) {
         total++;
         if (typeof base === 'number' && have.has(base + i)) received++;
       }
