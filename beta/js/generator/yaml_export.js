@@ -582,4 +582,6 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   return { data };
 }
 
-export const exportText = data => dumpYaml(data);
+const EXPORT_HEADER = '# This YAML is not meant to be edited by hand. Import it into the YAML generator at\n'
+  + '# https://barretg.github.io/Taskipelago/web-client/ to make changes, then export again.\n';
+export const exportText = data => EXPORT_HEADER + dumpYaml(data);
