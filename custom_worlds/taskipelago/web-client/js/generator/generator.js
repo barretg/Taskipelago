@@ -7,13 +7,13 @@ import { downloadText, pickTextFile, safeFileName } from '../shared/files.js';
 import { PyError, pyInt } from '../shared/pyish.js';
 import { tipHeader } from '../shared/tooltip.js';
 import { getUiPref, setUiPref } from '../shared/ui_prefs.js';
-import { dumpYaml, loadYaml } from '../shared/yaml11.js';
+import { loadYaml } from '../shared/yaml11.js';
 import { TIPS } from './legacy_text.js';
 import {
   DEATHLINK_LOCK_TIP, PREVIEWS_PURCHASABLE_TIP, MAX_PLAYER_NAME_LEN, TASK_REWARD_PREVIEW_LABELS, defaultModel, limitPlayerName, normalizeModel, slotCounts,
 } from './model.js';
 import { finalCounts, isGroupDisabled, usesRandomization } from './randomize_check.js';
-import { buildExport } from './yaml_export.js';
+import { buildExport, exportText } from './yaml_export.js';
 import { importDoc } from './yaml_import.js';
 import { addTask, renderTaskTable } from './task_rows.js';
 import { addItem, renderItemTable } from './item_rows.js';
@@ -178,7 +178,7 @@ async function exportYaml() {
   }
   if (result.cancelled) return;
   const fileName = `${safeFileName(result.data.name)}.yaml`;
-  downloadText(fileName, dumpYaml(result.data));
+  downloadText(fileName, exportText(result.data));
   await alertDialog('info', 'Success', `YAML exported as:\n${fileName}`);
 }
 

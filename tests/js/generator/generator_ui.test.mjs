@@ -182,7 +182,9 @@ test('export shows legacy validation errors, then downloads YAML PyYAML-compatib
 
   const last = downloads[downloads.length - 1];
   assert.equal(last.name, 'Tester.yaml');
-  const data = loadYaml(await last.blob.text());
+  const text = await last.blob.text();
+  assert.match(text, /^# This YAML is not meant to be edited by hand\..*\n# https:\/\/barretg\.github\.io\/Taskipelago\/web-client\//);
+  const data = loadYaml(text);
   assert.equal(data.name, 'Tester');
   assert.deepEqual(data.Taskipelago.tasks, ['yes', 'Cook']);
   assert.deepEqual(data.Taskipelago.items, ['Key']);
