@@ -21,10 +21,12 @@ FILLER_ITEMS: List[str] = [
 ]
 
 # IDs use formula: BASE + (player - 1) * MAX_TASKS + task_index
-# Bases are spaced 1_000_000 apart to support up to 1000 players * 1000 tasks each.
+# Same-namespace bases are spaced 20_000_000 apart: up to 4000 players * 5000 tasks each.
+# Seeds generated before 5000-task support used 912M/913M bases and a 1000 stride;
+# the client reads the bases from slot_data, so those seeds still run.
 BASE_ITEM_ID = 911_000_000
-BASE_TOKEN_ID = 912_000_000
-MAX_TASKS = 1000
+BASE_TOKEN_ID = 931_000_000
+MAX_TASKS = 5000
 
 CLASSIFICATION_MAP = {
     "trap": ItemClassification.trap,
