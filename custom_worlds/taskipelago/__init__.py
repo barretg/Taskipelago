@@ -30,7 +30,7 @@ from .locations import (
 from .clicker import (
     drop_manual_targets,
     parse_region_flags, parse_region_rates, parse_target_specs, parse_task_activations,
-    parse_task_flags,
+    parse_task_flags, parse_task_renewable,
     parse_value_expr, remap_spec_tasks, live_constants_used,
 )
 from .options import TaskipelagoOptions, MAX_TASK_DESCRIPTION_LEN
@@ -79,7 +79,7 @@ class TaskipelagoWorld(World):
     _parsed_reward_prereqs: List[Node | None]
     _raw_costs: List[str]
     _parsed_costs: List[Node | None]
-    _task_cost_reqs: List[List[List[Tuple[str, int]]]]  # per-task cost branches (OR of ANDs)
+    _task_cost_reqs: List[List[list]]  # per-task cost branches (OR of ANDs); see stage 12
     _forced_progression_rewards: set
     _lock_prereqs: bool
     _reward_location_names: List[str]
@@ -103,6 +103,7 @@ class TaskipelagoWorld(World):
     _clicker_activations: List[int]
     _clicker_manual: List[bool]
     _clicker_auto_complete: List[bool]
+    _clicker_renewable: "List[Tuple[str, int] | None]"
     _clicker_production: List[List[dict]]
     _clicker_click_power: List[List[dict]]
     _clicker_production_mult: List[List[dict]]
@@ -159,6 +160,7 @@ class TaskipelagoWorld(World):
         task_activations_raw = [str(x).strip() for x in (self.options.task_activations.value or [])]
         task_manual_raw = [str(x).strip() for x in (self.options.task_manual.value or [])]
         task_auto_complete_raw = [str(x).strip() for x in (self.options.task_auto_complete.value or [])]
+        task_renewable_raw = [str(x).strip() for x in (self.options.task_renewable.value or [])]
         item_production_raw = [str(x).strip() for x in (self.options.item_production.value or [])]
         item_click_power_raw = [str(x).strip() for x in (self.options.item_click_power.value or [])]
         item_production_mult_raw = [str(x).strip() for x in (self.options.item_production_mult.value or [])]
@@ -570,6 +572,11 @@ class TaskipelagoWorld(World):
             parse_task_flags(task_auto_complete_raw, n_editor_tasks, "task_auto_complete"),
             task_counts_editor,
         )
+        # (currency, amount) per task, or None. Only meaningful in clicker mode.
+        clicker_renewable = expand_rows(
+            parse_task_renewable(task_renewable_raw, n_editor_tasks),
+            task_counts_editor,
+        ) if clicker_mode else [None] * len(clicker_auto_complete)
 
         def _clicker_specs(raw: List[str], label: str, **kw) -> List[List[dict]]:
             rows = [
@@ -857,6 +864,7 @@ class TaskipelagoWorld(World):
             clicker_activations = [clicker_activations[_old] for _old in task_order]
             clicker_manual = [clicker_manual[_old] for _old in task_order]
             clicker_auto_complete = [clicker_auto_complete[_old] for _old in task_order]
+            clicker_renewable = [clicker_renewable[_old] for _old in task_order]
             clicker_production_full = [
                 remap_spec_tasks(specs, task_map) for specs in clicker_production_full
             ]
@@ -923,6 +931,7 @@ class TaskipelagoWorld(World):
         clicker_activations = _pad_clicker(clicker_activations, 1)
         clicker_manual = _pad_clicker(clicker_manual, False)
         clicker_auto_complete = _pad_clicker(clicker_auto_complete, False)
+        clicker_renewable = _pad_clicker(clicker_renewable, None)
 
         # ------------------------------------------------------------------ #
         # 6. DeathLink validation                                             #
@@ -1106,6 +1115,12 @@ class TaskipelagoWorld(World):
                 "[Taskipelago] WARNING: clicker_mode is on but every task is manual, "
                 "so the clicker board is empty."
             )
+        for _i, _ren in enumerate(clicker_renewable):
+            if _ren is not None and clicker_manual[_i]:
+                raise Exception(
+                    f"Taskipelago: task {_i + 1} is marked renewable but is a manual task; "
+                    f"only clicker tasks can be renewable."
+                )
         # A grant aimed straight at a manual task is dropped here rather than
         # forwarded: the client would discard it anyway, and slot_data should
         # not claim an upgrade that can never apply.
@@ -1748,6 +1763,30 @@ class TaskipelagoWorld(World):
 
         consumable_names: set = set(consumable_groups.keys())
 
+        # Renewable clicker tasks: currency name -> task indices that produce it.
+        # A currency whose items were all dropped by a random pick loses its
+        # producers (and falls back to cumulative logic) instead of failing.
+        _editor_consumables = {
+            str(nm).strip() for nm, c in zip(items_raw_editor, item_consumable_editor) if c
+        }
+        renewable_producers: Dict[str, List[int]] = {}
+        for i, ren in enumerate(clicker_renewable):
+            if ren is None:
+                continue
+            if ren[0] not in consumable_names:
+                if ren[0] in _editor_consumables:
+                    _clicker_warn(
+                        f"[Taskipelago] WARNING: task {i + 1} is renewable for '{ren[0]}', but no "
+                        f"'{ren[0]}' item is in the final pool, so it is not renewable this seed."
+                    )
+                    clicker_renewable[i] = None
+                    continue
+                raise Exception(
+                    f"Taskipelago: task {i + 1} is renewable for '{ren[0]}', which is not a "
+                    f"consumable item."
+                )
+            renewable_producers.setdefault(ren[0], []).append(i)
+
         parsed_costs: List[Node | None] = []
         for i, cost_text in enumerate(raw_costs_input):
             if not cost_text:
@@ -1789,6 +1828,10 @@ class TaskipelagoWorld(World):
                 consumable_demand[cname] = consumable_demand.get(cname, 0) + min_cost
 
         for cname, demand in consumable_demand.items():
+            # A renewable currency is farmed, so supply only has to cover the
+            # cheapest way into one of its producers (checked below).
+            if cname in renewable_producers:
+                continue
             supply = consumable_supply.get(cname, 0)
             if demand > supply:
                 raise Exception(
@@ -1811,6 +1854,8 @@ class TaskipelagoWorld(World):
         per_currency_cb: Dict[str, Dict[int, int]] = {}
 
         for cname in consumable_names:
+            if cname in renewable_producers:
+                continue
             tasks_with_max_cost: List[Tuple[int, int]] = []  # (task_idx, max_cost)
             for i, cost_ast in enumerate(parsed_costs):
                 if cost_ast is None:
@@ -1838,7 +1883,11 @@ class TaskipelagoWorld(World):
 
         # task_cost_reqs[i] = list of branches; each branch is [(cname, threshold), ...].
         # AP rule: at least one branch must have all its thresholds satisfied.
-        task_cost_reqs: List[List[List[Tuple[str, int]]]] = [[] for _ in range(n)]
+        # A renewable currency's entry is (cname, threshold, producers) instead: it is
+        # met once any producer task (other than this one) is complete, or, for a
+        # producer itself, by `threshold` received (its own cost; None otherwise).
+        # Nothing else spending that currency is in logic before some producer is.
+        task_cost_reqs: List[List[list]] = [[] for _ in range(n)]
 
         for i, cost_ast in enumerate(parsed_costs):
             if cost_ast is None:
@@ -1847,6 +1896,16 @@ class TaskipelagoWorld(World):
             branch_reqs: List[List[Tuple[str, int]]] = []
             for branch in branches:
                 req: List[Tuple[str, int]] = []
+                for cname in sorted(renewable_producers):
+                    branch_c_cost = sum(cnt for nm, cnt in branch if nm == cname)
+                    if branch_c_cost <= 0:
+                        continue
+                    producers = renewable_producers[cname]
+                    req.append((
+                        cname,
+                        branch_c_cost if i in producers else None,
+                        [j for j in producers if j != i],
+                    ))
                 for cname in consumable_names:
                     if cname not in per_currency_cb or i not in per_currency_cb[cname]:
                         continue
@@ -1863,7 +1922,9 @@ class TaskipelagoWorld(World):
         for i, branches in enumerate(task_cost_reqs):
             if len(branches) != 1:
                 continue
-            for cname, threshold in branches[0]:
+            for cname, threshold, *_ in branches[0]:
+                if cname in renewable_producers:
+                    continue
                 supply = consumable_supply.get(cname, 0)
                 if threshold > supply:
                     raise Exception(
@@ -1871,6 +1932,24 @@ class TaskipelagoWorld(World):
                         f"in cumulative AP logic (including worst-case OR-task spending before it) "
                         f"but only {supply} exist. Add more '{cname}' items or reduce costs."
                     )
+
+        # Some producer of each renewable currency must be affordable from the item
+        # supply alone, or the currency can never start flowing.
+        for cname, producers in renewable_producers.items():
+            supply = consumable_supply.get(cname, 0)
+            cheapest = min(
+                min(
+                    (sum(cnt for nm, cnt in b if nm == cname)
+                     for b in collect_cost_groups_per_branch(parsed_costs[j])),
+                    default=0,
+                ) if parsed_costs[j] is not None else 0
+                for j in producers
+            )
+            if cheapest > supply:
+                raise Exception(
+                    f"Taskipelago: every renewable task for '{cname}' costs more '{cname}' "
+                    f"than exist ({supply}); at least one must be affordable from items alone."
+                )
 
         # No task/item requirement graph can ever resolve unless at least one task
         # is completable with nothing collected yet - that's the only way Fill can
@@ -2057,6 +2136,7 @@ class TaskipelagoWorld(World):
         self._clicker_activations = clicker_activations
         self._clicker_manual = clicker_manual
         self._clicker_auto_complete = clicker_auto_complete
+        self._clicker_renewable = clicker_renewable
         self._clicker_production = clicker_production
         self._clicker_click_power = clicker_click_power
         self._clicker_production_mult = clicker_production_mult
@@ -2272,7 +2352,14 @@ class TaskipelagoWorld(World):
             ],
             "task_cost_reqs": [
                 [
-                    [{"consumable": cname, "threshold": thr} for cname, thr in branch]
+                    [
+                        {"consumable": r[0], "threshold": r[1]}
+                        if len(r) == 2 else
+                        # Renewable currency: met by any listed producer task being
+                        # complete, or by `threshold` received when it is not None.
+                        {"consumable": r[0], "threshold": r[1], "producers": list(r[2])}
+                        for r in branch
+                    ]
                     for branch in branches
                 ]
                 for branches in self._task_cost_reqs
@@ -2312,6 +2399,8 @@ class TaskipelagoWorld(World):
             "task_activations": list(self._clicker_activations),
             "task_manual": [bool(v) for v in self._clicker_manual],
             "task_auto_complete": [bool(v) for v in self._clicker_auto_complete],
+            # [currency, amount] per task, or None; older seeds lack it (nothing renews).
+            "task_renewable": [list(v) if v else None for v in self._clicker_renewable],
             "item_production": [list(v) for v in self._clicker_production],
             "item_click_power": [list(v) for v in self._clicker_click_power],
             "item_production_mult": [list(v) for v in self._clicker_production_mult],

@@ -35,6 +35,7 @@ from .prereq_parser import _COST_SUFFIX_CHARS, split_name_suffix
 TASK_LISTS = (
     "task_count", "task_prereqs", "item_prereqs", "task_priority", "task_description",
     "task_region", "task_cost", "task_activations", "task_manual", "task_auto_complete",
+    "task_renewable",
 )
 ITEM_LISTS = (
     "items", "item_types", "item_fillers", "item_consumable", "item_count", "item_early",

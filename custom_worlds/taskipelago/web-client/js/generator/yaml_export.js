@@ -12,7 +12,7 @@ import {
 import { pyInt, pySlice, pyStrip } from '../shared/pyish.js';
 import { encodeThemeColors } from '../shared/theme.js';
 import { dumpYaml } from '../shared/yaml11.js';
-import { clickerExportKeys, validateClicker } from './clicker_fields.js';
+import { clickerExportKeys, unrenewedCurrencies, validateClicker } from './clicker_fields.js';
 import {
   MAX_TASK_DESCRIPTION_LEN, isReservedWord,
   itemData,
@@ -97,6 +97,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
   const taskActivations = [];
   const taskManual = [];
   const taskAutoComplete = [];
+  const taskRenewable = [];   // {currency, amount} or null, per exported task row
   for (const row of model.tasks) {
     const t = taskData(row);
     if (!t.name) continue;
@@ -111,6 +112,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
     taskActivations.push(t.activations);
     taskManual.push(t.manual);
     taskAutoComplete.push(t.autoComplete);
+    taskRenewable.push(t.renewable ? { currency: t.renewableCurrency, amount: t.renewableAmount } : null);
   }
   if (!tasks.length) return fail('Error', 'No tasks defined.');
 
@@ -467,8 +469,11 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       mapScopedText(t, null, inner => remapPrereqIndices(inner, itemRowExportIdxs)));
   }
 
+  const consumableNames = new Set(items.filter((n, k) => itemConsumables[k] && n));
+  const enabledConsumables = new Set(items.filter((n, k) => itemConsumables[k] && n && !offItem(k)));
   const clickerArgs = {
     taskNames: tasks, taskActivations, items, itemSpecs, regionNames, taskManual, taskRegions,
+    taskRenewable, consumableNames,
   };
   const clickerError = validateClicker(model, clickerArgs);
   if (clickerError) {
@@ -478,9 +483,22 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       ...clickerArgs,
       taskActivations: taskActivations.map((v, i) => (offTask(i) ? '' : v)),
       itemSpecs: itemSpecs.map((v, k) => (offItem(k) ? noSpec : v)),
+      taskRenewable: taskRenewable.map((v, i) => (offTask(i) ? null : v)),
     });
     if (enabledError) return { error: enabledError };
     warnings.push(clickerError[1]);
+  }
+  if (model.clickerMode) {
+    const unrenewed = unrenewedCurrencies(enabledConsumables,
+      taskRenewable.map((v, i) => (offTask(i) ? null : v)));
+    if (unrenewed.length) {
+      const proceed = await confirm('Non-Renewable Currency',
+        'These currencies are not produced by any renewable task, so tasks that cost them stay '
+        + 'behind a cumulative barrier in logic (each needs its share of the total supply '
+        + 'received):\n\n' + unrenewed.join('\n')
+        + '\n\nMark a clicker task Renewable for a currency to lift its barrier. Export anyway?');
+      if (!proceed) return { cancelled: true };
+    }
   }
   if (warnings.length) {
     const proceed = await confirm('Problems In Disabled Content',
@@ -571,7 +589,7 @@ export async function buildExport(model, { confirm, randomFiller = defaultRandom
       death_link_lock_tasks: !!model.deathLinkLockTasks, // v1.1 F3
       // v1.1 F7: only non-default colors, so an all-default Style section adds nothing.
       ...clickerExportKeys(model, {
-        taskActivations, taskManual, taskAutoComplete, itemSpecs, taskNames: tasks,
+        taskActivations, taskManual, taskAutoComplete, taskRenewable, itemSpecs, taskNames: tasks,
         regionRows: regionNames.map(n => regionByName.get(n)),
       }),
       ...(styleColors.length ? { style_colors: styleColors } : {}),

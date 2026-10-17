@@ -310,3 +310,37 @@ test('a grant cannot be aimed at a non-clicker task', async () => {
   r = await build(m);
   assert.ok(r.data, JSON.stringify(r.error));
 });
+
+test('renewable tasks export, round-trip, and warn about currencies left non-renewable', async () => {
+  const m = clickerModel({
+    tasks: [
+      { name: 'Mine', activations: '5', renewable: true, renewableCurrency: 'Gold', renewableAmount: '3' },
+      { name: 'Buy', cost: '"Gold"*2 && "Silver"' },
+    ],
+    items: [
+      { name: 'Gold', consumable: true },
+      { name: 'Silver', consumable: true },
+    ],
+  });
+  const prompts = [];
+  const r = await buildExport(m, { confirm: async (title, text) => { prompts.push([title, text]); return true; }, randomFiller });
+  assert.deepEqual(r.data.Taskipelago.task_renewable, ['"Gold"*3', '']);
+  const warn = prompts.find(([t]) => t === 'Non-Renewable Currency');
+  assert.ok(warn && warn[1].includes('Silver') && !warn[1].includes('\nGold'));
+  const back = roundTrip(r.data).model.tasks[0];
+  assert.equal(back.renewable, true);
+  assert.equal(back.renewableCurrency, 'Gold');
+  assert.equal(back.renewableAmount, '3');
+});
+
+test('a renewable task needs a consumable currency and is not allowed on a manual task', async () => {
+  const items = [{ name: 'Gold', consumable: true }, { name: 'Rock' }];
+  let r = await build(clickerModel({ items, tasks: [{ name: 'A', renewable: true }, { name: 'B' }] }));
+  assert.match(r.error[1], /no currency selected/);
+  r = await build(clickerModel({ items, tasks: [{ name: 'A', renewable: true, renewableCurrency: 'Rock' }, { name: 'B' }] }));
+  assert.match(r.error[1], /not a consumable/);
+  r = await build(clickerModel({ items, tasks: [{ name: 'A', renewable: true, renewableCurrency: 'Gold', manual: true }, { name: 'B' }] }));
+  assert.match(r.error[1], /manual task/);
+  r = await build(clickerModel({ items, tasks: [{ name: 'A', renewable: true, renewableCurrency: 'Gold', renewableAmount: '0' }, { name: 'B' }] }));
+  assert.match(r.error[1], /whole number/);
+});

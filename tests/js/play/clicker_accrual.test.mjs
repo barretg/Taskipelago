@@ -496,3 +496,39 @@ test('a manual task is outside every grant pool, even a region or * one', async 
   // A distributed '*' rate divides by the clicker tasks only.
   assert.equal(m.eligible.includes(1), false);
 });
+
+test('a renewable task sends its check once, then pays its currency per completion', async () => {
+  await boot({
+    item_production: [[{ kind: 'task', ref: 0, rate: 4 }], [], [], [], []],
+    task_auto_complete: [true, false, false, false],
+    task_renewable: [['Gold', 3], null, null, null],
+  });
+  state.clickerRenew = {};
+  const { renewableEarnedCounts } = await importModule('play/logic.js');
+  give('Sponge');
+  board.settle(100);                     // 2.5s to the first completion, then 97.5s of cycles
+  const checks = sent.filter(m => m.cmd === 'LocationChecks');
+  assert.equal(checks.length, 1);
+  assert.equal(state.clickerRenew[0], 40);
+  assert.ok(Math.abs(board.taskProgress(0)) < 1e-6);
+  assert.deepEqual(renewableEarnedCounts(), { Gold: 117 });
+  // Still on the board and still earning.
+  assert.ok(board.clickerModel().eligible.includes(0));
+});
+
+test('a renewable task without auto-complete waits at full for its Complete press', async () => {
+  await boot({
+    item_production: [[{ kind: 'task', ref: 0, rate: 5 }], [], [], [], []],
+    task_auto_complete: [false, false, false, false],
+    task_renewable: [['Gold', 1], null, null, null],
+  });
+  state.clickerRenew = {};
+  give('Sponge');
+  board.settle(10);
+  assert.equal(board.taskProgress(0), 10);
+  assert.ok(board.completeReadyTask(0));  // the first press sends the check
+  board.settle(10);
+  assert.ok(board.completeReadyTask(0));  // the second pays out
+  assert.equal(state.clickerRenew[0], 2);
+  assert.equal(sent.filter(m => m.cmd === 'LocationChecks').length, 1);
+});

@@ -52,6 +52,9 @@ export function newTask() {
     activations: '',   // clicker mode
     manual: false,     // clicker mode: a normal task row, never clickable
     autoComplete: false, // clicker mode: completes on reaching its activations
+    renewable: false,  // clicker mode: later completions pay renewableCurrency
+    renewableCurrency: '', // a consumable item name
+    renewableAmount: '', // per completion; blank means 1
   };
 }
 
@@ -165,6 +168,8 @@ export function taskData(t) {
     cost: pyStrip(t.cost), region: pyStrip(t.region), priority: !!t.priority,
     count: rowCount(t.count), desc: pyStrip(t.desc),
     activations: pyStrip(t.activations), manual: !!t.manual, autoComplete: !!t.autoComplete,
+    renewable: !!t.renewable, renewableCurrency: pyStrip(t.renewableCurrency || ''),
+    renewableAmount: pyStrip(t.renewableAmount || ''),
   };
 }
 
@@ -590,7 +595,9 @@ function quotedRefFields(model, kind) {
   for (const t of model.tasks) out.push([t, 'prereq', scoped('task')], [t, 'itemPrereq', scoped('item')]);
   out.push([model, 'goalTasks', scoped('task')]);
   for (const r of model.regions) out.push([r, 'prereq', scoped(null)]);
-  if (kind === 'items') for (const t of model.tasks) out.push([t, 'cost', whole]);
+  // A renewable currency is a bare item name, so it is renamed as if quoted.
+  const bare = (text, fn) => (text ? fn(`"${text}"`).slice(1, -1) : text);
+  if (kind === 'items') for (const t of model.tasks) out.push([t, 'cost', whole], [t, 'renewableCurrency', bare]);
   else for (const it of model.items) out.push([it, 'clickerTarget', whole]);
   return out;
 }

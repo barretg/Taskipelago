@@ -632,6 +632,22 @@ class TaskAutoComplete(OptionList):
     default: List[str] = []
 
 
+class TaskRenewable(OptionList):
+    """
+    NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
+    Parallel list aligned with tasks. A renewable clicker task sends its check the
+    first time it completes as usual, then keeps accruing, and every later completion
+    gives the player consumable currency instead of a check.
+    Each entry is blank (not renewable), '"Currency"' (1 per completion) or
+    '"Currency"*N' (N per completion). The currency must be a consumable item
+    (item_consumable). Ignored when clicker_mode is off; not allowed on a manual task.
+    Tasks costing a renewable currency only need one of its renewable tasks completed
+    in logic, instead of a cumulative share of that currency's item supply.
+    """
+    display_name = "Task Renewable"
+    default: List[str] = []
+
+
 class RegionManual(OptionList):
     """
     NOTE: The Taskipelago client application contains a YAML builder that is the recommended way to configure this. Editing YAML manually is error-prone.
@@ -870,6 +886,7 @@ class TaskipelagoOptions(PerGameCommonOptions):
     task_activations: TaskActivations
     task_manual: TaskManual
     task_auto_complete: TaskAutoComplete
+    task_renewable: TaskRenewable
     region_manual: RegionManual
     item_production: ItemProduction
     item_click_power: ItemClickPower

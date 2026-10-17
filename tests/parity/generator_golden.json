@@ -54,7 +54,10 @@
        "desc": "Sort by color",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Vacuum",
@@ -67,7 +70,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Game night",
@@ -80,7 +86,10 @@
        "desc": "Board games",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -191,7 +200,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Cook dinner",
@@ -204,7 +216,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Read 10 pages",
@@ -217,7 +232,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -317,7 +335,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Cook dinner",
@@ -330,7 +351,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Read 10 pages",
@@ -343,7 +367,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -448,7 +475,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Cook dinner",
@@ -461,7 +491,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Read 10 pages",
@@ -474,7 +507,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -583,7 +619,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Cook dinner",
@@ -596,7 +635,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Read 10 pages",
@@ -609,7 +651,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -709,7 +754,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Cook dinner",
@@ -722,7 +770,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Read 10 pages",
@@ -735,7 +786,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -835,7 +889,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Cook dinner",
@@ -848,7 +905,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Read 10 pages",
@@ -861,7 +921,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -963,7 +1026,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Cook",
@@ -976,7 +1042,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Read",
@@ -989,7 +1058,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -1114,7 +1186,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Vacuum",
@@ -1127,7 +1202,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Game night",
@@ -1140,7 +1218,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -1274,7 +1355,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Vacuum",
@@ -1287,7 +1371,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Game night",
@@ -1300,7 +1387,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -1434,7 +1524,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Vacuum",
@@ -1447,7 +1540,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Game night",
@@ -1460,7 +1556,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -1594,7 +1693,10 @@
        "desc": "Sort by color",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Vacuum",
@@ -1607,7 +1709,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Game night",
@@ -1620,7 +1725,10 @@
        "desc": "Board games",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -1754,7 +1862,10 @@
        "desc": "Sort by color",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Vacuum",
@@ -1767,7 +1878,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Game night",
@@ -1780,7 +1894,10 @@
        "desc": "Board games",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -1905,7 +2022,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Two",
@@ -1918,7 +2038,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -2062,7 +2185,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [],
@@ -2176,7 +2302,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "2001-12-14",
@@ -2189,7 +2318,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "750",
@@ -2202,7 +2334,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Cook",
@@ -2215,7 +2350,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -2384,7 +2522,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Dishes",
@@ -2397,7 +2538,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Laundry",
@@ -2410,7 +2554,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Vacuum",
@@ -2423,7 +2570,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Trash",
@@ -2436,7 +2586,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Mop",
@@ -2449,7 +2602,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Dust",
@@ -2462,7 +2618,10 @@
        "desc": "Count 2: both copies are candidates",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Pushups",
@@ -2475,7 +2634,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Run",
@@ -2488,7 +2650,10 @@
        "desc": "Needs Morning coffee",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Yoga",
@@ -2501,7 +2666,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Stretch",
@@ -2514,7 +2682,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Write report",
@@ -2527,7 +2698,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Fix bike",
@@ -2540,7 +2714,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "Final review",
@@ -2553,7 +2730,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -2755,7 +2935,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "B",
@@ -2768,7 +2951,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "C",
@@ -2781,7 +2967,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -2901,7 +3090,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "90",
@@ -2914,7 +3106,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "15",
@@ -2927,7 +3122,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "",
@@ -2940,7 +3138,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "1e5",
@@ -2953,7 +3154,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "2.5",
@@ -2966,7 +3170,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "31",
@@ -2979,7 +3186,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       },
       {
        "name": "1000",
@@ -2992,7 +3202,10 @@
        "desc": "",
        "activations": "",
        "manual": false,
-       "autoComplete": false
+       "autoComplete": false,
+       "renewable": false,
+       "renewableCurrency": "",
+       "renewableAmount": ""
       }
      ],
      "items": [
@@ -3112,7 +3325,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -3125,7 +3341,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -3195,7 +3414,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "  ",
@@ -3208,7 +3430,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -3278,7 +3503,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -3291,7 +3519,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": " A ",
@@ -3304,7 +3535,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -3317,7 +3551,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "C",
@@ -3330,7 +3567,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -3388,7 +3628,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -3401,7 +3644,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -3471,7 +3717,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -3484,7 +3733,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -3685,7 +3937,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -3698,7 +3953,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -3790,7 +4048,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -3803,7 +4064,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -3972,7 +4236,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -3985,7 +4252,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -4065,7 +4335,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -4078,7 +4351,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -4151,7 +4427,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -4164,7 +4443,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -4234,7 +4516,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -4247,7 +4532,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -4305,7 +4593,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -4318,7 +4609,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -4452,7 +4746,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -4465,7 +4762,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -4535,7 +4835,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -4548,7 +4851,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -4618,7 +4924,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -4631,7 +4940,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -4727,7 +5039,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -4740,7 +5055,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "C",
@@ -4753,7 +5071,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -4823,7 +5144,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -4836,7 +5160,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -4927,7 +5254,10 @@
       "desc": "  dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd  ",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Cook",
@@ -4940,7 +5270,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "yes",
@@ -4953,7 +5286,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "017",
@@ -4966,7 +5302,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "",
@@ -4979,7 +5318,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -5268,7 +5610,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -5281,7 +5626,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "C",
@@ -5294,7 +5642,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "D",
@@ -5307,7 +5658,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -5495,7 +5849,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -5508,7 +5865,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "C",
@@ -5521,7 +5881,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "D",
@@ -5534,7 +5897,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "E",
@@ -5547,7 +5913,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -5787,7 +6156,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -5800,7 +6172,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -5898,7 +6273,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -5911,7 +6289,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -6073,7 +6454,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "1:30",
@@ -6086,7 +6470,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "0x1F",
@@ -6099,7 +6486,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "~",
@@ -6112,7 +6502,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "null",
@@ -6125,7 +6518,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Yes",
@@ -6138,7 +6534,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "1e5",
@@ -6151,7 +6550,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "2.50",
@@ -6164,7 +6566,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "=",
@@ -6177,7 +6582,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -6456,7 +6864,10 @@
       "desc": "Sort by color",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Vacuum",
@@ -6469,7 +6880,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Game night",
@@ -6482,7 +6896,10 @@
       "desc": "Board games",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -6719,7 +7136,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Cook dinner",
@@ -6732,7 +7152,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Read 10 pages",
@@ -6745,7 +7168,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -6941,7 +7367,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Cook dinner",
@@ -6954,7 +7383,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Read 10 pages",
@@ -6967,7 +7399,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -7172,7 +7607,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Cook dinner",
@@ -7185,7 +7623,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Read 10 pages",
@@ -7198,7 +7639,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -7409,7 +7853,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Cook dinner",
@@ -7422,7 +7869,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Read 10 pages",
@@ -7435,7 +7885,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -7631,7 +8084,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Cook dinner",
@@ -7644,7 +8100,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Read 10 pages",
@@ -7657,7 +8116,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -7855,7 +8317,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Cook dinner",
@@ -7868,7 +8333,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Read 10 pages",
@@ -7881,7 +8349,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -8081,7 +8552,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Cook",
@@ -8094,7 +8568,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Read",
@@ -8107,7 +8584,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -8332,7 +8812,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Vacuum",
@@ -8345,7 +8828,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Game night",
@@ -8358,7 +8844,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -8618,7 +9107,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Vacuum",
@@ -8631,7 +9123,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Game night",
@@ -8644,7 +9139,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -8904,7 +9402,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Vacuum",
@@ -8917,7 +9418,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Game night",
@@ -8930,7 +9434,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -9190,7 +9697,10 @@
       "desc": "Sort by color",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Vacuum",
@@ -9203,7 +9713,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Game night",
@@ -9216,7 +9729,10 @@
       "desc": "Board games",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -9476,7 +9992,10 @@
       "desc": "Sort by color",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Vacuum",
@@ -9489,7 +10008,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Game night",
@@ -9502,7 +10024,10 @@
       "desc": "Board games",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -9759,7 +10284,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Two",
@@ -9772,7 +10300,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -9921,7 +10452,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [],
@@ -10035,7 +10569,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "2001-12-14",
@@ -10048,7 +10585,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "750",
@@ -10061,7 +10601,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Cook",
@@ -10074,7 +10617,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -10240,7 +10786,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Dishes",
@@ -10253,7 +10802,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Laundry",
@@ -10266,7 +10818,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Vacuum",
@@ -10279,7 +10834,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Trash",
@@ -10292,7 +10850,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Mop",
@@ -10305,7 +10866,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Dust",
@@ -10318,7 +10882,10 @@
       "desc": "Count 2: both copies are candidates",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Pushups",
@@ -10331,7 +10898,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Run",
@@ -10344,7 +10914,10 @@
       "desc": "Needs Morning coffee",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Yoga",
@@ -10357,7 +10930,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Stretch",
@@ -10370,7 +10946,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Write report",
@@ -10383,7 +10962,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Fix bike",
@@ -10396,7 +10978,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "Final review",
@@ -10409,7 +10994,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -10882,7 +11470,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "B",
@@ -10895,7 +11486,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "C",
@@ -10908,7 +11502,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [
@@ -11130,7 +11727,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "90",
@@ -11143,7 +11743,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "15",
@@ -11156,7 +11759,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "",
@@ -11169,7 +11775,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "1e5",
@@ -11182,7 +11791,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "2.5",
@@ -11195,7 +11807,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "31",
@@ -11208,7 +11823,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      },
      {
       "name": "1000",
@@ -11221,7 +11839,10 @@
       "desc": "",
       "activations": "",
       "manual": false,
-      "autoComplete": false
+      "autoComplete": false,
+      "renewable": false,
+      "renewableCurrency": "",
+      "renewableAmount": ""
      }
     ],
     "items": [

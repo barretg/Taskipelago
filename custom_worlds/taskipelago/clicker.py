@@ -12,6 +12,7 @@ an already-parsed AST (or a folded number) and never re-parses authored text.
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Tuple
 
 from .prereq_parser import (
@@ -232,6 +233,30 @@ def parse_task_flags(raw: List[str], n_rows: int, label: str,
                 f"Taskipelago: {label} on {row_label} {i + 1} is '{raw[i]}'; "
                 f"expected 'true', 'false' or blank."
             )
+    return out
+
+
+def parse_task_renewable(raw: List[str], n_rows: int,
+                         row_label: str = "task") -> "List[Tuple[str, int] | None]":
+    """
+    task_renewable, one entry per row: blank (not renewable), '"Currency"' (1 per
+    repeat completion) or '"Currency"*N'. Whether the name is a consumable is
+    checked later, against the final item pool.
+    """
+    out: "List[Tuple[str, int] | None]" = []
+    for i in range(n_rows):
+        text = raw[i].strip() if i < len(raw) else ""
+        if not text or text.lower() == "false":
+            out.append(None)
+            continue
+        m = re.fullmatch(r'"([^"]+)"\s*(?:\*\s*(\d+))?', text)
+        amount = int(m.group(2)) if m and m.group(2) is not None else 1
+        if not m or not m.group(1).strip() or amount < 1:
+            raise Exception(
+                f"Taskipelago: task_renewable on {row_label} {i + 1} is '{raw[i]}'; "
+                f"expected blank, '\"Currency\"' or '\"Currency\"*N' with N at least 1."
+            )
+        out.append((m.group(1).strip(), amount))
     return out
 
 

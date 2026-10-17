@@ -6,7 +6,8 @@
 //   taskipelago_notify::<slot>::<seed>     int item index           max; replace on server-restart reset
 //   taskipelago_purchases::<slot>::<seed>  {taskIdx: {name: amt}}   update
 //   taskipelago_deathlink::<slot>::<seed>  {id: entry}              update to add, pop to remove (v1.1 F3)
-//   taskipelago_clicker::<slot>::<seed>    {p:{taskIdx: n}, t: ms}  replace (clicker mode)
+//   taskipelago_clicker::<slot>::<seed>    {p:{taskIdx: n}, t: ms,  replace (clicker mode)
+//                                           r:{taskIdx: claims}}    (r: renewable tasks only)
 import { ap, state, CLIENT_ID } from '../play/state.js';
 
 const NOTIFY_DEBOUNCE_MS = 1000;
@@ -68,19 +69,42 @@ export function sanitizeClickerProgress(obj) {
   }
   const t = obj.t;
   if (typeof t === 'number' && Number.isFinite(t) && t > 0) out.t = t;
+  // Only a seed with renewable tasks carries r, so other values keep their old shape.
+  const r = obj.r;
+  if (r && typeof r === 'object' && !Array.isArray(r)) {
+    const claims = {};
+    for (const [k, v] of Object.entries(r)) if (/^\d+$/.test(k) && isCount(v)) claims[Number(k)] = v;
+    if (Object.keys(claims).length) out.r = claims;
+  }
   return out;
 }
 
 /**
  * Merge a remote clicker value into a local one, taking the max per task so two
  * open clients cannot roll each other back. The timestamp takes the max too.
+ * A renewable task's progress resets on every claim, so it merges as the pair
+ * (claims, progress): more claims wins outright, equal claims take the max.
  */
 export function mergeClickerProgress(local, remote) {
   const a = sanitizeClickerProgress(local);
   const b = sanitizeClickerProgress(remote);
+  const ar = a.r || {}, br = b.r || {};
   const p = { ...a.p };
-  for (const [k, v] of Object.entries(b.p)) p[k] = Math.max(p[k] ?? 0, v);
-  return { p, t: Math.max(a.t, b.t) };
+  const r = { ...ar };
+  for (const [k, v] of Object.entries(b.p)) {
+    const ra = ar[k] ?? 0, rb = br[k] ?? 0;
+    if (rb > ra) p[k] = v;
+    else if (rb === ra) p[k] = Math.max(p[k] ?? 0, v);
+  }
+  for (const [k, v] of Object.entries(br)) {
+    if (v > (r[k] ?? 0)) {
+      r[k] = v;
+      if (!(k in b.p)) p[k] = 0;
+    }
+  }
+  const out = { p, t: Math.max(a.t, b.t) };
+  if (Object.keys(r).length) out.r = r;
+  return out;
 }
 
 /** {taskIdx: {name: amount}} with non-negative integer task indices. */
@@ -134,10 +158,10 @@ let clickerPending = null; // {key, value}
  * flushClickerProgress() on visibilitychange / pagehide so a closing tab does
  * not lose the last few seconds.
  */
-export function writeClickerProgress(progress, tickMs) {
+export function writeClickerProgress(progress, tickMs, renew = state.clickerRenew) {
   const key = serverKeys().clicker;
   if (clickerPending && clickerPending.key !== key) flushClickerProgress();
-  clickerPending = { key, value: sanitizeClickerProgress({ p: progress, t: tickMs }) };
+  clickerPending = { key, value: sanitizeClickerProgress({ p: progress, t: tickMs, r: renew }) };
   if (!clickerTimer) clickerTimer = setTimeout(flushClickerProgress, CLICKER_DEBOUNCE_MS);
 }
 

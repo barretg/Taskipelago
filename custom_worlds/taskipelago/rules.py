@@ -59,14 +59,14 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
     group_items = world._group_item_display_names       # Dict[str, List[str]]
     region_tokens = world._region_token_names           # Dict[str, List[str]]
     consumable_display = world._consumable_group_display_names  # Dict[str, List[str]]
-    task_cost_reqs = world._task_cost_reqs              # List[List[List[Tuple[str, int]]]] - OR of AND branches
+    task_cost_reqs = world._task_cost_reqs              # OR of AND branches; see _cost_req_met
     # Name list each task(...) / item(...) scope resolves its leaves against.
     scoped_names = {"task": token_names, "item": reward_names}
 
     for i in range(n):
         token_ast = world._parsed_prereqs[i]
         reward_ast = world._parsed_reward_prereqs[i]
-        cost_reqs = task_cost_reqs[i]  # list of (consumable_name, threshold)
+        cost_reqs = task_cost_reqs[i]
 
         has_prereqs = token_ast is not None or reward_ast is not None
         has_cost = bool(cost_reqs)
@@ -90,7 +90,7 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
                 if not eval_node(ra, state, p, rn, gi, rt, sn):
                     return False
                 if cr and not any(
-                    all(state.has_from_list(cd.get(cname, []), p, thr) for cname, thr in branch)
+                    all(_cost_req_met(state, p, req, cd, tn) for req in branch)
                     for branch in cr
                 ):
                     return False
@@ -98,3 +98,18 @@ def _set_rules_lambda(world: "TaskipelagoWorld", player: int, n: int) -> None:
 
             complete_loc.access_rule = complete_rule
             reward_loc.access_rule = complete_rule
+
+
+def _cost_req_met(state, player: int, req: tuple, consumable_display, token_names) -> bool:
+    """
+    (cname, threshold): a cumulative threshold of that currency received.
+    (cname, threshold, producers): a renewable currency, met once any producer
+    task is complete (its token held), or by `threshold` received when not None.
+    """
+    if len(req) == 2:
+        cname, thr = req
+        return state.has_from_list(consumable_display.get(cname, []), player, thr)
+    cname, thr, producers = req
+    if producers and state.has_any([token_names[j] for j in producers], player):
+        return True
+    return thr is not None and state.has_from_list(consumable_display.get(cname, []), player, thr)

@@ -38,6 +38,13 @@ export const TIPS = {
     + 'A task is also manual when its region is marked manual.',
   autoComplete: 'On: this task completes itself the moment it reaches its activations.\n\n'
     + 'Off (the default): a full task stops accruing and waits for you to press its Complete button.',
+  renewable: 'On: a renewable task sends its check the first time it completes, like any task. '
+    + 'Afterwards it stays on the board and keeps working: every later completion produces the '
+    + 'chosen currency instead, by the amount set here (blank means 1). Clicks, production, '
+    + 'multipliers, offline progress and auto-complete all keep applying to it.\n\n'
+    + 'Tasks that cost a renewable currency only need one of its renewable tasks completed in logic, '
+    + 'instead of a cumulative share of that currency\'s item supply.\n\n'
+    + 'The currency list holds the consumable items from the Items section. Not available on a manual task.',
   regionManual: 'On: every task in this region is a normal (non-clicker) task, as if each were marked Manual in the task table.\n\n'
     + 'Subregions inherit it: when the parent is Manual, the subregion\'s box is shown on and locked.',
   distributed: 'Off: the rate applies in full to each eligible task in the region.\n\n'
@@ -81,8 +88,73 @@ export function exprInput(obj, key, ctx, field, placeholder = '') {
 /** Header cells appended to the task table in clicker mode. */
 export const taskHeadCells = () => [
   tipHeader('Activations', TIPS.activations), tipHeader('Manual', TIPS.manual),
-  tipHeader('Auto', TIPS.autoComplete),
+  tipHeader('Auto', TIPS.autoComplete), tipHeader('Renewable', TIPS.renewable),
 ];
+
+/** Distinct consumable item names in the Items section, in row order. */
+function consumableNames(model) {
+  const out = [];
+  for (const it of model.items || []) {
+    const name = (it.name || '').trim();
+    if (it.consumable && !it.filler && name && !out.includes(name)) out.push(name);
+  }
+  return out;
+}
+
+/**
+ * The Renewable box, its currency dropdown and its amount. The dropdown stays
+ * locked until the box is on, and refills from the Items section each time it
+ * is opened, so it follows consumables added or renamed since the row drew.
+ */
+function renewableCell(task, i, ctx) {
+  const box = h('input', {
+    type: 'checkbox', 'aria-label': 'Renewable task',
+    dataset: { field: `tasks.${i}.renewable` },
+  });
+  const currency = h('select', {
+    'aria-label': 'Renewable currency', dataset: { field: `tasks.${i}.renewableCurrency` },
+  });
+  const amount = h('input', {
+    type: 'text', className: 'renewable-amount', value: task.renewableAmount ?? '',
+    spellcheck: false, placeholder: '1', 'aria-label': 'Currency per completion',
+    title: 'Currency produced per completion after the first. Blank means 1.',
+    dataset: { field: `tasks.${i}.renewableAmount` },
+    oninput: e => { task.renewableAmount = e.target.value; ctx.changed(); },
+  });
+  const fill = () => {
+    const names = consumableNames(ctx.model);
+    const cur = task.renewableCurrency || '';
+    const opts = [h('option', { value: '' }, names.length ? 'Choose currency' : 'No consumable items')];
+    if (cur && !names.includes(cur)) opts.push(h('option', { value: cur }, `${cur} (not consumable)`));
+    for (const n of names) opts.push(h('option', { value: n }, n));
+    currency.replaceChildren(...opts);
+    currency.value = cur;
+  };
+  currency.addEventListener('mousedown', fill);
+  currency.addEventListener('focus', fill);
+  currency.addEventListener('change', () => { task.renewableCurrency = currency.value; ctx.changed(); });
+  const sync = () => {
+    const off = !!task.manual;
+    box.disabled = off;
+    currency.disabled = off || !box.checked;
+    amount.disabled = off || !box.checked;
+  };
+  box.addEventListener('change', () => {
+    task.renewable = box.checked;
+    // One currency is the obvious choice when only one exists.
+    if (box.checked && !task.renewableCurrency) {
+      const names = consumableNames(ctx.model);
+      if (names.length === 1) task.renewableCurrency = names[0];
+    }
+    fill();
+    sync();
+    ctx.changed();
+  });
+  box.checked = !!task.renewable;
+  fill();
+  sync();
+  return { cell: h('div', { className: 'clicker-renewable' }, box, currency, amount), sync };
+}
 
 /** Body cells appended to a task row in clicker mode. */
 export function taskCells(task, i, ctx) {
@@ -95,6 +167,7 @@ export function taskCells(task, i, ctx) {
       // A manual task never accrues, so its activations and auto-complete are moot.
       activations.querySelector('input').disabled = e.target.checked;
       auto.disabled = e.target.checked;
+      renew.sync();
       ctx.changed();
     },
   });
@@ -107,7 +180,8 @@ export function taskCells(task, i, ctx) {
   auto.checked = !!task.autoComplete;
   activations.querySelector('input').disabled = !!task.manual;
   auto.disabled = !!task.manual;
-  return [activations, manual, auto];
+  const renew = renewableCell(task, i, ctx);
+  return [activations, manual, auto, renew.cell];
 }
 
 /** Header cells appended to the item table in clicker mode. */

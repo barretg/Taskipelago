@@ -135,3 +135,11 @@ test('disconnect clears every clicker field and stops the loop', async () => {
   assert.equal(state.clickerOfflineCapHours, 8);
   assert.equal(board.clickerLoopRunning(), false);
 });
+
+test('mergeClickerProgress: more renewable claims win outright, equal claims take the max', () => {
+  const merged = ss.mergeClickerProgress(
+    { p: { 0: 9, 1: 2 }, t: 500, r: { 0: 3, 1: 1 } },
+    { p: { 0: 1, 1: 6 }, t: 100, r: { 0: 4, 1: 1 } },
+  );
+  assert.deepEqual(merged, { p: { 0: 1, 1: 6 }, t: 500, r: { 0: 4, 1: 1 } });
+});

@@ -32,7 +32,8 @@ F = lg.FILLER_PLACEHOLDER
 
 def task(name, **kw):
     t = {"name": name, "prereq": "", "itemPrereq": "", "cost": "", "region": "",
-         "priority": False, "count": 1, "desc": "", "activations": "", "manual": False, "autoComplete": False}
+         "priority": False, "count": 1, "desc": "", "activations": "", "manual": False, "autoComplete": False,
+         "renewable": False, "renewableCurrency": "", "renewableAmount": ""}
     t.update(kw)
     return t
 
@@ -423,6 +424,9 @@ def apply_v11_import(doc, result: dict) -> dict:
         t["activations"] = ""
         t["manual"] = False
         t["autoComplete"] = False
+        t["renewable"] = False
+        t["renewableCurrency"] = ""
+        t["renewableAmount"] = ""
     for it in m["items"]:
         it["clickerKind"] = "none"
         it["clickerTarget"] = "*"
