@@ -1,5 +1,5 @@
 import { ap, state, els, CLIENT_ID } from './state.js';
-import { consumableBalance, consumableReceivedCounts, consumableSpentCounts } from './logic.js';
+import { consumableBalance, consumableReceivedCounts, consumableSpentCounts, renewableEarnedCounts } from './logic.js';
 import * as storage from '../shared/storage.js';
 import { isDeathLinkLocked } from './deathlink_queue.js';
 import { sanitizeCounts, writeManualConsumptions } from '../shared/server_state.js';
@@ -79,7 +79,8 @@ function consumableNamesUsedInTasks() {
 // Rendering: consumables
 // =============================================================
 export function renderConsumables() {
-  const hasCost = state.taskCostAmounts.some(b => b && b.length);
+  const hasCost = state.taskCostAmounts.some(b => b && b.length)
+    || (state.taskRenewable || []).some(Array.isArray);
   if (!hasCost || state.connState !== 'connected') {
     els.consumablesList.innerHTML = '<div style="padding:8px;color:var(--muted);font-size:12px">No consumable items in this session.</div>';
     return;
@@ -88,7 +89,8 @@ export function renderConsumables() {
   const bal   = consumableBalance();
   const recv  = consumableReceivedCounts();
   const spent = consumableSpentCounts();
-  const names = [...new Set([...Object.keys(recv), ...Object.keys(spent)])].sort();
+  const earned = renewableEarnedCounts();
+  const names = [...new Set([...Object.keys(recv), ...Object.keys(earned), ...Object.keys(spent)])].sort();
 
   if (!names.length) {
     els.consumablesList.innerHTML = '<div style="padding:8px;color:var(--muted);font-size:12px">No consumable items received yet.</div>';
@@ -107,7 +109,10 @@ export function renderConsumables() {
     row.className = 'consumable-entry' + (b < 0 ? ' consumable-warning' : '');
 
     const label = document.createElement('span');
-    label.textContent = `${name}:  ${b} remaining  (${r} received, ${s + m} spent)`;
+    const e = earned[name] || 0;
+    label.textContent = e
+      ? `${name}:  ${b} remaining  (${r} received, ${e} earned, ${s + m} spent)`
+      : `${name}:  ${b} remaining  (${r} received, ${s + m} spent)`;
     row.appendChild(label);
 
     if (!usedInTasks.has(name)) {

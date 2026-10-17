@@ -1080,7 +1080,7 @@ button.primary { border-color: var(--accent); }
 
 /* Clicker mode grows both tables by its own columns. */
 .gen-task-table.clicker .gt-row {
-  grid-template-columns: 70px minmax(200px, 3fr) minmax(140px, 2fr) minmax(120px, 2fr) minmax(110px, 2fr) minmax(100px, 1.4fr) 40px 64px minmax(150px, 1.6fr) 56px 56px 76px;
+  grid-template-columns: 70px minmax(200px, 3fr) minmax(140px, 2fr) minmax(120px, 2fr) minmax(110px, 2fr) minmax(100px, 1.4fr) 40px 64px minmax(150px, 1.6fr) 56px 56px minmax(190px, 1.6fr) 76px;
 }
 
 .gen-item-table.clicker .gt-row {
@@ -1417,6 +1417,9 @@ button.primary { border-color: var(--accent); }
 .clicker-cell { width: 100%; min-width: 70px; box-sizing: border-box; }
 
 .clicker-expr { display: flex; flex-direction: column; gap: 1px; }
+.clicker-renewable { display: flex; align-items: center; gap: 4px; }
+.clicker-renewable select { flex: 1; min-width: 0; }
+.clicker-renewable .renewable-amount { width: 40px; }
 .clicker-preview { font-size: 10px; color: var(--muted); }
 .clicker-preview.is-error { color: #e05c5c; }
 

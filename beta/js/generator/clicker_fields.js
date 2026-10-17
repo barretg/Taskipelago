@@ -278,9 +278,23 @@ export function offlineExample(model) {
  */
 export function validateClicker(model, {
   taskNames, taskActivations, items, itemSpecs, regionNames,
-  taskManual = [], taskRegions = [],
+  taskManual = [], taskRegions = [], taskRenewable = [], consumableNames = null,
 }) {
   if (!model.clickerMode) return null;
+  const manual = manualLookup(model, { taskNames, taskManual, taskRegions });
+  for (let i = 0; i < taskRenewable.length; i++) {
+    const r = taskRenewable[i];
+    if (!r) continue;
+    const label = `Task '${taskNames[i]}' is renewable`;
+    if (!r.currency) return ['Error', `${label} but has no currency selected.`];
+    if (consumableNames && !consumableNames.has(r.currency)) {
+      return ['Error', `${label} for '${r.currency}', which is not a consumable item.`];
+    }
+    if (!renewableAmountOk(r.amount)) {
+      return ['Error', `${label}: amount '${r.amount}' must be a whole number of at least 1.`];
+    }
+    if (manual.task(taskNames[i])) return ['Error', `${label} but is a manual task; only clicker tasks can be renewable.`];
+  }
   for (let i = 0; i < taskActivations.length; i++) {
     const v = pyStrip(taskActivations[i]);
     if (!v) continue;
@@ -311,6 +325,21 @@ export function validateClicker(model, {
   return null;
 }
 
+const renewableAmountOk = amount => !pyStrip(amount) || /^[1-9]\d*$/.test(pyStrip(amount));
+
+/** A task's renewable entry ({currency, amount} or null) as its task_renewable value. */
+export function renewableToken(r) {
+  if (!r || !r.currency) return '';
+  const amount = pyStrip(r.amount);
+  return amount && amount !== '1' ? `"${r.currency}"*${amount}` : `"${r.currency}"`;
+}
+
+/** Consumable currency names that no renewable task produces, in first-seen order. */
+export function unrenewedCurrencies(consumableNames, taskRenewable) {
+  const renewed = new Set(taskRenewable.filter(Boolean).map(r => r.currency));
+  return [...consumableNames].filter(n => !renewed.has(n));
+}
+
 /**
  * Which task and region names are manual, for checkTarget. A task is manual on
  * its own flag or through its region; a region counts as manual only when every
@@ -339,7 +368,7 @@ function manualLookup(model, { taskNames, taskManual, taskRegions }) {
  * the normal export uses. Returns {} when clicker mode is off.
  */
 export function clickerExportKeys(model, {
-  taskActivations, taskManual, taskAutoComplete, itemSpecs, taskNames, regionRows,
+  taskActivations, taskManual, taskAutoComplete, taskRenewable = [], itemSpecs, taskNames, regionRows,
 }) {
   if (!model.clickerMode) return {};
   const some = list => list.some(Boolean);
@@ -364,6 +393,8 @@ export function clickerExportKeys(model, {
   if (manual.some(v => v === 'true')) out.task_manual = manual;
   const auto = (taskAutoComplete || []).map(v => (v ? 'true' : 'false'));
   if (auto.some(v => v === 'true')) out.task_auto_complete = auto;
+  const renew = taskRenewable.map(renewableToken);
+  if (renew.some(Boolean)) out.task_renewable = renew;
   for (const [kind, key] of Object.entries(KIND_KEYS)) {
     const list = itemSpecs.map(s => spec(s, kind));
     // item_production is always written so a clicker slot is recognizable.
@@ -393,11 +424,18 @@ export function clickerTaskFields(block) {
   const activations = pyListOr(block, 'task_activations');
   const manual = pyListOr(block, 'task_manual');
   const auto = pyListOr(block, 'task_auto_complete');
-  return i => ({
-    activations: at(activations, i),
-    manual: at(manual, i).toLowerCase() === 'true',
-    autoComplete: at(auto, i).toLowerCase() === 'true',
-  });
+  const renewable = pyListOr(block, 'task_renewable');
+  return i => {
+    const m = /^"([^"]+)"\s*(?:\*\s*(\d+))?$/.exec(at(renewable, i));
+    return {
+      activations: at(activations, i),
+      manual: at(manual, i).toLowerCase() === 'true',
+      autoComplete: at(auto, i).toLowerCase() === 'true',
+      renewable: !!m,
+      renewableCurrency: m ? m[1].trim() : '',
+      renewableAmount: m && m[2] && m[2] !== '1' ? m[2] : '',
+    };
+  };
 }
 
 /** Per-item clicker fields at flat YAML slot `i`. */

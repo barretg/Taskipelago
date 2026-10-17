@@ -193,6 +193,7 @@ function applySlotData(sd) {
   state.taskManual          = Array.isArray(sd.task_manual) ? sd.task_manual : [];
   // A seed from before the flag always auto-completed, so absence keeps that.
   state.taskAutoComplete    = Array.isArray(sd.task_auto_complete) ? sd.task_auto_complete : null;
+  state.taskRenewable       = Array.isArray(sd.task_renewable) ? sd.task_renewable : [];
   state.itemProduction      = Array.isArray(sd.item_production) ? sd.item_production : [];
   // Click power and the two multipliers are targeted lists like the rest, but a
   // seed generated before targeting sends one slot-wide value per item, so each
@@ -332,6 +333,7 @@ function clearPlayState() {
   state.taskActivations = [];
   state.taskManual = [];
   state.taskAutoComplete = null;
+  state.taskRenewable = [];
   state.itemProduction = [];
   state.itemClickPower = [];
   state.itemProductionMult = [];
@@ -344,6 +346,7 @@ function clearPlayState() {
   state.regionOfflineRate = {};
   state.clickerOfflineCapHours = 8;
   state.clickerProgress = {};
+  state.clickerRenew = {};
   state.clickerLastTick = 0;
   // Runtime
   state.checkedLocations = new Set();

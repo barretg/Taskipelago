@@ -241,13 +241,30 @@ export function consumableSpentCounts() {
   return totals;
 }
 
+/**
+ * Currency produced by renewable clicker tasks. Every claim after the first
+ * (which sent the task's check) pays the task's amount of its currency.
+ */
+export function renewableEarnedCounts() {
+  const out = {};
+  const ren = state.taskRenewable || [];
+  for (let i = 0; i < ren.length; i++) {
+    const spec = ren[i];
+    if (!Array.isArray(spec)) continue;
+    const extra = (state.clickerRenew[i] || 0) - 1;
+    if (extra > 0) out[spec[0]] = (out[spec[0]] || 0) + extra * (spec[1] || 1);
+  }
+  return out;
+}
+
 export function consumableBalance() {
   const recv = consumableReceivedCounts();
+  const earned = renewableEarnedCounts();
   const spent = consumableSpentCounts();
   const manual = state.manualConsumptions;
-  const all = new Set([...Object.keys(recv), ...Object.keys(spent), ...Object.keys(manual)]);
+  const all = new Set([...Object.keys(recv), ...Object.keys(earned), ...Object.keys(spent), ...Object.keys(manual)]);
   const bal = {};
-  for (const n of all) bal[n] = (recv[n] || 0) - (spent[n] || 0) - (manual[n] || 0);
+  for (const n of all) bal[n] = (recv[n] || 0) + (earned[n] || 0) - (spent[n] || 0) - (manual[n] || 0);
   return bal;
 }
 
@@ -294,10 +311,32 @@ export function taskCostIsPaid(idx) {
  * in-logic keeps every later in-logic purchase affordable. Older seeds ship
  * no thresholds and stay ungated.
  */
-export function costBranchInLogic(i, k, recv = consumableReceivedCounts()) {
+export function costBranchInLogic(i, k, recv = consumableReceivedCounts(), checked = allChecked()) {
   const reqs = state.taskCostReqs[i];
   if (!reqs || !reqs[k]) return true;
-  return reqs[k].every(r => (recv[r.consumable] || 0) >= r.threshold);
+  return reqs[k].every(r => costReqMet(r, recv, checked));
+}
+
+/**
+ * One currency requirement. A renewable currency (`producers` present) is met
+ * once any producer task is complete, or by `threshold` received when it is
+ * not null (a producer's own cost); anything else is a cumulative threshold.
+ */
+function costReqMet(r, recv, checked) {
+  if (Array.isArray(r.producers)) {
+    if (state.baseCompleteId !== null
+        && r.producers.some(j => checked.has(state.baseCompleteId + j))) return true;
+    return r.threshold !== null && r.threshold !== undefined
+      && (recv[r.consumable] || 0) >= r.threshold;
+  }
+  return (recv[r.consumable] || 0) >= r.threshold;
+}
+
+function costReqText(r) {
+  if (!Array.isArray(r.producers)) return `${r.threshold} ${r.consumable}`;
+  const tasks = r.producers.map(j => `task ${j + 1}`).join(' or ');
+  if (r.threshold === null || r.threshold === undefined) return `${tasks} completed (renews ${r.consumable})`;
+  return tasks ? `${r.threshold} ${r.consumable} or ${tasks} completed` : `${r.threshold} ${r.consumable}`;
 }
 
 /** '' when some cost branch of task `i` is in logic, else why it is not. */
@@ -305,11 +344,15 @@ export function costLogicReason(i) {
   const reqs = state.taskCostReqs[i];
   if (!reqs || !reqs.length) return '';
   const recv = consumableReceivedCounts();
+  const checked = allChecked();
   let best = null;
   for (const branch of reqs) {
-    const miss = branch.filter(r => (recv[r.consumable] || 0) < r.threshold);
+    const miss = branch.filter(r => !costReqMet(r, recv, checked));
     if (!miss.length) return '';
     if (!best || miss.length < best.length) best = miss;
+  }
+  if (best.some(r => Array.isArray(r.producers))) {
+    return `Needs ${best.map(costReqText).join(', ')} (out of logic)`;
   }
   return `Needs ${best.map(r => `${r.threshold} ${r.consumable}`).join(', ')} received (out of logic)`;
 }

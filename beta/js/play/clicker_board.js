@@ -6,6 +6,7 @@
 // storage so two open clients cannot roll each other back.
 import { ap, state, els } from './state.js';
 import { allChecked, completeTask, attemptPurchase, attemptMakeChange } from './logic.js';
+import { renderConsumables } from './consumables.js';
 import { taskAvailability, formatCostBranches, rewardPreview } from './tasks.js';
 import { isDeathLinkLocked } from './deathlink_queue.js';
 import { evalNumExpr, numExprBindings } from '../shared/num_expr.js';
@@ -104,6 +105,39 @@ export function isAutoComplete(i) {
   return state.taskAutoComplete === null || !!state.taskAutoComplete[i];
 }
 
+/**
+ * A renewable task sends its check on the first completion, then stays on the
+ * board: every later completion pays its currency instead. `clickerRenew[i]`
+ * counts claims, the first included, and progress restarts at 0 on each.
+ */
+export function isRenewable(i) {
+  return Array.isArray(state.taskRenewable[i]);
+}
+
+/** A completed renewable task, still accruing toward its next payout. */
+function isRenewing(i, a) {
+  return !!a.completed && isRenewable(i) && !isManualTask(i);
+}
+
+/**
+ * Finish task `i` at full progress: the ordinary completion, or a renewable
+ * claim. `completed` is whether its check was already sent.
+ */
+function finishTask(i, completed) {
+  if (!isRenewable(i)) { completeTask(i); return; }
+  if (!completed) {
+    completeTask(i);
+    if (state.baseCompleteId === null || !state.pendingLocations.has(state.baseCompleteId + i)) return;
+    // Set, not added: completeTask's re-render may already have counted it.
+    state.clickerRenew[i] = 1;
+  } else {
+    state.clickerRenew[i] = (state.clickerRenew[i] || 1) + 1;
+  }
+  state.clickerProgress[i] = 0;
+  saveClickerProgress();
+  if (completed) renderConsumables();
+}
+
 /** Full progress, awaiting the player's Complete (or an auto-complete). */
 export function isReadyTask(i) {
   return taskProgress(i) >= requiredActivations(i);
@@ -135,8 +169,15 @@ export function clickerModel({ offline = false, checked = allChecked() } = {}) {
     avail.push(a);
     if (a.completed) nCompleted++;
     if (a.unlocked || a.completed) nUnlocked++;
+    const renewing = isRenewing(i, a);
+    // Completed elsewhere (another client, or before its claim synced): the
+    // first claim is the completion itself, so the next cycle starts empty.
+    if (renewing && !(state.clickerRenew[i] >= 1)) {
+      state.clickerRenew[i] = 1;
+      state.clickerProgress[i] = 0;
+    }
     // A ready task has nothing left to earn, so production flows to the rest.
-    if (a.unlocked && !a.completed && !isManualTask(i) && !isReadyTask(i)) eligible.push(i);
+    if (((a.unlocked && !a.completed) || renewing) && !isManualTask(i) && !isReadyTask(i)) eligible.push(i);
   }
   const bindings = numExprBindings(n, nUnlocked, nCompleted);
   const counts = itemCopyCounts();
@@ -327,10 +368,15 @@ export function settle(seconds, { offline = false } = {}) {
     const m = clickerModel({ offline });
     if (!m.eligible.length) break;
 
+    // A completed, auto-complete renewable task pays out without changing the
+    // model (no completion count moves), so it cycles in bulk inside a segment
+    // instead of bounding it.
+    const cycling = i => isAutoComplete(i) && isRenewing(i, m.avail[i]);
+
     // The soonest completion bounds this segment; nothing else changes the model.
     let tNext = Infinity;
     for (const i of m.eligible) {
-      if (!(m.rate[i] > 0)) continue;
+      if (!(m.rate[i] > 0) || cycling(i)) continue;
       const t = (requiredActivations(i) - taskProgress(i)) / m.rate[i];
       if (t < tNext) tNext = t;
     }
@@ -338,19 +384,31 @@ export function settle(seconds, { offline = false } = {}) {
     if (!(step > 0) && !Number.isFinite(tNext)) break;
 
     const finished = [];
+    let paid = false;
     for (const i of m.eligible) {
       if (!(m.rate[i] > 0)) continue;
       const need = requiredActivations(i);
+      if (cycling(i)) {
+        const total = taskProgress(i) + m.rate[i] * step;
+        const claims = Math.floor(total / need);
+        state.clickerProgress[i] = total - claims * need;
+        if (claims > 0) {
+          state.clickerRenew[i] = (state.clickerRenew[i] || 1) + claims;
+          paid = true;
+        }
+        continue;
+      }
       const next = taskProgress(i) + m.rate[i] * step;
       // Overflow is discarded; progress freezes at the requirement.
       state.clickerProgress[i] = Math.min(need, next);
       if (state.clickerProgress[i] >= need) finished.push(i);
     }
     remaining -= step;
+    if (paid) renderConsumables();
     if (!finished.length) break;
     // A task that is not auto-complete just leaves the eligible pool, which
     // still re-binds the next segment (a distributed share grows).
-    for (const i of finished) if (isAutoComplete(i)) completeTask(i);
+    for (const i of finished) if (isAutoComplete(i)) finishTask(i, m.avail[i].completed);
     completedAny = true;
   }
   return completedAny;
@@ -366,8 +424,8 @@ function completeReadyAuto() {
   for (let i = 0; i < state.tasks.length; i++) {
     if (isManualTask(i) || !isAutoComplete(i) || !isReadyTask(i)) continue;
     const a = taskAvailability(i, checked);
-    if (!a.unlocked || a.completed) continue;
-    completeTask(i);
+    if (!isRenewing(i, a) && (!a.unlocked || a.completed)) continue;
+    finishTask(i, a.completed);
     any = true;
   }
   return any;
@@ -377,8 +435,9 @@ function completeReadyAuto() {
 export function completeReadyTask(i) {
   if (!state.clickerMode || isDeathLinkLocked() || isManualTask(i) || !isReadyTask(i)) return false;
   const a = taskAvailability(i, allChecked());
-  if (!a.unlocked || a.completed) return false;
-  completeTask(i);
+  if (!isRenewing(i, a) && (!a.unlocked || a.completed)) return false;
+  finishTask(i, a.completed);
+  if (a.completed) renderClicker();
   return true;
 }
 
@@ -392,7 +451,8 @@ export function clickTask(i) {
   state.clickerProgress[i] = Math.min(need, taskProgress(i) + m.taskClickValue[i]);
   saveClickerProgress();
   if (state.clickerProgress[i] >= need && isAutoComplete(i)) {
-    completeTask(i);
+    finishTask(i, m.avail[i].completed);
+    if (m.avail[i].completed) renderClicker();
     return true;
   }
   renderClicker();
@@ -444,6 +504,7 @@ export function applyOfflineCatchUp(now = Date.now()) {
 export function applyServerClickerProgress(value, initial = false) {
   const merged = mergeClickerProgress({ p: state.clickerProgress, t: state.clickerLastTick }, value);
   state.clickerProgress = merged.p;
+  state.clickerRenew = merged.r || {};
   if (initial || merged.t > state.clickerLastTick) state.clickerLastTick = merged.t;
   if (initial && state.clickerMode) applyOfflineCatchUp();
 }
@@ -514,16 +575,19 @@ function visibleTasks(m) {
     const a = m.avail[i];
     const wouldHide = !a.otherPrereqsOk && state.hideUnreachable && effectiveLock;
     if (wouldHide && !state.showLocked) continue;
-    if (a.completed && state.hideCompleted) continue;
+    // A renewable task keeps working after its check, so it is never "done".
+    const renewing = isRenewing(i, a);
+    if (a.completed && !renewing && state.hideCompleted) continue;
     // A cost-locked task is bought here rather than only in the task list, so
     // the card carries its price and its buttons.
     const branches = a.branches || [];
     out.push({
       i,
-      locked: !a.unlocked,
-      hiddenName: wouldHide,
-      completed: a.completed,
-      ready: !a.completed && !!a.unlocked && isReadyTask(i),
+      locked: !a.unlocked && !renewing,
+      hiddenName: wouldHide && !renewing,
+      completed: a.completed && !renewing,
+      renewing,
+      ready: (renewing || (!a.completed && !!a.unlocked)) && isReadyTask(i),
       reasons: a.reasons,
       branches,
       purchasable: !!a.costOnlyLocked && effectiveLock && branches.length > 0,
@@ -539,7 +603,7 @@ export function renderClicker() {
   const m = clickerModel();
   const rows = visibleTasks(m);
 
-  const sig = rows.map(r => `${r.i}:${r.locked ? 'L' : ''}${r.completed ? 'C' : ''}${r.ready ? 'R' : ''}${r.hiddenName ? 'H' : ''}${r.purchasable ? (r.costInLogic ? '$' : '!') : ''}${r.canMakeChange ? 'M' : ''}`).join(',');
+  const sig = rows.map(r => `${r.i}:${r.locked ? 'L' : ''}${r.completed ? 'C' : ''}${r.renewing ? 'W' : ''}${r.ready ? 'R' : ''}${r.hiddenName ? 'H' : ''}${r.purchasable ? (r.costInLogic ? '$' : '!') : ''}${r.canMakeChange ? 'M' : ''}`).join(',');
   if (sig !== lastSignature) {
     lastSignature = sig;
     buildGrid(rows, m);
@@ -561,12 +625,12 @@ function buildGrid(rows, m) {
     name.className = 'clicker-name';
     name.textContent = row.hiddenName
       ? `${i + 1}. Locked Task`
-      : row.completed
+      : row.completed || row.renewing
         ? `✔ ${i + 1}. ${state.tasks[i]}`
         : `${i + 1}. ${state.tasks[i]}`;
     card.appendChild(name);
 
-    const preview = row.completed ? ''
+    const preview = row.completed || row.renewing ? ''
       : rewardPreview(i, !row.locked || (row.purchasable && row.costInLogic));
     if (preview) {
       const pv = document.createElement('div');
@@ -606,6 +670,17 @@ function buildGrid(rows, m) {
       const detail = document.createElement('div');
       detail.className = 'clicker-detail';
       card.appendChild(detail);
+
+      if (isRenewable(i) && !row.hiddenName) {
+        const [currency, amount] = state.taskRenewable[i];
+        const renew = document.createElement('div');
+        renew.className = 'clicker-hint clicker-renew';
+        renew.textContent = row.renewing
+          ? `Renewable: +${amount} ${currency} per completion`
+          : `Renewable: after its first completion, +${amount} ${currency} per completion`;
+        card.appendChild(renew);
+        if (row.renewing && row.canMakeChange) card.appendChild(cardActions(row));
+      }
 
       let btn = null;
       if (row.locked) {

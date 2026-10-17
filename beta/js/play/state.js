@@ -69,6 +69,7 @@ export const state = {
   taskActivations: [],         // ints, parallel to tasks
   taskManual: [],              // bools, parallel to tasks: a normal task row, never clickable
   taskAutoComplete: null,      // bools, parallel to tasks; null (an older seed) auto-completes all
+  taskRenewable: [],           // [currency, amount] or null, parallel to tasks; [] for older seeds
   // Every grant kind carries a target, so each entry is a list of resolved
   // specs. A pre-targeting seed sends one bare value per item, which
   // connection.js normalizes to a single '*' spec.
@@ -89,6 +90,7 @@ export const state = {
   pendingLocations: new Set(), // optimistic (not yet confirmed by server)
   taskPurchases: {},           // taskIdx -> {name: amount}
   clickerProgress: {},         // taskIdx -> float activations accrued
+  clickerRenew: {},            // taskIdx -> completions claimed by a renewable task (first included)
   clickerLastTick: 0,          // ms epoch of the last accrual write
   manualConsumptions: {},      // name -> count of manually consumed units
   hintRequestedIndices: new Set(), // task indices already hinted this session
