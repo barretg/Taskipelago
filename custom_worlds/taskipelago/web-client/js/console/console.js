@@ -183,5 +183,10 @@ export function initConsole(consoleActions = {}) {
     else if (e.key === 'ArrowUp') { e.preventDefault(); browseHistory(-1); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); browseHistory(1); }
   });
+  // Output appended while the tab is hidden has no layout, so re-pin to bottom on open.
+  document.querySelector('#main-tabs .tab-btn[data-tab="console"]')
+    ?.addEventListener('click', () => {
+      els.consoleOutput.scrollTop = els.consoleOutput.scrollHeight;
+    });
   updateConsoleConnected(state.connState === 'connected');
 }
